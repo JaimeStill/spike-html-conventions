@@ -1,0 +1,16 @@
+[tools]
+biome = "2.5.15"
+bun = "1.4.3"
+node = "26.12.0"
+pnpm = "12.11.2"
+shellcheck = "0.11.0"
+
+[tasks.check]
+description = "Lint and format-check the sources and shell scripts; writes nothing"
+run = '''
+set -eu
+cd "$MISE_PROJECT_ROOT"
+biome ci --no-errors-on-unmatched .
+find . -name '*.sh' -not -path './node_modules/*' -not -path './.git/*' -print0 \
+  | xargs -0 -r shellcheck
+'''
