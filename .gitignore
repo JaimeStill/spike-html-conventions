@@ -2,3 +2,5 @@
 .claude/plans/
 .claude/briefs/
 node_modules
+# Build and demo output, from mise run build and mise run demo.
+dist/

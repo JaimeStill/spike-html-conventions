@@ -5,6 +5,7 @@ node = "26.12.0"
 pnpm = "12.11.2"
 shellcheck = "0.11.0"
 "github:microsoft/typescript-go" = { version = "7.0.2", version_prefix = "typescript/v", bin_path = "package/lib" }
+"npm:esbuild" = "0.28.2"
 
 [tasks.check]
 description = "Lint, format-check, type-check, and test the sources; reads no network, writes nothing"
@@ -14,9 +15,45 @@ cd "$MISE_PROJECT_ROOT"
 biome ci --no-errors-on-unmatched .
 find . -name '*.sh' -not -path './node_modules/*' -not -path './.git/*' -print0 \
   | xargs -0 -r shellcheck
+# Lit's types come from node_modules, installed once outside the check (mise run install),
+# so the check itself never reads the network.
+if [ ! -d node_modules/lit ]; then
+  echo "check: lit isn't installed; run mise run install first" >&2
+  exit 1
+fi
 # Type-check the .ts and JSDoc forms (tsconfig.json); plain .js and the tests are outside it.
 tsc --noEmit -p .
 # One shared suite over all three forms, under each runner.
 node --test test/
 bun test ./test/
 '''
+
+[tasks.install]
+description = "Install lit from the lockfile with pnpm; reads the network unless pnpm's store has it"
+run = "pnpm install --frozen-lockfile"
+dir = "{{config_root}}"
+
+[tasks."build:tsc"]
+description = "Emit the .ts and JSDoc forms as unbundled ESM with declarations, to dist/tsc"
+run = "scripts/build.sh tsc"
+dir = "{{config_root}}"
+
+[tasks."build:esbuild"]
+description = "Bundle each element in each form, Lit included, with esbuild, to dist/esbuild"
+run = "scripts/build.sh esbuild"
+dir = "{{config_root}}"
+
+[tasks."build:bun"]
+description = "Bundle each element in each form, Lit included, with bun build, to dist/bun"
+run = "scripts/build.sh bun"
+dir = "{{config_root}}"
+
+[tasks.build]
+description = "Every build of the pagination element: tsc emit, esbuild, and bun build"
+depends = ["build:tsc", "build:esbuild", "build:bun"]
+
+[tasks.demo]
+description = "Render every build of the pagination element in headless Chromium, from file://"
+depends = ["build"]
+run = "scripts/demo.sh"
+dir = "{{config_root}}"
