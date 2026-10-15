@@ -66,3 +66,10 @@ dir = "{{config_root}}"
 description = "Time each toolchain with hyperfine and record the rows that need no pushed tag, as a dated markdown report on stdout; reads the network, writes nothing to the working tree"
 run = "scripts/measure.sh"
 dir = "{{config_root}}"
+
+[tasks.currency]
+description = "Report every mise tool, package dependency, and github: tag dependency pinned behind its latest, one line each, exiting nonzero if any; reads the network, writes nothing"
+run = "scripts/currency.sh"
+# Without mise's own command echo, so a current tree prints nothing at all.
+quiet = true
+dir = "{{config_root}}"
