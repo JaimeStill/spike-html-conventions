@@ -8,7 +8,7 @@ shellcheck = "0.11.0"
 "npm:esbuild" = "0.28.2"
 
 [tasks.check]
-description = "Lint, format-check, type-check, and test the sources; reads no network, writes nothing"
+description = "Lint, format-check, type-check, and test the sources, and install both consumer fixtures offline; reads no network, writes nothing"
 run = '''
 set -eu
 cd "$MISE_PROJECT_ROOT"
@@ -26,11 +26,14 @@ tsc --noEmit -p .
 # One shared suite over all three forms, under each runner.
 node --test test/
 bun test ./test/
+# Each consumer fixture installs this package and spike-html-design by git tag, offline, from
+# local repositories, with lit from the managers' caches (mise run install warms them).
+scripts/consumers.sh
 '''
 
 [tasks.install]
-description = "Install lit from the lockfile with pnpm; reads the network unless pnpm's store has it"
-run = "pnpm install --frozen-lockfile"
+description = "Install lit from the lockfile with pnpm, and warm pnpm's and bun's caches with lit for the check's offline fixture installs; reads the network"
+run = ["pnpm install --frozen-lockfile", "scripts/consumers.sh warm"]
 dir = "{{config_root}}"
 
 [tasks."build:tsc"]

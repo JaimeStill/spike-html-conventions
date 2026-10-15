@@ -1,0 +1,11 @@
+{
+  "name": "consumer-bun",
+  "version": "0.0.0",
+  "private": true,
+  "description": "A test fixture, never released: a consumer that depends on spike-html-design and spike-html-conventions by git tag. The Bun column: installed and run with bun.",
+  "type": "module",
+  "dependencies": {
+    "spike-html-conventions": "github:JaimeStill/spike-html-conventions#v0.1.0",
+    "spike-html-design": "github:JaimeStill/spike-html-design#v0.7.0"
+  }
+}
