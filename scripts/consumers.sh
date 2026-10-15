@@ -6,6 +6,8 @@
 #                                fixtures/consumer-bun with bun, offline, and checks each
 #   scripts/consumers.sh warm    mise run install's step: installs lit with pnpm and with bun,
 #                                from the network, into their global store and cache
+#   scripts/consumers.sh repo D  scripts/measure.sh's step: makes D the scratch repository
+#                                below, tagged v0.1.0, and nothing else
 #
 # Each fixture depends on spike-html-design and on this package by git tag, as a consumer writes
 # it: github:<owner>/<repo>#<tag>. A github: source is fetched from GitHub, so the check copies
@@ -49,6 +51,40 @@ fail() {
   exit 1
 }
 
+# own_repo DIR makes DIR the scratch repository: the working tree's files, tracked and untracked
+# but not ignored, committed and tagged $own_tag with a fixed identity and date, and no user or
+# system git config, so no hook or signing runs and the same tree gives the same commit.
+own_repo() {
+  local dir=$1
+  mkdir -p "$dir"
+  (
+    cd "$root"
+    git ls-files -z --cached --others --exclude-standard |
+      while IFS= read -r -d '' path; do
+        # A tracked file deleted from the working tree is left out, as the next commit leaves it.
+        if [[ -e "$path" ]]; then cp --parents -p "$path" "$dir/"; fi
+      done
+  )
+  (
+    cd "$dir"
+    export GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1
+    export GIT_AUTHOR_NAME=check GIT_AUTHOR_EMAIL=check@localhost GIT_COMMITTER_NAME=check
+    export GIT_COMMITTER_EMAIL=check@localhost
+    export GIT_AUTHOR_DATE=2000-01-01T00:00:00Z GIT_COMMITTER_DATE=2000-01-01T00:00:00Z
+    git init -q -b main
+    git add -A
+    git commit -q -m "$own_tag"
+    git tag -a "$own_tag" -m "$own_tag"
+  )
+}
+
+# The repo mode, for scripts/measure.sh: the scratch repository alone, at a directory the caller
+# owns and removes.
+if [[ "$mode" == repo ]]; then
+  own_repo "${2:?usage: consumers.sh repo DIR}"
+  exit 0
+fi
+
 # pnpm's store, given by its parent, as --store-dir takes it. The scratch directory may sit on
 # another filesystem than the store, where pnpm can't hard link and would silently fall back to a
 # cold store beside the scratch directory, so every install names the store and copies from it.
@@ -67,36 +103,14 @@ if [[ "$mode" == warm ]]; then
   echo "consumers: pnpm's store and bun's cache hold lit $lit"
   exit 0
 fi
-[[ "$mode" == check ]] || fail "unknown mode $mode; expected check or warm"
+[[ "$mode" == check ]] || fail "unknown mode $mode; expected check, warm, or repo"
 
 git -C "$design" rev-parse --verify --quiet "$design_tag^{commit}" >/dev/null ||
   fail "no $design_tag in $design; set SPIKE_HTML_DESIGN to a spike-html-design checkout"
 design=$(cd "$design" && pwd)
 
-# The scratch repository: the working tree's files, committed and tagged with a fixed identity
-# and date, and no user or system git config, so no hook or signing runs and the same tree gives
-# the same commit.
 own="$scratch/spike-html-conventions"
-mkdir -p "$own"
-(
-  cd "$root"
-  git ls-files -z --cached --others --exclude-standard |
-    while IFS= read -r -d '' path; do
-      # A tracked file deleted from the working tree is left out, as the next commit leaves it.
-      if [[ -e "$path" ]]; then cp --parents -p "$path" "$own/"; fi
-    done
-)
-(
-  cd "$own"
-  export GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1
-  export GIT_AUTHOR_NAME=check GIT_AUTHOR_EMAIL=check@localhost GIT_COMMITTER_NAME=check
-  export GIT_COMMITTER_EMAIL=check@localhost
-  export GIT_AUTHOR_DATE=2000-01-01T00:00:00Z GIT_COMMITTER_DATE=2000-01-01T00:00:00Z
-  git init -q -b main
-  git add -A
-  git commit -q -m "$own_tag"
-  git tag -a "$own_tag" -m "$own_tag"
-)
+own_repo "$own"
 
 # Each tag's tree, extracted, for the byte-for-byte comparison.
 for pair in "spike-html-design:$design:$design_tag" "spike-html-conventions:$own:$own_tag"; do

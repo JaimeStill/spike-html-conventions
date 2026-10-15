@@ -6,6 +6,7 @@ pnpm = "12.11.2"
 shellcheck = "0.11.0"
 "github:microsoft/typescript-go" = { version = "7.0.2", version_prefix = "typescript/v", bin_path = "package/lib" }
 "npm:esbuild" = "0.28.2"
+"aqua:sharkdp/hyperfine" = "2.0.0"
 
 [tasks.check]
 description = "Lint, format-check, type-check, and test the sources, and install both consumer fixtures offline; reads no network, writes nothing"
@@ -59,4 +60,9 @@ depends = ["build:tsc", "build:esbuild", "build:bun"]
 description = "Render every build of the pagination element in headless Chromium, from file://"
 depends = ["build"]
 run = "scripts/demo.sh"
+dir = "{{config_root}}"
+
+[tasks.measure]
+description = "Time each toolchain with hyperfine and record the rows that need no pushed tag, as a dated markdown report on stdout; reads the network, writes nothing to the working tree"
+run = "scripts/measure.sh"
 dir = "{{config_root}}"
