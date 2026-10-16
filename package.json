@@ -1,0 +1,24 @@
+{
+  "name": "spike-html-conventions",
+  "version": "0.1.0",
+  "type": "module",
+  "private": false,
+  "files": [
+    "src"
+  ],
+  "exports": {
+    "./ts/router": "./src/ts/router.ts",
+    "./ts/pagination-lit": "./src/ts/pagination-lit.ts",
+    "./ts/pagination-vanilla": "./src/ts/pagination-vanilla.ts",
+    "./jsdoc/router": "./src/jsdoc/router.js",
+    "./jsdoc/pagination-lit": "./src/jsdoc/pagination-lit.js",
+    "./jsdoc/pagination-vanilla": "./src/jsdoc/pagination-vanilla.js",
+    "./jsdoc/globals": "./src/jsdoc/globals.d.ts",
+    "./js/router": "./src/js/router.js",
+    "./js/pagination-lit": "./src/js/pagination-lit.js",
+    "./js/pagination-vanilla": "./src/js/pagination-vanilla.js"
+  },
+  "dependencies": {
+    "lit": "3.3.3"
+  }
+}

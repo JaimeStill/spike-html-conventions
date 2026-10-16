@@ -2,15 +2,79 @@
 biome = "2.5.15"
 bun = "1.4.3"
 node = "26.12.0"
+# npm 12, its own pin: node 26.12.0 bundles npm 11.20.0, from before npm 12 refused git dependencies by default.
+npm = "12.2.1"
 pnpm = "12.11.2"
 shellcheck = "0.11.0"
+"github:microsoft/typescript-go" = { version = "7.0.2", version_prefix = "typescript/v", bin_path = "package/lib" }
+"npm:esbuild" = "0.28.2"
+# Vite through mise's npm: backend; its vite runs on the pinned node.
+"npm:vite" = "8.3.4"
+"aqua:sharkdp/hyperfine" = "2.0.0"
 
 [tasks.check]
-description = "Lint and format-check the sources and shell scripts; writes nothing"
+description = "Lint, format-check, type-check, and test the sources, and install the three consumer fixtures offline; reads no network, writes nothing"
 run = '''
 set -eu
 cd "$MISE_PROJECT_ROOT"
 biome ci --no-errors-on-unmatched .
 find . -name '*.sh' -not -path './node_modules/*' -not -path './.git/*' -print0 \
   | xargs -0 -r shellcheck
+# Lit's types come from node_modules, installed once outside the check (mise run install),
+# so the check itself never reads the network.
+if [ ! -d node_modules/lit ]; then
+  echo "check: lit isn't installed; run mise run install first" >&2
+  exit 1
+fi
+# Type-check the .ts and JSDoc forms (tsconfig.json); plain .js and the tests are outside it.
+tsc --noEmit -p .
+# One shared suite over all three forms, under each runner.
+node --test test/
+bun test ./test/
+# Each consumer fixture installs this package and spike-html-design by git tag, offline, from
+# local repositories, with lit from the managers' caches (mise run install warms them): pnpm,
+# npm, and bun.
+scripts/consumers.sh
 '''
+
+[tasks.install]
+description = "Install lit from the lockfile with pnpm, and warm pnpm's, npm's, and bun's caches with lit for the check's offline fixture installs; reads the network"
+run = ["pnpm install --frozen-lockfile", "scripts/consumers.sh warm"]
+dir = "{{config_root}}"
+
+[tasks."build:tsc"]
+description = "Emit the .ts and JSDoc forms as unbundled ESM with declarations, to dist/tsc"
+run = "scripts/build.sh tsc"
+dir = "{{config_root}}"
+
+[tasks."build:esbuild"]
+description = "Bundle each element in each form, Lit included, with esbuild, to dist/esbuild"
+run = "scripts/build.sh esbuild"
+dir = "{{config_root}}"
+
+[tasks."build:bun"]
+description = "Bundle each element in each form, Lit included, with bun build, to dist/bun"
+run = "scripts/build.sh bun"
+dir = "{{config_root}}"
+
+[tasks.build]
+description = "Every build of the pagination element: tsc emit, esbuild, and bun build"
+depends = ["build:tsc", "build:esbuild", "build:bun"]
+
+[tasks.demo]
+description = "Render every build of the pagination element in headless Chromium, from file://"
+depends = ["build"]
+run = "scripts/demo.sh"
+dir = "{{config_root}}"
+
+[tasks.measure]
+description = "Record each mise tool's installed size and each TypeScript form's lines and brotli bytes, time each toolchain with hyperfine (Node: pnpm installs and npm installs in its hoisted and linked layouts, tsc, esbuild, and Vite; Bun: bun install and bun build), and record every row, the layout rows (phantom dependencies, lockfile determinism, and disk sharing under npm, pnpm, and bun) and the GitHub and jsDelivr ones for v0.1.0 once it is released, as a dated markdown report on stdout; reads the network, writes nothing to the working tree"
+run = "scripts/measure.sh"
+dir = "{{config_root}}"
+
+[tasks.currency]
+description = "Report every mise tool, package dependency, and github: tag dependency pinned behind its latest, one line each, exiting nonzero if any; reads the network, writes nothing"
+run = "scripts/currency.sh"
+# Without mise's own command echo, so a current tree prints nothing at all.
+quiet = true
+dir = "{{config_root}}"

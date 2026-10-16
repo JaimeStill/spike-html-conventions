@@ -1,10 +1,11 @@
 # Project kind: this spike holds the web stack's conventions and their fixtures, checked by
 # `mise run check`. Its goals live in the coordinator's roadmap
-# (standards-lab/context/roadmap.toml). No currency command until the toolchain task picks the
-# toolchain; no gate.
+# (standards-lab/context/roadmap.toml). `mise run currency` reports every mise tool, package
+# dependency, and github: tag dependency behind its latest. No gate.
 [project]
 kind = "code"
 check = "mise run check"
+currency = "mise run currency"
 
 # Remote platform and the commands that publish and merge a finished branch. Pull requests run
 # no checks, so the merge doesn't wait on them.
