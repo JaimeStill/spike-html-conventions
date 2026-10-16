@@ -783,7 +783,7 @@ the specifier's text. The layer table is the configuration:
 There is no override per file depth, and no convention on how a relative specifier is written:
 `./x/../../foundation/dom.js` from a component is the foundation's `dom.ts`, which a component
 may import, however the path climbs. That retires the normalization convention Biome's text rules
-needed (below), a point the architect accepted in the plan's fourth round.
+needed (below).
 
 In the check, `test/layers.test.js` runs the pinned ESLint over two scratch trees built from
 `test/layers-tree.js`, whose imports name real files, so a resolved-file rule is tested fairly,
@@ -932,13 +932,12 @@ and 8 of the 13 JSON files come out different. It fixes what each rule sees and 
 reflow, and `max-len` has no fixer, so a split call stays split. A joined line can also stay past
 the width unreported: from the disturbed code, D's restore exits 0 with 6 more lines past 100
 columns than the original, 21 against 15, because `max-len` with `ignoreStrings` doesn't report a
-line that holds a string *(m 2026-10-16T21:11:09Z)*. So Stylistic is a checker of a
-format, not a formatter: it keeps a tree as it is and can't bring one back. ESLint's own
-deprecation post recommends a formatter first, Prettier or dprint, and Stylistic only for those
-who don't want one ([s66][eslint-dep]). Stylistic's stewardship is thin, 8 organization members
-and $1,165 a year from 4 backers against Prettier's $58,056 from 351, and its leads over B, one
-config file and a default limited to code and JSON, don't make up for a formatter that can't
-restore a tree. Prettier wins it on the first criterion, and D drops out.
+line that holds a string *(m 2026-10-16T21:11:09Z)*. So Stylistic is a checker of a format, not
+a formatter: it keeps a tree as it is and can't bring one back. ESLint's own deprecation post
+recommends a formatter first, Prettier or dprint, and Stylistic only for those who don't want one
+([s66][eslint-dep]). Stylistic's stewardship is thin, 8 organization members and $1,165 a year
+from 4 backers against Prettier's $58,056 from 351, and its leads over B, one config file and a
+default limited to code and JSON, don't make up for a formatter that can't restore a tree. Prettier wins it on the first criterion, and D drops out.
 
 **First: industry standard and maintainability.**
 
@@ -957,18 +956,19 @@ restore a tree. Prettier wins it on the first criterion, and D drops out.
   stewarded than Biome by funding and foundation. B's plugins aren't: typescript-eslint is
   volunteer-run at about Biome's funding ($31,255 a year), and the direction rule rests on
   eslint-plugin-boundaries, one maintainer's repository funded by GitHub Sponsors, and on the
-  resolver it needs, eslint-import-resolver-typescript, whose own collective draws $0 a year. The difference is what
-  a failure costs. A plugin is one config block: if boundaries stalls, or the resolver it depends
-  on for the direction rule does, import-x is the measured fallback, with its built-in resolver
-  and its false positive to fix, and core's rule still catches 55 of 60. Biome is one project for
-  lint, format, and direction, so if it stalls, all three are replaced at once.
+  resolver it needs, eslint-import-resolver-typescript, whose own collective draws $0 a year.
+  The difference is what a failure costs. A plugin is one config block: if boundaries stalls, or
+  the resolver it depends on for the direction rule does, import-x is the measured fallback, with
+  its built-in resolver and its false positive to fix, and core's rule still catches 55 of 60.
+  Biome is one project for lint, format, and direction, so if it stalls, all three are replaced
+  at once.
 - **Surface.** Biome's, clearly: one binary, one config file, and one pin with nothing beneath
   it, against B's three binaries, four config files, and 9 packages to keep current with 140
-  installed under them *(m 2026-10-16T21:11:09Z)*. The fourth config file is `pnpm-workspace.yaml`, which
-  holds the pnpm settings the devDependencies need (`allowBuilds`, so unrs-resolver's postinstall
-  isn't run). That is B's real cost: more pins for currency to track, more upgrades that can break
-  the check, and a lockfile that grew from 59 lines to 1,615 when the devDependencies came in
-  (d2307d6). The architect's case for Biome, "its simplicity and
+  installed under them *(m 2026-10-16T21:11:09Z)*. The fourth config file is
+  `pnpm-workspace.yaml`, which holds the pnpm settings the devDependencies need (`allowBuilds`,
+  so unrs-resolver's postinstall isn't run). That is B's real cost: more pins for currency to
+  track, more upgrades that can break the check, and a lockfile that grew from 59 lines to 1,615
+  when the devDependencies came in (d2307d6). The architect's case for Biome, "its simplicity and
   minimal surface friction", is this row, and it holds.
 - **Configurability.** A tie. Prettier matched every option on this tree, 15 set, as Biome did
   with 3; both need Lit's templates left alone, which Biome does by default and Prettier with
@@ -977,8 +977,8 @@ restore a tree. Prettier wins it on the first criterion, and D drops out.
   moves a key in `package.json`, and D can't restore.
 - **Content scope.** Biome's by default: it touches only js, json, and ts, where Prettier also
   formats Markdown and YAML, and rewrites 174 of this README's 1,173 lines and 565 of the pnpm
-  lockfile's 1,615. A `.prettierignore` of five lines limits it to code and JSON, so the cost is a default
-  to undo, not a limit.
+  lockfile's 1,615. A `.prettierignore` of five lines limits it to code and JSON, so the cost is
+  a default to undo, not a limit.
 - **Direction.** B's now. The gap that decided the superseded pick, ESLint's rule never
   checking `import()`, is closed: boundaries flags all five dynamic edges. It judges the resolved
   file, so the layer table is its whole configuration: no override per file depth, no
@@ -990,11 +990,10 @@ restore a tree. Prettier wins it on the first criterion, and D drops out.
 Weighed together, the standard, the stewardship of the tools, and the direction mechanism are
 B's; surface and content scope are Biome's; configurability and formatting are even. Biome's
 lead is real and it is one row: one binary and one config file against nine pins and four config
-files. It doesn't outweigh
-the standard by use, the better-stewarded tools, and a direction rule that judges the file
-rather than the text, now that B can enforce every edge. The first criterion picks ESLint +
-Prettier. oxlint + oxfmt is neither the standard nor, at 0.x, a formatter that leaves the JSON
-as it is, and its direction is by text, as Biome's is.
+files. It doesn't outweigh the standard by use, the better-stewarded tools, and a direction rule
+that judges the file rather than the text, now that B can enforce every edge. The first criterion
+picks ESLint + Prettier. oxlint + oxfmt is neither the standard nor, at 0.x, a formatter that
+leaves the JSON as it is, and its direction is by text, as Biome's is.
 
 **Second: footprint.** Node is already the toolchain's runtime (Results 1), so each setup adds
 its own installs: A 66.7 MB, B 62.1 MB, C 35.6 MB, D 55.2 MB *(m 2026-10-16T21:11:09Z)*. B and
@@ -1015,19 +1014,21 @@ wait. Speed doesn't decide it.
 **The pick: ESLint + Prettier, with eslint-plugin-boundaries for the direction, provisionally**,
 as Results 1 picks pnpm. The industry standard and maintainability decide it: the standard by a
 wide margin, the better-stewarded tools, and a direction rule by resolved file, against Biome's
-smaller surface, which is the cost B carries: 9 pins and 140 installed packages. Footprint is
-even. Speed shows two order-of-magnitude gaps, B's lint and format 10.3 times C's and ESLint's
-lint 11.0 times `biome lint`'s, and neither overturns the first criterion: C loses on the
-standard and on JSON formatting, and Biome on direction and stewardship. ESLint Stylistic loses to Prettier on the first criterion, since it can't restore a tree. The check runs
-this setup, ESLint and Prettier from the devDependencies, with boundaries enforcing the direction
-in `eslint.config.js`; Biome's earlier pick is superseded.
+smaller surface, which is the cost B carries: 9 pins and 140 installed packages. On footprint, A
+and B are even and C is 1.7 times smaller than B, not an order of magnitude. Speed shows two
+order-of-magnitude gaps, B's lint and format 10.3 times C's and ESLint's lint 11.0 times
+`biome lint`'s, and neither overturns the first criterion: C loses on the standard and on JSON
+formatting, and Biome on direction and stewardship. ESLint Stylistic loses to Prettier on the
+first criterion, since it can't restore a tree. The check runs this setup, ESLint and Prettier
+from the devDependencies, with boundaries enforcing the direction in `eslint.config.js`; Biome's
+earlier pick is superseded.
 
 **What would reverse it.** Toward Biome: a Biome rule that restricts imports by resolved file
 (Biome 2 has a module graph, but no such rule); eslint-plugin-boundaries, or
 eslint-import-resolver-typescript under its rule, going unmaintained with import-x's false
-positive unfixed, leaving B no direction rule that passes the trees; the
-standard moving, the libraries or SoJS taking up Biome; or the surface cost showing in practice,
-upgrades to the nine pins breaking the check more often than the direction rule is worth. Toward
+positive unfixed, leaving B no direction rule that passes the trees; the standard moving, the
+libraries or SoJS taking up Biome; or the surface cost showing in practice, upgrades to the nine
+pins breaking the check more often than the direction rule is worth. Toward
 oxlint + oxfmt: oxfmt reaching 1.0 and leaving the JSON as it is, a resolved-file direction rule,
 and the libraries or SoJS taking up Oxc. Toward ESLint Stylistic: a reflow, so that it restores
 both trees.

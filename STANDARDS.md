@@ -23,7 +23,7 @@ The architecture pages that apply, in the architecture repository:
   beside it. tsc emit builds libraries and Vite builds apps; esbuild builds nothing. The Bun
   column, the manager not picked, and the esbuild pin are the comparison's evidence only; nothing
   shipped depends on a Bun-only API.
-- Every tool comes from a pin in `mise.toml`, except the lint tooling, pinned exactly in
+- Every tool comes from a pin in `mise.toml`, except the check's lint tooling, pinned exactly in
   `package.json`'s devDependencies and run from `node_modules`. The system Chromium is the other
   exception, by the architect's decision; `mise run measure` records its version.
 - Lit is the only runtime dependency; lint tooling is the only devDependencies.
