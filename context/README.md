@@ -20,8 +20,8 @@ components, and apps) be built on, over the spike-html-design v0.7.0 baseline?
 ## Hypotheses
 
 - **Toolchain:** Node 26 LTS + pnpm for packages; Bun 1.4 only for bundling, the dev server, and
-  CSS. The toolchain task ruled out the split by role: the pick is one toolchain, Node with pnpm
-  or Bun, never both (Results, 1).
+  CSS. Results 1 rules out the split by role: the pick is one toolchain, Node with pnpm or Bun,
+  never both.
 - **Components:** vanilla for the foundation and the static branch; Lit from components up.
 - **Stack:** foundation (native only: the design system plus JS/TS modules; its tools split into
   utilities, structure/layout, and meta components/variants, with layouts folded into

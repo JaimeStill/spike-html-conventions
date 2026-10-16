@@ -143,7 +143,7 @@ Release       v0.1.0
 
 ## Progress
 
-slices 7/7 committed · standards — · spec — · editor —
+slices 7/7 committed · standards done · spec done (2 rounds) · editor done
 
 ## Decisions
 
@@ -181,9 +181,23 @@ slices 7/7 committed · standards — · spec — · editor —
 - toolchain: test files are outside the type check, and no package manifest has a devDependency.
 - toolchain: v0.1.0 releases at SHIP; GitHub/jsDelivr rows run against spike-html-design v0.7.0 in BUILD, and the fixture's own v0.1.0 rows run after the release, recorded by the structure task's first step.
 - toolchain: architect: fix herald's `normalizePath` quirk in the port; the base path strips only at a segment boundary (base `/app`: `/application` stays).
+- toolchain: the sources sit in one directory per form, `src/ts/`, `src/jsdoc/`, and `src/js/`; the package exports each module as `./<form>/<module>`, plus `./jsdoc/globals` for types, and ships only `src`.
+- toolchain: each element variant has its own tag, `hd-pagination-{lit,vanilla}-{ts,jsdoc,js}`, because one shared tag would make the typed forms' `HTMLElementTagNameMap` declarations conflict in the one type-checked program.
+- toolchain: the JSDoc form's tag and event maps live in `src/jsdoc/globals.d.ts`, because JSDoc can't write `declare global`.
+- toolchain: pnpm installs Lit for development (`mise run install`, frozen lockfile) until the pick is applied; moving to bun swaps the lockfile.
+- toolchain: `bun build` runs with `NODE_ENV=production`, so it resolves Lit's production export (24 kB, not 57 kB); `--production` was rejected because it also minifies, unlike the esbuild build.
+- toolchain: the route matcher's `RouteTable` requires a `"*"` entry, so the fallback match is always a route config.
+- toolchain: the router keeps two herald quirks as a faithful port, for whichever task builds the real router: `resolveRoute` splits the target on `?` and keeps two parts, so a second `?` and everything after it are dropped; and it doesn't strip a `#fragment`, so the fragment reaches the route path.
+- toolchain: `mise run currency` reports a pin as trailing only when a strictly higher plain `vX.Y.Z` exists; a repository with no `vX.Y.Z` tag, or a pin ahead of its highest tag, is unreleased, not trailing; a dependency in any other form is reported as one it can't compare.
+- toolchain: the check's offline installs take this package from a scratch repository of the working tree, tagged v0.1.0 there; the check never tags this repository.
+- toolchain: brotli bytes are measured at quality 11 through bun's `node:zlib`, because mise's registry has no brotli CLI.
+- toolchain: result, evidence 1: the pick is Bun, on footprint (89.0 MB against node and pnpm's 283.3 MB); Node and pnpm's stronger stewardship doesn't overturn it, because the exit to Node stays measured in the check.
+- toolchain: result, evidence 1: esbuild doesn't earn its place in the Node column; tsc emit builds with no order-of-magnitude gap and adds no binary.
+- toolchain: result, evidence 2: the TypeScript form is JSDoc checked by tsc, for the foundation and the components; plain JS remains the fallback for a module with no public contract.
 
 ## Pending edits
 
-- coordinator · `context/html-artifacts.md`, "Experiment: spike-html-conventions": the toolchain hypothesis's split by role (Node + pnpm for packages, Bun for bundling) is ruled out; the pick is Node or Bun, never both.
+- coordinator · `context/html-artifacts.md`, "Experiment: spike-html-conventions": the toolchain hypothesis's split by role (Node + pnpm for packages, Bun for bundling) is ruled out; the pick is Node or Bun, never both. Record the spike's interim results, pending the intake's decision: the toolchain pick is Bun, on footprint; esbuild doesn't earn its place in the Node column; the TypeScript form is JSDoc checked by tsc.
 - coordinator · roadmap, spike-html-packages: weigh registry-based release options (npm registry publish, release-asset tarballs installed by URL, plain URL imports through an import map), this spike's prefixed-tag rows (pnpm installs a subdirectory at a tag with `&path:`, bun can't), and pnpm 12's `blockExoticSubdeps` default.
 - coordinator · roadmap, this spike's `structure` task: its first step runs and records the fixture package's v0.1.0 GitHub and jsDelivr rows.
+- coordinator · roadmap, spike-html-apps: the real router fixes two herald quirks this spike's port kept (a second `?` in the query is dropped; a `#fragment` reaches the route path) and strips the base path only at a segment boundary.

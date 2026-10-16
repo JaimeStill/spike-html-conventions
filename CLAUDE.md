@@ -7,10 +7,15 @@ the layout specs for static pages and applications, with the application SDK's s
 repository is managed with the marathon workflow; start from `context/README.md`.
 
 - **Standards:** `STANDARDS.md`, with pointers into the architecture repository.
-- **Check:** `mise run check`: biome ci and shellcheck. The toolchain task extends it.
+- **Check:** `mise run check`: biome ci, shellcheck, `tsc --noEmit`, the shared suite in
+  `test/` under `node --test` and `bun test`, and the pnpm and bun consumer fixtures installed
+  offline. Run `mise run install` once first.
+- **Tasks:** `mise run install` (Lit, and the managers' caches for the offline installs),
+  `build`, `demo`, `measure` (the evidence's dated figures; reads the network), and `currency`.
+  Each task's description in `mise.toml` says what it does.
 - **Goals:** this spike's tasks live in the coordinator's roadmap,
   `standards-lab/context/roadmap.toml`, under `experiment.html.spike-html-conventions`. Its goal
   record is `context/goals/experiment.html.spike-html-conventions.md`.
-- **Dependencies:** none yet; tools are pinned in mise.
+- **Dependencies:** Lit 3.3.3 is the only package dependency; tools are pinned in `mise.toml`.
 - **References:** the repositories this spike reads are keys in the coordinator's
   `references.toml` and `references.local.toml`. The spike reads them and never writes to them.
