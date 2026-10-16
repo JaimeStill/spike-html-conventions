@@ -100,6 +100,7 @@ Amendment (redirect at BRIEF): npm against pnpm, today.
      disk duplication, speed, monorepo support): measured where the
      measure task can show it (phantom dependency, npm's linked install
      strategy, disk use), sourced otherwise; Results 1 re-weighed.
+     Architect's addition: Bun as a third column for every concern.
 ```
 
 ## Progress
@@ -176,6 +177,7 @@ slices 12/12 committed · standards done (3 passes) · spec done (2 rounds after
 - toolchain: result, evidence 1: the runtime is Node, the industry standard, settled; the manager is pnpm provisionally, on the multi-package practice and the repository-release facts, and npm if spike-html-packages releases the layers through a registry; never Bun beside it. Footprint (Bun 89.0 MB, Node + npm 236.8 MB, Node + pnpm 283.3 MB) and speed (order-of-magnitude gaps only under a second) don't overturn it.
 - toolchain: result, evidence 1: tsc emit builds the foundation and components, and Vite builds apps; `bun build` leaves with Bun.
 - toolchain: result, evidence 2: every layer is written in `.ts` and released through a build that ships `.js` and `.d.ts`; JSDoc lost on readability and maintainability, plain JS on type safety.
+- toolchain: architect: amendment 13 includes Bun as a third column for every concern; its manager results don't reopen the runtime pick.
 
 ## Pending edits
 
