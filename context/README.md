@@ -177,7 +177,58 @@ Conflict of interest: this survey was drafted by an Anthropic model, and Anthrop
   `oxc-project/oxc`; oxlint is at 1.88.0 and oxfmt at 0.73.0, still 0.x ([s65][oxc-npm]). Each npm
   package is a bin script with 19 per-platform binding packages, and each runs as a Node script
   that loads a native addon (`oxlint.linux-x64-gnu.node`, 15.2 MB; `oxfmt.linux-x64-gnu.node`,
-  8.9 MB; *m 2026-10-16T18:23:55Z*, Results). Biome is one native binary.
+  8.9 MB; *m 2026-10-16T19:33:43Z*, Results). Biome is one native binary.
+
+The ESLint plugins the comparison measures, and the one it leaves out (npm, the same week;
+[s67][npm-stylistic], [s68][npm-plugins], and each package's registry document):
+
+| package | latest | npm downloads | accepts ESLint 10 | what it does here |
+| --- | --- | ---: | --- | --- |
+| `@stylistic/eslint-plugin` ([s70][reg-stylistic]) | 5.10.0 | 6.16M | yes, `^9.0.0 \|\| ^10.0.0` | formatting as lint rules, for code |
+| `eslint-plugin-jsonc` ([s71][reg-jsonc]) | 3.4.2 | 1.50M | yes, `>=9.38.0` | lint and formatting rules for JSON |
+| `eslint-plugin-boundaries` ([s72][reg-boundaries]) | 7.2.0 | 1.93M | yes, `>=6.0.0` | the layer direction, by resolved file |
+| `eslint-plugin-import-x` ([s73][reg-importx]) | 4.17.1 | 6.76M | yes, `^8.57.0 \|\| ^9.0.0 \|\| ^10.0.0` | the layer direction (`no-restricted-paths`) and `no-unresolved`, by resolved file |
+| `eslint-plugin-import` ([s74][reg-import]) | 2.32.0 | 62.54M | no: every release's range ends at `^9`; 2.32.0 is from 2025-06-20 | left out |
+| `typescript-eslint` ([s77][reg-tse]) | 8.71.2 | 89.73M | yes, `^8.57.0 \|\| ^9.0.0 \|\| ^10.0.0` | TypeScript parsing and rules, in both ESLint setups |
+
+- ESLint Stylistic began when ESLint and typescript-eslint deprecated their formatting rules
+  "due to the maintenance cost", and it ports and maintains those rules ([s69][stylistic-readme]).
+  ESLint's announcement (2023-10-26, ESLint v8.53.0) recommends a formatter first: "We recommend
+  using a source code formatter instead of ESLint for formatting your code", naming Prettier and
+  dprint. Only "if the idea of using a dedicated source code formatter doesn't appeal to you" does
+  it point to the Stylistic packages ([s66][eslint-dep]).
+- Stylistic's rules fix what each rule sees and have no line-width reflow: `max-len` reports a
+  long line and has no fixer, so a call split across lines stays split and a joined line stays
+  past the width (*m 2026-10-16T19:33:43Z*, Results 6).
+- `eslint-plugin-import-x` is the un-ts organization's fork of `eslint-plugin-import`, which has no
+  release accepting ESLint 10; its `next` dist-tag is `2.0.0-beta.1` ([s74][reg-import]).
+  `eslint-plugin-boundaries` uses import-x's `no-unresolved` beside its own rule here, so both
+  ESLint setups install import-x either way.
+
+Stewardship, read 2026-10-16. Funding is each Open Collective's JSON (`yearlyIncome`, in cents,
+and `backersCount`, at `opencollective.com/<slug>.json`); maintainers are npm's `maintainers` for
+the package, the publishers, and the team page where one exists; organization members are the
+public members of each GitHub organization (`gh api orgs/<org>/members`).
+
+| tool | organization or foundation | maintainers | funding |
+| --- | --- | --- | --- |
+| ESLint | an OpenJS Foundation project, in its At-Large category ([s90][openjs]) | a Technical Steering Committee of 3, 2 reviewers, and 5 committers ([s88][eslint-team]); reviewers and committers may invoice their hours, at $80 and $50 an hour ([s89][eslint-gov]); npm publishers `openjsfoundation` and `eslintbot` ([s75][reg-eslint]) | Open Collective $146,977 a year, 546 backers ([s80][oc-eslint]) |
+| Prettier | none: not in OpenJS's project list ([s90][openjs]); its own GitHub organization, copyright "James Long and contributors" | 11 npm publishers, one a bot (`prettier-bot`) ([s76][reg-prettier]); 27 public organization members | Open Collective $58,056 a year, 351 backers ([s81][oc-prettier]) |
+| ESLint Stylistic | its own GitHub organization, `eslint-stylistic`, begun 2023 ([s69][stylistic-readme]) | 8 public organization members, Anthony Fu among them; its one npm publisher is `eslint-stylistic-bot` ([s70][reg-stylistic]) | Open Collective $1,165 a year, 4 backers ([s82][oc-stylistic]) |
+| typescript-eslint | "an independent open source project. Its members are volunteer open source developers" ([s91][tse-team]) | 4 maintainers and 5 committers ([s91][tse-team]); npm publishers `jameshenry` and `bradzacher` ([s77][reg-tse]) | Open Collective $31,255 a year, 135 backers ([s83][oc-tse]) |
+| eslint-plugin-boundaries | none: a user's repository, `javierbrea/eslint-plugin-boundaries` | one: `javierbrea`, its only npm maintainer ([s72][reg-boundaries]) | GitHub Sponsors, `javierbrea` ([s99][boundaries-funding]); no Open Collective, and no `funding` field |
+| eslint-plugin-import-x | the un-ts GitHub organization, 4 public members | one npm maintainer, `jounqin` ([s73][reg-importx]) | the organization's Open Collective, `unts` ([s100][unts-funding]), $126 a year, 4 backers ([s86][oc-unts]); the collective its package's `funding` names, `eslint-plugin-import-x`, $0, 0 backers ([s87][oc-importx]) |
+| eslint-plugin-jsonc | none: a user's repository, `ota-meshi/eslint-plugin-jsonc` | npm maintainers `ota-meshi` and `jounqin` ([s71][reg-jsonc]) | GitHub Sponsors, `ota-meshi`, its `funding` field ([s71][reg-jsonc]) |
+| Biome | none: its own GitHub organization, the community fork of Rome, announced 2023-08-29 after Rome Tools Inc. laid off its employees; "led and maintained by the same people that maintained Rome so far" ([s93][biome-ann]) | 8 core contributors and 6 maintainers ([s94][biome-people]), under a lead / core contributor / maintainer model ([s92][biome-gov]); 5 npm publishers ([s78][reg-biome]) | Open Collective $30,433 a year, 38 backers ([s84][oc-biome]), and GitHub Sponsors; funds are paid only through Open Collective ([s92][biome-gov]); Depot, its "exclusive platinum sponsor" since 2025-12-01, provides its CI runners ([s95][biome-depot]) |
+| Oxc (oxlint, oxfmt) | VoidZero Inc., which "holds the copyrights, funds the development, and controls the direction" of Oxc ([s96][vz-seed]); VoidZero joined Cloudflare, announced 2026-06-04, with Oxc to "remain open-source and MIT-licensed" and its team leading it ([s98][vz-cf]) | one npm publisher, `boshen` ([s79][reg-oxlint]); 11 public organization members | VoidZero's $4.6M seed (2024-10-01, [s96][vz-seed]) and $12.5M Series A (2025-10-30, [s97][vz-a]), before the Cloudflare acquisition; Open Collective $43,039 a year, 26 backers ([s85][oc-oxc]) |
+
+- Open Collective's figures are what each collective received through it in the last year; they
+  don't count GitHub Sponsors, employers' time, or a sponsor's services, such as Depot's runners
+  for Biome.
+- Three of the ESLint plugins rest on one or two people: boundaries on one maintainer, in a
+  user's repository; import-x on one npm maintainer, in a four-member organization; and jsonc on
+  two npm maintainers, in a user's repository. Of the nine, ESLint and Prettier draw the most
+  through Open Collective; Oxc's backing is a company's venture funding, now Cloudflare's.
 
 ### What the web-component libraries use
 
@@ -316,6 +367,40 @@ SoJS lists neither Web Test Runner nor a 2025 package-manager question.
 [m-shoelace]: https://github.com/shoelace-style/shoelace/blob/25bd8ec77660/package.json
 [lit-eslint]: https://github.com/lit/lit/blob/01dbc6673cdc/packages/labs/eslint-plugin/package.json
 [eslint-gh]: https://registry.npmjs.org/eslint-plugin-github/4.7.0
+[eslint-dep]: https://eslint.org/blog/2023/10/deprecating-formatting-rules/
+[npm-stylistic]: https://api.npmjs.org/downloads/point/2026-10-06:2026-10-12/@stylistic/eslint-plugin
+[npm-plugins]: https://api.npmjs.org/downloads/point/2026-10-06:2026-10-12/eslint-plugin-jsonc,eslint-plugin-boundaries,eslint-plugin-import-x,eslint-plugin-import,typescript-eslint
+[stylistic-readme]: https://github.com/eslint-stylistic/eslint-stylistic/blob/7736997ad57c/README.md
+[reg-stylistic]: https://registry.npmjs.org/@stylistic/eslint-plugin
+[reg-jsonc]: https://registry.npmjs.org/eslint-plugin-jsonc
+[reg-boundaries]: https://registry.npmjs.org/eslint-plugin-boundaries
+[reg-importx]: https://registry.npmjs.org/eslint-plugin-import-x
+[reg-import]: https://registry.npmjs.org/eslint-plugin-import
+[reg-eslint]: https://registry.npmjs.org/eslint
+[reg-prettier]: https://registry.npmjs.org/prettier
+[reg-tse]: https://registry.npmjs.org/typescript-eslint
+[reg-biome]: https://registry.npmjs.org/@biomejs/biome
+[reg-oxlint]: https://registry.npmjs.org/oxlint
+[oc-eslint]: https://opencollective.com/eslint.json
+[oc-prettier]: https://opencollective.com/prettier.json
+[oc-stylistic]: https://opencollective.com/eslint-stylistic.json
+[oc-tse]: https://opencollective.com/typescript-eslint.json
+[oc-biome]: https://opencollective.com/biome.json
+[oc-oxc]: https://opencollective.com/oxc.json
+[oc-unts]: https://opencollective.com/unts.json
+[oc-importx]: https://opencollective.com/eslint-plugin-import-x.json
+[eslint-team]: https://eslint.org/team/
+[eslint-gov]: https://github.com/eslint/eslint/blob/4637f9827a1b/docs/src/contribute/governance.md
+[tse-team]: https://typescript-eslint.io/maintenance/team
+[biome-gov]: https://github.com/biomejs/biome/blob/fd19c59592a5/GOVERNANCE.md
+[biome-ann]: https://biomejs.dev/blog/announcing-biome/
+[biome-people]: https://biomejs.dev/internals/people-and-credits/
+[biome-depot]: https://biomejs.dev/blog/depot-exclusive-sponsor/
+[vz-seed]: https://voidzero.dev/posts/announcing-voidzero-inc
+[vz-a]: https://voidzero.dev/posts/announcing-series-a
+[vz-cf]: https://voidzero.dev/posts/voidzero-cloudflare
+[boundaries-funding]: https://github.com/javierbrea/eslint-plugin-boundaries/blob/50f2d3193ec5/.github/FUNDING.yml
+[unts-funding]: https://github.com/un-ts/.github/blob/aed33c928b71/FUNDING.yml
 
 ## Results
 
@@ -324,11 +409,13 @@ the run of **2026-10-16T14:03:02Z (UTC)** as *(m 2026-10-16)*, unless a citation
 run. That covers the timings and rows, each mise tool's installed size (its Footprint section,
 `mise where` and `du -sb`), and the lines and brotli bytes of `src/` (its Forms section), with
 every tool's version as pinned in `mise.toml`. Results 3 and 6, and the Lint and format survey
-where it cites a run, cite the run of **2026-10-16T18:23:55Z (UTC)** as
-*(m 2026-10-16T18:23:55Z)*, for the layer rules and the lint and format rows; it ran after the
-layer rules gained Results 3's normalization groups. File counts from the offline installs are
-from `mise run check` the same day. Survey figures cite the Ecosystem survey's sources, and other
-facts from outside the spike carry their own source and date.
+where it cites a run, cite the run of **2026-10-16T19:33:43Z (UTC)** as
+*(m 2026-10-16T19:33:43Z)*, for the layer rules and the four setups' lint and format rows; it ran
+after measure gained ESLint Stylistic, the resolved-file direction plugins on trees whose imports
+name real files, the split formatting rows, and the surface rows, and all 104 of its rows passed.
+File counts from the offline installs are from `mise run check` the same day. Survey figures cite
+the Ecosystem survey's sources, and other facts from outside the spike carry their own source and
+date.
 
 Conflict of interest: this evidence was drafted by an Anthropic model, and Anthropic owns Bun.
 The pick rests on the measured rows and the cited facts; weigh it with that in mind.
@@ -634,7 +721,7 @@ as written unless `rewriteRelativeImportExtensions` rewrites `./x.ts` to `./x.js
 
 The JSDoc and plain JS forms stay in `src/` as this comparison's evidence, not as conventions.
 
-### 3. Layout and direction: `layers/`, enforced by Biome
+### 3. Layout and direction: `layers/`, enforced by resolved file, provisionally
 
 **The layout.** The layers are directories in one package, in `layers/`, beside `src/`, whose
 per-form tree stays frozen as Results 2's evidence. `layers/` isn't in package.json's `exports`.
@@ -664,76 +751,92 @@ name, bare or with a subpath:
 STANDARDS.md holds the calls the check can't make: what belongs in each layer, and promoting an
 app's element once a second app needs it.
 
-**The mechanism.** The check runs Biome's `noRestrictedImports` ([rule][biome-nri]) at error
-level, with one `biome.json` override per layer directory. The foundation, components, and SDK refuse a layer by
-its directory name, at any depth, and the foundation refuses every bare specifier. An app can't
-refuse a sibling by name, since a sibling is `../<name>`, so each app override refuses every
-specifier that climbs out of the app and re-allows the permitted layers named from `layers/`.
-That takes one override per file depth, 0 to 3 directories into an app; the deepest also covers
-everything below it and fails closed. Biome's `../**` doesn't match a bare `..`, which resolves
-to the parent directory's index, so each app override also names the bare form of its climb,
-`..` and `../` in a file at the app's root, `../..` and `../../` one directory down, and so on. A
-bare climb from an app, or from a components or SDK file, lands on a file directly in `layers/`,
-`layers/apps/`, or a branch directory, which belongs to no layer: one more override covers those
-and refuses every relative and absolute specifier and the package's own name there, so such a
-file fails closed and can re-export no layer.
+**The mechanism, provisional with Results 6's pick.** Once the check moves to ESLint (this task's
+next slice), it enforces the direction with eslint-plugin-boundaries 7.2.0's `dependencies` rule
+([s72][reg-boundaries]) at error level, with eslint-plugin-import-x's `no-unresolved` beside it,
+in `eslint.config.js`. eslint-import-resolver-typescript resolves each specifier to the file it
+names, a `.js` specifier to its `.ts` source, and the rule judges the layer that file is in, never
+the specifier's text. The layer table is the configuration:
 
-A re-allowed prefix would let a path climb back out of it, `../../../foundation/../sdk/session.js`
-from the static app, so every override, in every layer, also holds the normalization convention:
-a relative specifier starts with `./` or with its run of `../`, and no later segment is `.`,
-`..`, or empty. Biome 2.5.15's globs have no character classes but do take brace alternation
-(`{a,b}`), so the group names a segment that isn't `.` or `..` by its first characters: an
-enumerated ASCII character (`a`–`z`, `A`–`Z`, `0`–`9`, `_ - @ $ ~ +`), `.` followed by one, or
-`..` followed by one or by `.`. Each such segment followed by `..`, as the last segment or before
-more, is refused, as are `./` followed by `..`, a `.` segment after the leading run, last or not,
-an empty segment, and any segment holding `%`, since the URL parser reads `%2e%2e` as `..`. The
-foundation, which refuses every specifier but its own relative paths, re-allows its own index,
-`.` and `..` bare, beside `./**` and `../**`, which don't match them. A second group refuses an
-absolute specifier, `/layers/sdk/session.js`, which resolves against the origin and so escapes
-every layer rule. Normalized names that hold dots stay allowed: `./..x/y.js`,
-`./.well-known/a.js`, `x..y`, `...`.
+- Each layer is an element, matched by its directory from the repository root, with a second
+  pattern for files under a directory whose name starts with a dot (`./.well-known/`, `./..x/`),
+  which a glob's `**` never enters, so those files stay in their layer.
+- Each app captures its directory's name, and its policy allows its own captured directory, so an
+  app may import itself and not a sibling, with one policy per branch.
+- A file directly in `layers/`, `layers/apps/`, or a branch directory is an element with no
+  policy, so it can import nothing and re-export no layer.
+- The rule's default is disallow, and it checks every origin: an import passes only when a policy
+  names its target, a layer's element or the external `lit`. A specifier that resolves to no file
+  fails `no-unresolved`, so an import can't pass by naming nothing.
 
-In the check, `test/layers.test.js` runs the pinned Biome over two scratch trees built from
-`test/layers-tree.js`. The violation tree holds 62 files with one import each: 6 in the
-foundation, 8 in components, 5 in the SDK, 23 in the static app, 17 in the application app, and 3
-outside any layer or app, in `layers/` and in each branch directory. They cover every forbidden
-edge, the four import forms (`import`, `export … from`, `import type`, and `import()`), the
-package's own name, an absolute path, fifteen paths that aren't normalized, and three bare
-climbs. The non-normalized paths are:
+There is no override per file depth, and no convention on how a relative specifier is written:
+`./x/../../foundation/dom.js` from a component is the foundation's `dom.ts`, which a component
+may import, however the path climbs. That retires the normalization convention Biome's text rules
+needed (below), a point the architect accepted in the plan's fourth round.
 
-- in each app branch, `./../`, a descend-then-climb path, and a layer-name-then-`..` path, with a
-  second layer name in the static app;
-- a `.`, an empty, a `...`, and a `%2e%2e` segment;
-- the trailing `./..`, `../../../foundation/..`, and `./views/..`;
-- one in components.
+In the check, `test/layers.test.js` runs the pinned ESLint over two scratch trees built from
+`test/layers-tree.js`, whose imports name real files, so a resolved-file rule is tested fairly,
+and it passes only on an exact match of the files flagged to the violation files, so a rule that
+refuses everything or nothing fails it. The violation tree holds 62 files with one import each: 6
+in the foundation, 8 in components, 5 in the SDK, 23 in the static app, 17 in the application
+app, and 3 outside any layer or app, in `layers/` and in each branch directory. They cover every
+forbidden edge, the four import forms (`import`, `export … from`, `import type`, and `import()`),
+the package's own name, an absolute path, fifteen paths that aren't normalized, and three bare
+climbs (`..` from the static app, `../` and `../..` from the application app). The allowed tree
+holds 14 files of permitted imports in the same forms, with names that hold dots (`./..x/y.js`,
+`./.well-known/a.js`, `x..y`, `...`) and a nested foundation index importing `..` and `./`.
 
-The bare climbs are `..` from the static app, and `../` and `../..` from the application app.
-Each non-normalized path, each bare climb, and the three files outside a layer passed
-`biome.json` before these rules. The allowed tree holds 14 files of permitted imports in the
-same forms, with the dotted names above and a nested foundation index importing `..` and `./`.
-The test passes only when the rule flags exactly the 62 and none of the 14, so a rule that
-refuses everything or nothing fails it. Measured: 62 of 62 and 0 of 14
-*(m 2026-10-16T18:23:55Z)*.
+Measured *(m 2026-10-16T19:33:43Z)*: the plugin flags 60 of the 62 violation files, all by
+`boundaries/dependencies`, and 0 of the 14 allowed files. Its two misses are
+`layers/components/unnormalized.ts` (`./x/../../foundation/dom.js`) and
+`layers/apps/application/documents/name-parent.ts` (`./views/..`, the app's own index). Each
+specifier is non-normalized, and each resolves to a file its layer may import, so each breaks
+only `biome.json`'s normalization convention, not the layer direction. They were violations of
+the text rule, not of the table, and with the convention gone they are no crossing at all. All
+five `import()` edges are flagged.
 
-**What it can't see.** The rule matches the import's text, never the resolved file, so a
-symlink or a server mapping the text doesn't show is outside it. The app overrides go one per
-file depth, and a file more than three directories into an app fails closed, its outward imports
-refused, permitted ones included. And the normalization groups know a name segment only by its
-first characters, so a segment that starts with a non-ASCII character, followed by `..`, isn't
-refused: `../../../foundation/é/../../sdk/session.js` from the static app passes (reproduced
-2026-10-16 against this `biome.json`; the `%` patterns refuse `%7Ex/..` and `%2e%2e`).
+**What it can't see.** The rule judges the file the TypeScript resolver finds, so a mapping the
+resolver doesn't read, such as an import map or a server rewrite at run time, is outside it, as
+it is outside any lint rule. A package import resolves into `node_modules`, so the only package a
+layer may name is the one a policy names, `lit`.
 
-The groups add about 30 ms to every Biome run, format included, so the cost lies in loading the
-configuration, not in linting: over the 21-file tree `biome lint` took 62.5 ms with them
-against 32.3 ms without, and `biome format` 59.1 ms against 28.8 ms (hyperfine, 30 runs,
-2026-10-16). Results 6's timings include them.
+**Superseded: Biome's `noRestrictedImports`, by text.** Until the check moves, it runs Biome's
+`noRestrictedImports` ([rule][biome-nri]), one `biome.json` override per layer directory, and it
+flags 62 of 62 and 0 of 14 *(m 2026-10-16T19:33:43Z)*. The rule matches the import's text, never
+the resolved file, which takes:
+
+- one override per file depth, 0 to 3 directories into an app, the deepest failing closed, since
+  an app can refuse a sibling only by refusing every climb out of itself and re-allowing the
+  permitted layers by name;
+- the bare forms of each climb (`..`, `../`) named beside `../**`, which doesn't match them, and
+  one more override for the files outside any layer;
+- the normalization convention, since a re-allowed prefix lets a path climb back out of it
+  (`../../../foundation/../sdk/session.js` from the static app): a relative specifier starts with
+  `./` or its run of `../`, and no later segment is `.`, `..`, or empty, enforced by groups that
+  know a name segment only by its first characters, enumerated in ASCII. A segment that starts
+  with a non-ASCII character, followed by `..`, isn't refused:
+  `../../../foundation/é/../../sdk/session.js` from the static app passes (reproduced 2026-10-16
+  against this `biome.json`).
+
+The groups add about 30 ms to every Biome run, format included, since the cost lies in loading
+the configuration: over the 21-file tree `biome lint` took 62.5 ms with them against 32.3 ms
+without, and `biome format` 59.1 ms against 28.8 ms (hyperfine, 30 runs, 2026-10-16). If Results
+6's pick returns to Biome, this mechanism is the one that stays.
 
 **Rejected:**
 
-- **dependency-cruiser** ([repo][depcruise]): it checks the resolved module graph, so it would
-  close the remaining text-against-file gap above, which text matching can't. It is an extra pin,
-  a Node package beside the linter the check already runs, for one rule the linter covers on
-  every specifier the normalization convention admits.
+- **eslint-plugin-import-x's `no-restricted-paths`** ([s73][reg-importx]), the other resolved-file
+  rule measured: it misses the same two non-normalized files, flags 60 of 62 (52 by its own rule,
+  8 by `no-unresolved` alone), and flags 2 of the 14 allowed files, `layers/components/dotted.ts`
+  and `layers/apps/static/site/dotted.ts` *(m 2026-10-16T19:33:43Z)*. It reads an import as
+  outside a zone's directory when its path relative to that directory starts with `..`, so a
+  directory inside the layer named `..x` or `...` is outside it: a false positive on a legal name,
+  which an exact-match test can't accept. Its zones also take no captures, so the configuration
+  lists each app's directory when it loads, one zone each. Its `no-unresolved` stays, beside
+  boundaries' rule.
+- **dependency-cruiser** ([repo][depcruise]): it checks the resolved module graph, as the plugin
+  does, but as a separate tool and pin beside the linter, where the plugin runs inside the linter
+  the check already runs.
 - **tsc project references** ([handbook][ts-refs]): one project per layer, each referencing only
   what it may import. `tsc -b` writes output even when the build fails, and the check writes
   nothing. Reproduced with tsc 7.0.2, 2026-10-16: two projects, the second with a type error,
@@ -744,18 +847,18 @@ against 32.3 ms without, and `biome format` 59.1 ms against 28.8 ms (hyperfine, 
   expression, so it flags 57 of the 62 violation files, missing the five dynamic edges, and it
   needs `biome.json`'s groups translated to regular expressions: ESLint reads a group as
   gitignore lines, where a `!` line can't re-include a `./` or `../` path, so the groups copied
-  as written also flag all 14 allowed files *(m 2026-10-16T18:23:55Z)*. Results 6 weighs it
-  as a setup.
+  as written also flag all 14 allowed files *(m 2026-10-16T19:33:43Z)*.
 
 **Handed on.**
 
 - To spike-html-packages: the package-boundary facts. pnpm refuses an import of an undeclared
-  package, a phantom dependency, by default (Results 1, amendment 13), and Biome's
-  `noUndeclaredDependencies` ([rule][biome-nud]) refuses one in the lint. So if the layers become
+  package, a phantom dependency, by default (Results 1, amendment 13), and a lint rule can refuse
+  one too, import-x's `no-extraneous-dependencies` ([rule][ix-ned]) or Biome's
+  `noUndeclaredDependencies` ([rule][biome-nud]), neither measured. So if the layers become
   packages, each package's declared dependencies enforce the direction between them, by resolved
-  file rather than by text; whether they do is spike-html-packages' call. So is the import
-  extension the releases use: the occupants import `.js` paths, which bundler resolution maps to
-  `.ts` with no compiler option.
+  file at install as well as in the lint; whether they do is spike-html-packages' call. So is
+  the import extension the releases use: the occupants import `.js` paths, which bundler
+  resolution maps to `.ts` with no compiler option.
 - To components or spike-html-apps: herald's elements import domain code. Four files in
   `app/client/ui/elements` import from `@domains` ([herald][herald-elements], 6fc22b3, read
   2026-10-16): `classify-progress.ts` the `WORKFLOW_STAGES` constant and the `WorkflowStage`
@@ -766,93 +869,146 @@ against 32.3 ms without, and `biome format` 59.1 ms against 28.8 ms (hyperfine, 
 - To branches: the app-internal tiers (modules and views), and whether static pages use Lit.
   STANDARDS.md records the second as undecided.
 
-### 6. Lint and format: Biome
+### 6. Lint and format: ESLint + Prettier, provisionally
 
-Measure runs three setups over one copy of `src/`, `layers/`, and `test/` (21 files): Biome,
-the check's tool, and two whose tools come from mise pins only the measure task uses
-*(m 2026-10-16T18:23:55Z)*:
+Measure runs four setups over one copy of `src/`, `layers/`, and `test/` (21 files), and over the
+repository's 11 tracked JSON files, with tools from mise pins the measure task uses and ESLint's
+packages installed into scratch *(m 2026-10-16T19:33:43Z)*. Both ESLint setups run
+typescript-eslint's and `@eslint/js`'s recommended rules, with the layer table in
+eslint-plugin-boundaries. "Restores" formats a scratch copy whose line breaks and indentation are
+disturbed (125 lines split, 13 joined, 7 joined past the 100-column width for the code; 23 split,
+21 joined, 142 closed, and 66 past the width for the JSON) and compares the result with the
+original, byte for byte.
 
-| fact | A: Biome 2.5.15 | B: ESLint 10.13.0 + Prettier 3.9.10 | C: oxlint 1.88.0 + oxfmt 0.73.0 |
-| --- | --- | --- | --- |
-| runs as | one native binary | Node scripts; ESLint also needs typescript-eslint 8.71.2, @eslint/js 10.0.1, globals 17.13.0, and typescript 6.0.3 installed beside it | Node scripts, each loading a native addon |
-| footprint | 66.7 MB, no runtime | 51.8 MB (ESLint 11.2 MB, Prettier 10.0 MB, the four packages and their dependencies, 30 in all, 30.6 MB), plus node | 35.6 MB, plus node |
-| reproduces the tree's formatting, byte for byte | yes, from `biome.json`'s three options | yes, with 15 options set, `embeddedLanguageFormatting` off among them | yes, with Prettier's options |
-| Lit's templates, at the default | left as written | reformatted in the three `pagination-lit` files | the same as Prettier |
-| file types its default run touches, of the repository's 54 tracked files in 9 types | js, json, ts | js, json, md, ts, yaml | js, json, md, toml, ts |
-| limited to code | `files.includes` | a `.prettierignore` | the same `.prettierignore` |
-| what its default run rewrites, beside code | nothing | `context/README.md`, 144 of 980 lines; `pnpm-lock.yaml`, 23 of 59 lines into 38 | `context/README.md`, 143 of 980 lines; `package.json`, one key moved |
-| direction rule, violation tree | 62 of 62 | 57 of 62: no `import()` | 62 of 62, merged; 54 of 62 with the groups as written |
-| direction rule, allowed tree | 0 of 14 | 0 of 14, as regular expressions; 14 of 14 with the groups as written | 0 of 14 |
-| the groups from `biome.json` | as written | translated to regular expressions | merged into one group per override: a `!` pattern matching in one group re-allows what another refuses, and a lookaround regex flags nothing |
-| lint + format, hyperfine mean | 121.3 ms | 863.9 ms | 94.2 ms |
+| fact | A: Biome 2.5.15 | B: ESLint 10.13.0 + Prettier 3.9.10 | C: oxlint 1.88.0 + oxfmt 0.73.0 | D: ESLint 10.13.0 + Stylistic 5.10.0 + jsonc 3.4.2 |
+| --- | --- | --- | --- | --- |
+| binaries on PATH | biome | eslint, prettier, node | oxlint, oxfmt, node | eslint, node |
+| config files | 1: `biome.json` | 3: `eslint.config.js`, `.prettierrc.json`, `.prettierignore` | 3: `.oxlintrc.json`, `.oxfmtrc.json`, `.prettierignore` | 1: `eslint.config.js` |
+| packages to keep current | 1 | 9: 2 mise pins, 7 packages | 2 | 10: 1 mise pin, 9 packages |
+| packages installed under them | 0, one native binary | 140 | 5 | 150 |
+| footprint | 66.7 MB, no runtime | 65.0 MB, plus node | 35.6 MB, plus node | 58.6 MB, plus node |
+| matches the tree's formatting with | `biome.json`'s 3 options | 15 options, `embeddedLanguageFormatting` off among them | Prettier's 15 | Stylistic's `customize` with 9 options, plus the rules Biome's output needs |
+| Lit's templates, at the formatter's default | left as written | reformatted in the three `pagination-lit` files | the same as Prettier | not measured |
+| code, leaves unchanged (21 files) | yes | yes | yes | yes |
+| code, restores (21 files) | yes | yes | yes | no: 19 of 21 differ |
+| JSON, leaves unchanged (11 files) | yes | yes | no: `package.json` differs, one key moved | yes |
+| JSON, restores (11 files) | yes | yes | no: `package.json` differs | no: 8 of 11 differ |
+| file types its default run touches, of the 54 tracked files in 9 types | js, json, ts | js, json, md, ts, yaml | js, json, md, toml, ts | js, json, ts |
+| what its default run rewrites beside code and JSON | nothing | `context/README.md`, 144 of 1,001 lines; `pnpm-lock.yaml`, 23 of 59 lines into 38 | `context/README.md`, 143 of 1,001 lines | nothing |
+| limited to code and JSON by | `files.includes` | a `.prettierignore` | the same `.prettierignore` | its config's own `files` globs |
+| direction, violation tree (62) | 62, by text | 60, by resolved file (boundaries); 57 with core's `no-restricted-imports`, no `import()` | 62, by text, groups merged | B's: 60 |
+| direction, allowed tree (14) | 0 | 0 (boundaries) | 0 | B's: 0 |
+| lint + format, hyperfine mean | 122.9 ms | 927.5 ms | 88.8 ms | 836.7 ms |
 
-Prettier rewrites the README by padding every table's cells to the column's width, rewriting
-`*emphasis*` as `_emphasis_`, and adding a blank line before a table in a list; oxfmt does about
-the same, and moves package.json's `"type"` key (reproduced 2026-10-16 on copies).
+The direction rows are Results 3's. Of the two violation files boundaries doesn't flag, each
+imports a file its layer may import through a non-normalized path, so each breaks only
+`biome.json`'s normalization convention, which a resolved-file rule makes moot.
+eslint-plugin-import-x's `no-restricted-paths` flags the same 60 and 2 of the allowed files, a
+false positive on directory names that start with dots (Results 3).
 
-**First: industry standard and maintainability.** ESLint + Prettier is the industry standard,
-clearly: 9,697 and 9,295 SoJS 2025 respondents against Biome's 1,762 and oxlint's 123 write-ins
-([s1][sj25-other]); 158.7M and 139.1M npm downloads against Biome's 17.9M and oxlint's and oxfmt's
-26.8M and 17.1M ([s57][npm-lint], [s58][npm-biome]); and ESLint in 10 and Prettier in 11 of the
-13 web-component libraries, where Biome is in one (FAST) and Oxc in none (Ecosystem survey, Lint
-and format). Oxc's tools lead Biome on npm downloads but have neither the survey's respondents
-(123 write-ins) nor any of the 13 libraries, and oxfmt is still 0.x. Against the standard, B's
-measured gaps:
+**The order.** As in Results 1: first, industry standard and maintainability, where
+maintainability holds stewardship and surface (binaries, config files, and packages to keep
+current), configurability, the formatting rows for code and JSON, content scope, and direction
+coverage; second, footprint; third, speed, only on an order-of-magnitude gap.
 
-- **Direction.** ESLint's rule can't enforce the layer direction on `import()`, the form an app
-  uses to load a view lazily: 5 of the 62 violation files have no expression in it at all. The
-  evidence 3 check needs every edge, and Biome and oxlint flag all 62. Closing it in ESLint takes
-  another plugin, a fifth package, which wasn't measured. Its working config is also a regex
-  translation of glob groups, where Biome reads the groups as written; oxlint reads them too, but
-  only with each override's groups merged into one.
-- **What it adds to the check.** Two tools on Node, plus four packages installed for ESLint,
-  where the check today runs one binary with no package install; six versions to keep current
-  against one.
-- **Configurability.** The architect's view is that Prettier is inflexible. On this tree it
-  matched every option: with 15 set it reproduces all 21 files byte for byte, as oxfmt does. So
-  the configurability concern didn't hold here. Both need `embeddedLanguageFormatting` off,
-  though, or they reformat Lit's templates, which Biome leaves alone by default.
-- **Content scope.** The architect's view is that Prettier is heavy-handed on content, Markdown
-  included, and that held. By default Prettier formats Markdown and YAML, rewrites 144 of the
-  README's 980 lines (the README as it stood at that run) and the pnpm lockfile, and oxfmt does
-  about the same and reorders package.json. Biome's default touches only js, json, and ts. Each
-  can be limited to code, Biome by `files.includes` and the other two by a `.prettierignore`, so
-  the cost is a default to undo, not a limit.
+**Prettier against ESLint Stylistic**, in the same order. Stylistic leaves the formatted tree as
+it is, code and JSON, but it can't restore one: from the disturbed copy, 19 of the 21 code files
+and 8 of the 11 JSON files come out different. It fixes what each rule sees and has no line-width
+reflow, and `max-len` reports a long line without a fixer, so a split call stays split and a
+joined line stays past the width *(m 2026-10-16T19:33:43Z)*. So Stylistic is a checker of a
+format, not a formatter: it keeps a tree as it is and can't bring one back. ESLint's own
+deprecation post recommends a formatter first, Prettier or dprint, and Stylistic only for those
+who don't want one ([s66][eslint-dep]). Stylistic's stewardship is thin, 8 organization members
+and $1,165 a year from 4 backers against Prettier's $58,056 from 351, and its leads over B, one
+config file and a default limited to code and JSON, don't make up for a formatter that can't
+restore a tree. Prettier wins it on the first criterion, and D drops out.
 
-The standard is B's; maintainability is A's, and the gap that decides it isn't taste: ESLint can't
-express the check this task adds. A tool that leaves the lazy `import()` edges unenforced doesn't
-carry the standard's weight for this check, so the first criterion picks Biome, against the
-standard by use, as Results 1 picked pnpm against npm's. oxlint matches Biome on direction once
-its groups are merged, but it is not the standard either, and it brings Node, an addon, and a 0.x
-formatter that reorders package.json.
+**First: industry standard and maintainability.**
 
-**Second: footprint.** Node is already the toolchain's runtime (Results 1), so the setups add
-their own installs: B 51.8 MB and C 35.6 MB against Biome's 66.7 MB *(m 2026-10-16T18:23:55Z)*.
-Biome is the largest by 14.9 MB over B and 31.1 MB over C, 1.3 and 1.9 times the size, not an
-order of magnitude, so it doesn't overturn the first. B's 30.6 MB of packages is also an install
-the check doesn't have today.
+- **The standard.** ESLint + Prettier, by a wide margin: 9,697 and 9,295 SoJS 2025 respondents
+  against Biome's 1,762 and oxlint's 123 write-ins ([s1][sj25-other]); 158.7M and 139.1M weekly
+  npm downloads against Biome's 17.9M and oxlint's and oxfmt's 26.8M and 17.1M ([s57][npm-lint],
+  [s58][npm-biome]); and ESLint in 10 and Prettier in 11 of the 13 web-component libraries, where
+  Biome is in one (FAST) and Oxc in none. The direction plugin is a smaller standard:
+  eslint-plugin-boundaries draws 1.93M a week ([s68][npm-plugins]).
+- **Stewardship** (Ecosystem survey, Lint and format). ESLint is the only tool here under a
+  foundation, an OpenJS project with a three-member Technical Steering Committee, paid hourly
+  reviewers and committers, and $146,977 a year from 546 backers. Prettier has no foundation
+  but 10 npm publishers beside a bot, and $58,056 a year from 351. Biome is a community fork of
+  Rome, 8 core contributors and 6 maintainers, with $30,433 a year from 38 backers and Depot's CI
+  runners. Oxc is VoidZero's, venture-funded and now Cloudflare's. B's two tools are better
+  stewarded than Biome by every figure. B's plugins aren't: typescript-eslint is volunteer-run at about Biome's
+  funding ($31,255 a year), and the direction rule rests on eslint-plugin-boundaries, one
+  maintainer's repository funded by GitHub Sponsors. The difference is what a failure costs. A
+  plugin is one config block: if boundaries stalls, import-x is the measured fallback, with its
+  false positive to fix, and core's rule still catches 57 of 62. Biome is one project for lint,
+  format, and direction, so if it stalls, all three are replaced at once.
+- **Surface.** Biome's, clearly: one binary, one config file, and one pin with nothing beneath
+  it, against B's three binaries, three config files, and 9 packages to keep current with 140
+  installed under them. That is B's real cost: more pins for currency to track, more upgrades
+  that can break the check, and a lockfile. The architect's case for Biome, "its simplicity and
+  minimal surface friction", is this row, and it holds.
+- **Configurability.** A tie. Prettier matched every option on this tree, 15 set, as Biome did
+  with 3; both need Lit's templates left alone, which Biome does by default and Prettier with
+  `embeddedLanguageFormatting` off.
+- **Formatting.** A tie: A and B leave and restore all 21 code files and all 11 JSON files. C
+  moves a key in `package.json`, and D can't restore.
+- **Content scope.** Biome's by default: it touches only js, json, and ts, where Prettier also
+  formats Markdown and YAML, and rewrites 144 of this README's 1,001 lines and the pnpm
+  lockfile. A `.prettierignore` of five lines limits it to code and JSON, so the cost is a default
+  to undo, not a limit.
+- **Direction.** B's now. The gap that decided the superseded pick, ESLint's rule never
+  checking `import()`, is closed: boundaries flags all five dynamic edges. It judges the resolved
+  file, so the layer table is its whole configuration: no override per file depth, no
+  normalization convention, and none of the convention's gaps (a non-ASCII segment followed by
+  `..`) or its 30 ms a run. Biome flags 62 of 62, but by text, with the limits Results 3 records.
+  Its two extra files break the convention, not the direction.
 
-**Third: speed**, only on an order-of-magnitude gap. Lint and format together take 94.2 ms under
-oxlint + oxfmt, 121.3 ms under Biome, and 863.9 ms under ESLint + Prettier
-*(m 2026-10-16T18:23:55Z)*: ESLint + Prettier is 7.1 times slower, under an order of magnitude,
-and ESLint alone 10.1 times (614.3 ms against 60.9 ms), but all of it is under a second at this
-size. oxlint + oxfmt is 1.3 times faster than Biome, whose every run carries the normalization
-groups' cost (Results 3). Speed doesn't decide it.
+Weighed together, the standard, the stewardship of the tools, and the direction mechanism are
+B's; surface and content scope are Biome's; configurability and formatting are even. Biome's
+lead is real and it is one row: one binary and one config against nine pins. It doesn't outweigh
+the standard by use, the better-stewarded tools, and a direction rule that judges the file
+rather than the text, now that B can enforce every edge. The first criterion picks ESLint +
+Prettier. oxlint + oxfmt is neither the standard nor, at 0.x, a formatter that leaves the JSON
+as it is, and its direction is by text, as Biome's is.
 
-**The pick: Biome stays in the check**, for lint, format, and the layer direction, with
-`biome.json` as it is. ESLint + Prettier is the clear standard, and the evidence weighs against it
-on maintainability: it can't enforce the direction on `import()`, it needs Node and four packages
-in the check, and its formatter rewrites Markdown and the lockfile unless limited. Its
-configurability matched Biome's on this tree. Footprint favours the other two, C by 1.9 times,
-short of an order of magnitude, and speed doesn't decide it: ESLint + Prettier is 7.1 times
-slower, under an order of magnitude and under a second, and oxlint + oxfmt is 1.3 times faster
-than Biome, a gap of 27 ms.
+**Second: footprint.** Node is already the toolchain's runtime (Results 1), so each setup adds
+its own installs: A 66.7 MB, B 65.0 MB, C 35.6 MB, D 58.6 MB *(m 2026-10-16T19:33:43Z)*. B and
+Biome are within 1.7 MB of each other; C is about half either, 1.8 times smaller than B, not an
+order of magnitude. It doesn't overturn the first.
 
-**What would reverse it.** Toward ESLint + Prettier: ESLint's rule checking `import()`, or a
-measured plugin closing the gap at one more pin; or spike-html-packages making the layers
-packages, where declared dependencies enforce the direction (Results 3) and the lint rule's gap
-stops deciding, leaving the standard. Toward oxlint + oxfmt: oxfmt reaching 1.0 and the libraries
-or SoJS taking up Oxc's tools.
+**Third: speed**, only on an order-of-magnitude gap. Lint and format together take 927.5 ms under
+ESLint + Prettier against 122.9 ms under Biome *(m 2026-10-16T19:33:43Z)*: 7.5 times slower,
+under an order of magnitude. ESLint alone, with the resolver behind boundaries, is 10.9 times
+`biome lint` (668.0 ms against 61.4 ms), at the order of magnitude, and under a second at this
+size, in a check that runs once, not in an edit loop. oxlint + oxfmt, at 88.8 ms, is 1.4 times
+faster than Biome. Lint at application scale isn't measured here; the branches task's tree is the
+first that could show a wait. Speed doesn't decide it.
+
+**The pick: ESLint + Prettier, with eslint-plugin-boundaries for the direction, provisionally**,
+as Results 1 picks pnpm. The industry standard and maintainability decide it: the standard by a
+wide margin, the better-stewarded tools, and a direction rule by resolved file, against Biome's
+smaller surface, which is the cost B carries: 9 pins and 140 installed packages. Footprint is
+even, and the speed gap, 7.5 times, is under an order of magnitude and under a second. ESLint
+Stylistic loses to Prettier on the first criterion, since it can't restore a tree. The check moves
+to this setup in this task's next slice; until then it runs Biome, and Biome's earlier pick is
+superseded.
+
+**What would reverse it.** Toward Biome: a Biome rule that restricts imports by resolved file
+(Biome 2 has a module graph, but no such rule); eslint-plugin-boundaries going unmaintained with
+import-x's false positive unfixed, leaving B no direction rule that passes the trees; the
+standard moving, the libraries or SoJS taking up Biome; or the surface cost showing in practice,
+upgrades to the nine pins breaking the check more often than the direction rule is worth. Toward
+oxlint + oxfmt: oxfmt reaching 1.0 and leaving the JSON as it is, a resolved-file direction rule,
+and the libraries or SoJS taking up Oxc. Toward ESLint Stylistic: a reflow, so that it restores
+both trees.
+
+**What reopens it.** spike-html-packages making the layers packages: pnpm then refuses an import
+of an undeclared package (Results 1), so the declared dependencies enforce the direction between
+packages by resolved file at install, the plugin's role shrinks to the files inside a package, and
+direction weighs less for B. That leaves the standard and the stewardship against Biome's
+surface, weighed again with that decision. A change in ESLint's foundation or funding, or in
+Prettier's, reopens it too.
 
 ### 7. Consumption
 
@@ -952,6 +1108,7 @@ or SoJS taking up Oxc's tools.
 [pnpm-install]: https://pnpm.io/installation
 [biome-nri]: https://biomejs.dev/linter/rules/no-restricted-imports/
 [biome-nud]: https://biomejs.dev/linter/rules/no-undeclared-dependencies/
+[ix-ned]: https://github.com/un-ts/eslint-plugin-import-x/blob/aa1071d6eff5/docs/rules/no-extraneous-dependencies.md
 [depcruise]: https://github.com/sverweij/dependency-cruiser
 [ts-refs]: https://www.typescriptlang.org/docs/handbook/project-references.html
 [eslint-nri]: https://eslint.org/docs/latest/rules/no-restricted-imports
