@@ -361,9 +361,10 @@ ships JS, so bun's `.ts` support under node_modules buys a consumer nothing. The
   anyway: its warning says the opposite of what it does, a cost to anyone auditing a git
   dependency. pnpm refuses until the script is allowed, bun skips it and says so; pnpm's
   `allowBuilds` takes the resolved spec with its commit, not the bare name. Whether the layers use
-  prefixed tags or git-tag dependencies is spike-html-packages' to settle; with npm hosting ruled
-  out unless no workable alternative exists, a release from the repository is the likely path, so
-  these facts weigh on the pick, and "What would reverse it" says what changes it.
+  prefixed tags or git-tag dependencies is spike-html-packages' to settle. Ruling out npm's registry
+  doesn't settle it: GitHub Packages, JSR, Verdaccio, and release-asset tarballs remain (Ecosystem
+  survey, Release hosting). These facts weigh on the pick only if the layers release from their
+  repositories.
 
 The first criterion picks Node, clearly: the consensus runtime, both standard builds, and the
 stronger stewardship. Between its managers it still picks pnpm, more narrowly than before npm's
@@ -372,10 +373,11 @@ libraries' majority) and the stronger stewardship. pnpm has the multi-package pr
 is, and the repository-release facts: it is the only manager measured that installs a
 subdirectory at a prefixed tag; of the two that guard git dependencies, it takes a consumer's own
 without a setting; and it never runs a git dependency's `prepare` while saying it didn't. Those
-facts decide it because hosting rules npm out unless no workable alternative exists, which leaves
-the layers released from repositories, the path where npm is weakest. If spike-html-packages
-releases through a registry instead, npm's standard and stewardship would carry the first
-criterion, and the pick would change to npm.
+facts decide it only if spike-html-packages releases the layers from their repositories, the path
+where npm is weakest. If it releases through a registry (GitHub Packages, JSR, or a self-hosted
+one), npm's standard and stewardship carry the first criterion, and the pick changes to npm. The
+runtime is settled here; the manager is pnpm provisionally, until spike-html-packages decides how
+the layers release.
 
 **Second: footprint.** Bun is smallest: 89.0 MB for one binary, against Node + npm's 236.8 MB
 (271.1 MB with Vite for an app) and Node + pnpm's 283.3 MB (317.6 MB with Vite)
