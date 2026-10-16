@@ -28,9 +28,9 @@ The architecture pages that apply, in the architecture repository:
 
 ## Code
 
-- Every layer is written in `.ts`, erasable syntax only, and released through a build that ships
-  `.js` and `.d.ts`; a release never asks a consumer to load `.ts`. The JSDoc and plain JS forms in
-  `src/` are the comparison's evidence only, never the convention for new code.
+- Every layer is written in `.ts` and released through a build that ships `.js` and `.d.ts`; a
+  release never asks a consumer to load `.ts`. The JSDoc and plain JS forms in `src/` are the
+  comparison's evidence only, never the convention for new code.
 - Lit elements declare reactive properties with `static properties`, never decorators.
 - In the JSDoc form, an object typedef with quoted keys stays on one line: over several lines,
   tsc 7.0.2's declaration emit copies each line's leading `*` into the `.d.ts`, which then fails
