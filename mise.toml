@@ -10,6 +10,11 @@ shellcheck = "0.11.0"
 "npm:esbuild" = "0.28.2"
 # Vite through mise's npm: backend; its vite runs on the pinned node.
 "npm:vite" = "8.3.4"
+# The lint and format comparison's tools, for the measure task only; the check runs Biome alone.
+"npm:eslint" = "10.13.0"
+"npm:prettier" = "3.9.10"
+"npm:oxlint" = "1.88.0"
+"npm:oxfmt" = "0.73.0"
 "aqua:sharkdp/hyperfine" = "2.0.0"
 
 [tasks.check]
@@ -68,12 +73,12 @@ run = "scripts/demo.sh"
 dir = "{{config_root}}"
 
 [tasks.measure]
-description = "Record each mise tool's installed size and each TypeScript form's lines and brotli bytes, time each toolchain with hyperfine (Node: pnpm installs and npm installs in its hoisted and linked layouts, tsc, esbuild, and Vite; Bun: bun install and bun build), and record every row, the layout rows (phantom dependencies, lockfile determinism, and disk sharing under npm, pnpm, and bun) and the GitHub and jsDelivr ones for v0.1.0 once it is released, as a dated markdown report on stdout; reads the network, writes nothing to the working tree"
+description = "Record each mise tool's installed size and each TypeScript form's lines and brotli bytes, time each toolchain with hyperfine (Node: pnpm installs and npm installs in its hoisted and linked layouts, tsc, esbuild, and Vite; Bun: bun install and bun build), and record every row, the layout rows (phantom dependencies, lockfile determinism, and disk sharing under npm, pnpm, and bun) and the GitHub and jsDelivr ones for v0.1.0 once it is released, and compare three lint and format setups over the code (Biome; ESLint with typescript-eslint and Prettier; oxlint and oxfmt: footprint, timings, matching biome.json's formatting, content scope, and the layer rules), as a dated markdown report on stdout; reads the network, writes nothing to the working tree"
 run = "scripts/measure.sh"
 dir = "{{config_root}}"
 
 [tasks.currency]
-description = "Report every mise tool, package dependency, and github: tag dependency pinned behind its latest, one line each, exiting nonzero if any; reads the network, writes nothing"
+description = "Report every mise tool, package dependency, github: tag dependency, and package measure installs into scratch pinned behind its latest, one line each, exiting nonzero if any; reads the network, writes nothing"
 run = "scripts/currency.sh"
 # Without mise's own command echo, so a current tree prints nothing at all.
 quiet = true

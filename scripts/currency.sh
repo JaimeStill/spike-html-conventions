@@ -3,7 +3,7 @@
 # line each, and exits nonzero when it reports any; with everything current it prints nothing and
 # exits 0. It reads the network and writes nothing. Run it through `mise run currency`.
 #
-# Three kinds of pin, each line naming the file that holds it, as `FILE: NAME PIN -> LATEST`:
+# Four kinds of pin, each line naming the file that holds it, as `FILE: NAME PIN -> LATEST`:
 #
 #   mise tools        mise.toml's [tools], against `mise outdated --bump --local`.
 #   registry deps     a package.json dependency pinned to a version (lit in the root package),
@@ -12,6 +12,11 @@
 #                     spike-html-design and spike-html-conventions), against the highest vX.Y.Z
 #                     tag in `git ls-remote --tags`. Neither `pnpm outdated` nor `bun outdated`
 #                     reports these, so the comparison is here.
+#   scratch packages  scripts/measure.sh's eslint_packages, the ESLint setup's packages that
+#                     install into measure's scratch rather than as mise tools, against the
+#                     registry's latest through `pnpm view`; a package another of them names as a
+#                     peer (typescript, under typescript-eslint) against the highest version in
+#                     that peer range instead, the latest the setup can take.
 #
 # A pin trails only when its latest is strictly higher. A repository with no vX.Y.Z tag, or whose
 # highest tag is below the pin, has an unreleased pin rather than a trailing one: this repository's
@@ -86,6 +91,39 @@ for manifest in package.json fixtures/*/package.json; do
       report "$manifest: $name $spec -> can't compare this form of pin"
     fi
   done <<<"$deps"
+done
+
+# The scratch packages, from measure.sh's one eslint_packages line. Each package's peer ranges,
+# at its pin, are looked up once.
+specs=$(sed -n 's/^eslint_packages=(\(.*\))$/\1/p' scripts/measure.sh)
+if [[ -z "$specs" ]]; then report "scripts/measure.sh: eslint_packages -> not found"; fi
+read -ra specs <<<"$specs"
+declare -A peers=()
+for spec in "${specs[@]}"; do
+  peers[$spec]=$(pnpm view "$spec" peerDependencies --json)
+done
+for spec in "${specs[@]}"; do
+  name=${spec%@*} pin=${spec##*@} range="" capped_by=""
+  for other in "${specs[@]}"; do
+    if [[ "$other" == "$spec" ]]; then continue; fi
+    range=$(node -e 'console.log(JSON.parse(process.argv[1] || "{}")[process.argv[2]] ?? "")' \
+      "${peers[$other]}" "$name")
+    if [[ -n "$range" ]]; then
+      capped_by=$other
+      break
+    fi
+  done
+  if [[ -n "$range" ]]; then
+    versions=$(pnpm view "$name@$range" version --json)
+    latest=$(node -e 'for (const v of [].concat(JSON.parse(process.argv[1]))) console.log(v)' "$versions" |
+      sort -V | tail -n 1)
+  else
+    latest=$(pnpm view "$name" version)
+  fi
+  if behind "$pin" "$latest"; then
+    if [[ -n "$capped_by" ]]; then latest+=" (the highest in $capped_by's peer range $range)"; fi
+    report "scripts/measure.sh: $name $pin -> $latest"
+  fi
 done
 
 exit "$stale"
