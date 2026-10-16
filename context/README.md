@@ -53,10 +53,12 @@ components, and apps) be built on, over the spike-html-design v0.7.0 baseline?
 
 ## Results
 
-Every timing and row below is from one run of `mise run measure`, dated **2026-10-16T00:07:12Z
-(UTC)**, cited as *(m 2026-10-16)*; it prints every tool's version, all as pinned in `mise.toml`.
-File counts from the offline installs are from `mise run check` the same day. Line and byte
-counts are of `src/` at this commit, and installed sizes of mise's installs, the same day.
+Every figure below is from one run of `mise run measure`, dated **2026-10-16T00:25:08Z (UTC)**,
+cited as *(m 2026-10-16)*: the timings and rows, each mise tool's installed size (its Footprint
+section, `mise where` and `du -sb`), and the lines and brotli bytes of `src/` (its Forms section).
+It prints every tool's version, all as pinned in `mise.toml`. File counts from the offline
+installs are from `mise run check` the same day. Facts from outside the spike carry their own
+source and date.
 
 Conflict of interest: this evidence was drafted by an Anthropic model, and Anthropic owns Bun.
 The pick rests on the measured rows and the cited facts; weigh it with that in mind.
@@ -75,61 +77,81 @@ The pick rests on the measured rows and the cited facts; weigh it with that in m
 | lint/format | biome | biome |
 | jsDelivr | nothing: a pushed tag | nothing: a pushed tag |
 | tools added | node, pnpm (and esbuild to bundle) | bun |
-| installed size, linux-x64 | 225 MB + 58 MB (+ 12 MB) | 85 MB |
+| installed size, Linux x86_64 *(m 2026-10-16)* | 224.4 MB + 58.9 MB (+ 11.6 MB) | 89.0 MB |
+
+The Bun column's footprint is the toolchain a layer needs, not yet this repository's own: its
+scripts still call `node` (`currency.sh` and `measure.sh` read JSON with it, `consumers.sh warm`
+reads Lit's version with it), and mise's `npm:esbuild` backend needs node. The spike runs both
+columns head to head, so it keeps node regardless; a layer on Bun alone would make those JSON
+reads with `bun -e`, the same one-liners.
 
 **Timings** *(m 2026-10-16)*, hyperfine means; the ratio is how many times faster Bun is.
 
 | step | Node | Bun | ratio |
 | --- | ---: | ---: | ---: |
-| install, cold | 794.1 ms | 632.3 ms | 1.3x |
-| install, warm | 170.4 ms | 14.1 ms | 12.1x |
-| type check (shared tsc) | 72.5 ms | 72.5 ms | 1x |
-| build | tsc emit 77.0 ms, esbuild 36.9 ms | 5.8 ms | 13.3x, 6.4x |
-| watch rebuild | tsc 68.9 ms, esbuild 106.7 ms | 14.5 ms | 4.8x, 7.4x |
-| test | 121.2 ms | 17.3 ms | 7.0x |
+| install, cold | 752.4 ms | 642.5 ms | 1.2x |
+| install, warm | 174.0 ms | 13.8 ms | 12.6x |
+| type check (shared tsc) | 83.7 ms | 83.7 ms | 1x |
+| build (bundler to bundler) | esbuild 36.8 ms | 5.6 ms | 6.6x |
+| watch rebuild | tsc 68.6 ms, esbuild 107.8 ms | 14.3 ms | 4.8x, 7.5x |
+| test | 119.3 ms | 18.2 ms | 6.6x |
 
-**Stewardship**, as of 2026-10-15:
+tsc emit (85.0 ms) isn't in the build ratio: it transpiles each file and bundles nothing, so
+against `bun build` it isn't like for like.
+
+**Stewardship**, as of 2026-10-16:
 
 - Node: an [OpenJS Foundation project][openjs]. Node 26 is LTS from 2026-10-28, in maintenance
   from 2027-10-20, and supported to 2029-04-30 ([nodejs/Release schedule.json][node-sched]).
   From 27, one major a year, each one LTS ([Evolving the Node.js Release Schedule][node-blog]).
 - pnpm: MIT, independent, funded through Open Collective ([opencollective.com/pnpm][pnpm-oc]);
-  it maintains three lines (10, 11, 12) with releases several times a week, and its lead
-  maintainer wrote 64 of its 100 most recent commits ([releases][pnpm-rel]). 223M npm downloads
-  in the week to 2026-10-12 ([npm API][npm-dl]).
+  it maintains three lines (10, 11, 12) with releases several times a week
+  ([releases][pnpm-rel]). Its lead maintainer wrote 64 of its 100 most recent commits, from
+  2026-10-10 to 2026-10-15 ([commits API][pnpm-commits]). 223M npm downloads in the week to
+  2026-10-12 ([npm API][npm-dl]).
 - Bun: Oven, acquired by Anthropic in December 2025 ([heise][bun-heise]). Still MIT
   ([LICENSE.md][bun-lic]) and developed in the open on GitHub; the 1.4.0 notes thank outside
   contributors ([v1.4.0][bun-140]). Releases ([GitHub][bun-rel]): 35 in the 12 months before
   the acquisition, 15 in the 10.5 months since, with no release from 2026-05-13 to 2026-08-20.
   That gap ended with 1.4.0, a feature release: new built-in APIs, parallel `bun test`, new
   package-management commands, and a rewrite from Zig to Rust ([bun.com/1.4][bun-14]). Two core
-  engineers wrote 72 of the 100 most recent commits. No foundation and no published support
-  window.
+  engineers wrote 72 of the 100 most recent commits, from 2026-10-02 to 2026-10-16, and its bot
+  20 more ([commits API][bun-commits]). No foundation and no published support window.
+
+Each commit count is the author logins of a repository's 100 most recent commits on its default
+branch, read 2026-10-16 with `gh api 'repos/<owner>/<repo>/commits?per_page=100' --jq
+'.[].author.login'`.
 
 The setup ruled Deno out for "patches only after its acquisition". Applied to Bun on the
 evidence, the test doesn't rule it out: a feature minor shipped nine months after its
 acquisition, under the same license, in the open. Its cadence has halved since.
 
 **The pick: Bun, and never Node and pnpm beside it.** Footprint decides first, and Bun covers
-install, build, watch, and test as one pinned binary, against node and pnpm (and esbuild to
-bundle) at more than three times the size. On standard status and long-term worth, Node and
-pnpm are the standards and the stronger stewardship: a foundation and a published LTS window
-against one company and none. That weighs against Bun but doesn't overturn the footprint,
-because the exit is cheap and the check measures it: the same suite runs under `node --test`,
-the same `package.json` installs under pnpm, and nothing Bun-specific ships (the JSDoc form,
-below). Speed counts on two order-of-magnitude gaps, warm install (12.1x) and build (13.3x over
-tsc emit) *(m 2026-10-16)*, though every step is under a second at this size. Consumption counts
-for Bun too: it installs a git-tag package that itself depends on a git tag, which pnpm 12
-refuses by default (`ERR_PNPM_EXOTIC_SUBDEP`, *m 2026-10-16*), and that is the shape of every
-layer above spike-html-design.
+install, build, watch, and test as one pinned binary, 89.0 MB against node and pnpm's 283.3 MB
+(294.9 MB with esbuild to bundle) *(m 2026-10-16)*, more than three times the size. On standard
+status and long-term worth, Node and pnpm are the standards and the stronger stewardship: a
+foundation and a published LTS window against one company and none. That weighs against Bun but
+doesn't overturn the footprint, because the exit is cheap and the check measures it: the same
+suite runs under `node --test`, the same `package.json` installs under pnpm, and nothing
+Bun-specific ships (the JSDoc form, below). Speed counts only on an order-of-magnitude gap, and
+only warm install clears it (12.6x); bundler to bundler, `bun build` is 6.6x esbuild, and every
+other step is under 8x *(m 2026-10-16)*. At this size every step is under a second.
+
+Consumption counts for neither column. The two rows where the managers differ are both
+spike-html-packages' questions, and each is a gap on one side *(m 2026-10-16)*. pnpm 12 refuses
+a git-tag package that itself depends on a git tag (`ERR_PNPM_EXOTIC_SUBDEP`) by default, and one
+consumer-side setting, `blockExoticSubdeps: false` in `pnpm-workspace.yaml`, lifts it; bun
+installs it as is. pnpm installs a package from a subdirectory at a prefixed tag with `path:`, and
+bun can't. Whether the layers carry git-tag dependencies or prefixed tags is spike-html-packages'
+to settle.
 
 **What would reverse it.** Bun failing the Deno test: releases going patch-only, a license other
-than MIT, or development leaving the open. spike-html-packages choosing per-package prefixed tags,
-which pnpm installs as subdirectories and bun can't *(m 2026-10-16)*. A consumer that requires a
-published support window.
+than MIT, or development leaving the open. spike-html-packages choosing per-package prefixed tags
+while bun still can't install a subdirectory from one. A consumer that requires a published
+support window.
 
-**esbuild doesn't earn its place in the Node column.** Its build is 2.1x tsc emit's (36.9 ms
-against 77.0 ms) and its watch rebuild is slower (106.7 ms against 68.9 ms) *(m 2026-10-16)*: no
+**esbuild doesn't earn its place in the Node column.** Its build is 2.3x tsc emit's (36.8 ms
+against 85.0 ms) and its watch rebuild is slower (107.8 ms against 68.6 ms) *(m 2026-10-16)*: no
 order-of-magnitude gap. It adds a second native binary to mirror for offline installs: esbuild
 0.28.2 on npm is a stub with a `postinstall` and 26 per-platform optional packages
 (`@esbuild/linux-x64` and the rest; [registry][esb-npm]), and mise's npm backend installs it from
@@ -137,22 +159,25 @@ the registry. The native tsc has the same per-platform shape, but every column n
 so tsc emit adds nothing; bun build is inside the bun binary. Its standard status is eroding:
 Vite 8 bundles with Rolldown and minifies with Oxc, and lists esbuild only as optional ([Vite
 migration guide][vite8]), though it still draws 303M npm downloads a week ([npm API][npm-dl]).
-It is 0.x, and one maintainer wrote 93 of its 100 most recent commits ([evanw/esbuild][esb-gh]).
-The file:// rows load Lit unbundled through an import map, so the Node column needs no bundler
-here; bundling an application is the branches task's question.
+It is 0.x, and one maintainer wrote 93 of its 100 most recent commits, from 2026-02-05 to
+2026-08-09 ([commits API][esb-commits], read 2026-10-16). The file:// rows load Lit unbundled
+through an import map, so the Node column needs no bundler here; bundling an application is the
+branches task's question.
 
 ### 2. The TypeScript form: JSDoc with tsc
 
-Lines in `src/`, and brotli bytes (`brotli -q 11`, unminified, as jsDelivr serves source):
+Lines in `src/`, and brotli bytes (quality 11, unminified, as jsDelivr serves source)
+*(m 2026-10-16, Forms)*:
 
 | form | router | Lit element | vanilla element | globals.d.ts | lines | brotli |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| `.ts`, strippable | 103 | 176 | 210 | — | 489 | 5,018 B |
-| JSDoc + tsc | 119 | 185 | 225 | 18 | 547 | 5,151 B |
-| plain JS | 83 | 156 | 200 | — | 439 | 4,319 B |
+| `.ts`, strippable | 103 | 176 | 210 | — | 489 | 5,017 B |
+| JSDoc + tsc | 119 | 185 | 225 | 18 | 547 | 5,168 B |
+| plain JS | 83 | 156 | 200 | — | 439 | 4,318 B |
 
-JSDoc costs 58 lines (12%) over `.ts` and 108 (25%) over plain JS; its brotli bytes exclude
-`globals.d.ts`, which no browser loads. The Lit element's reactive properties:
+JSDoc costs 58 lines (12%) over `.ts` and 108 (25%) over plain JS, and 151 brotli bytes (3%)
+over `.ts`; its brotli bytes exclude `globals.d.ts`, which no browser loads. The Lit element's
+reactive properties:
 
 ```ts
 // .ts: declared fields, defaults in the constructor
@@ -183,17 +208,24 @@ this.#select = /** @type {HTMLSelectElement} */ (root.querySelector("select"));
 this.#select = root.querySelector("select");
 ```
 
-JSDoc can't write `declare global`, so its tag and event maps sit in `globals.d.ts`; and tsc
-7.0.2's declaration emit breaks on a typedef spread over several lines, so those stay on one.
+JSDoc can't write `declare global`, so its tag and event maps sit in `globals.d.ts`. And tsc
+7.0.2's declaration emit breaks on one shape of typedef: an object type with quoted, hyphenated
+keys, such as `{ "page-change": … }`, spread over several lines, has each line's leading `*`
+copied into the `.d.ts`, which then fails to parse; a multi-line object typedef with plain keys
+emits correctly. Reproduced 2026-10-16 by emitting declarations (`tsc` with `declaration` and
+`allowJs`) for two scratch files, one typedef of each shape. The event-detail typedefs stay on
+one line.
 
 What each form needs to run as shipped *(m 2026-10-16, except as noted)*:
 
 - `.ts`: nothing loads it but Bun. Node refuses to strip types under node_modules
   (`ERR_UNSUPPORTED_NODE_MODULES_TYPE_STRIPPING`); bun imports it from node_modules. jsDelivr
-  serves `.ts` as `text/plain` with `nosniff`, which no browser runs: the v0.1.0 rows that record
-  it are pending. Every other consumer needs a build first.
-- JSDoc: runs as written under node and bun, from node_modules, and in Chromium from file://;
-  `tsc --noEmit` checks it, and a wrongly typed property or argument fails the check.
+  serves a `.ts` as `text/plain` with `nosniff`, which no browser runs, as observed on another
+  repository's `.ts`: Lit's [`packages/lit/src/index.ts` at `lit@3.3.3`][lit-ts]. This package's
+  own `.ts` rows are pending v0.1.0. Every other consumer needs a build first.
+- JSDoc: runs as written under node and bun, from node_modules, and in Chromium from file://,
+  loaded from this working tree until v0.1.0 is released; `tsc --noEmit` checks it, and a wrongly
+  typed property or argument fails the check.
 - Plain JS: runs as written everywhere; nothing checks a type.
 
 **Conclusion: JSDoc checked by tsc**, for the foundation and the components. It is the only
@@ -201,11 +233,12 @@ form that both ships with no build to every consumer the spike measured and keep
 contract at the element boundary: its properties and the detail of its events. Turbo's position
 (DHH, [Turbo 8 is dropping TypeScript][turbo]) is to drop the type layer to drop the build step
 and its friction; JSDoc drops the build too, and keeps the check, at 12% more lines than `.ts`.
-Svelte's position moved its library source to JSDoc in Svelte 4 so the shipped files are the
-source: `packages/svelte/src` on main is 368 `.js` files and 36 `.d.ts`, with `.ts` only in tests
-([sveltejs/svelte][svelte], 2026-10-15), the same split as `src/jsdoc/` and its `globals.d.ts`.
-That is this conclusion for libraries. Plain JS stays the fallback
-for a module with no public contract to check.
+Svelte converted its library source from TypeScript to JSDoc for Svelte 4 ([fd9d61a][svelte-jsdoc],
+"chore: TS to JSDoc Conversion (#8569)", 2023-05-19; 4.0.0 was released 2023-06-22), and keeps it
+there: `packages/svelte/src` on main is 368 `.js` files and 36 `.d.ts`, with `.ts` only in 12
+test files ([sveltejs/svelte][svelte], commit 40bb084, read 2026-10-16), the same split as
+`src/jsdoc/` and its `globals.d.ts`. That is this conclusion for libraries. Plain JS stays the
+fallback for a module with no public contract to check.
 
 With the toolchain: JSDoc makes the runtime's TypeScript support moot for anything shipped, so
 it neither favors Bun nor locks into it. A `.ts` package could be imported from node_modules
@@ -226,10 +259,12 @@ open.
   origin, and bytes equal to the tag's.
 - **file://** *(m 2026-10-16)*: four pages in headless Chromium load spike-html-design v0.7.0
   and Lit 3.3.3 from jsDelivr, Lit through an import map, and the element's JSDoc and plain JS
-  forms in Lit and vanilla; each element is defined and renders page 3 of 7.
+  forms in Lit and vanilla, from this working tree until v0.1.0 is released; each element is
+  defined and renders page 3 of 7.
 - **Refusals** *(m 2026-10-16)*: node won't strip `.ts` under node_modules, and bun imports it;
-  pnpm refuses a git-tag package with a git-tag dependency (`ERR_PNPM_EXOTIC_SUBDEP`), and bun
-  installs it.
+  pnpm refuses a git-tag package with a git-tag dependency (`ERR_PNPM_EXOTIC_SUBDEP`) by default,
+  installs it with `blockExoticSubdeps: false` in the consumer's `pnpm-workspace.yaml`, and bun
+  installs it as is. Handed to spike-html-packages.
 - **Prefixed tags** *(m 2026-10-16)*, from a local, unpushed `fixture/v0.1.0`: pnpm installs the
   subdirectory with `#fixture/v0.1.0&path:/fixture` (11 files); bun can't resolve the spec.
   Handed to spike-html-packages.
@@ -242,17 +277,21 @@ open.
 [node-blog]: https://nodejs.org/en/blog/announcements/evolving-the-nodejs-release-schedule
 [pnpm-oc]: https://opencollective.com/pnpm
 [pnpm-rel]: https://github.com/pnpm/pnpm/releases
+[pnpm-commits]: https://api.github.com/repos/pnpm/pnpm/commits?per_page=100
 [npm-dl]: https://api.npmjs.org/downloads/point/last-week/esbuild,pnpm
 [bun-heise]: https://heise.de/-11102416
 [bun-lic]: https://github.com/oven-sh/bun/blob/main/LICENSE.md
 [bun-140]: https://github.com/oven-sh/bun/releases/tag/bun-v1.4.0
 [bun-rel]: https://github.com/oven-sh/bun/releases
 [bun-14]: https://bun.com/1.4
+[bun-commits]: https://api.github.com/repos/oven-sh/bun/commits?per_page=100
 [esb-npm]: https://registry.npmjs.org/esbuild/0.28.2
 [vite8]: https://vite.dev/guide/migration
-[esb-gh]: https://github.com/evanw/esbuild
+[esb-commits]: https://api.github.com/repos/evanw/esbuild/commits?per_page=100
 [turbo]: https://world.hey.com/dhh/turbo-8-is-dropping-typescript-70165c01
 [svelte]: https://github.com/sveltejs/svelte/tree/main/packages/svelte/src
+[svelte-jsdoc]: https://github.com/sveltejs/svelte/commit/fd9d61a7b747c05958002b7dcb64cb3199378ad8
+[lit-ts]: https://cdn.jsdelivr.net/gh/lit/lit@lit@3.3.3/packages/lit/src/index.ts
 [openjs]: https://openjsf.org/projects
 
 ## Capabilities

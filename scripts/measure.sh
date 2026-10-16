@@ -30,11 +30,20 @@
 # it holds `stamp = N`, so hyperfine's time is from the source change to the rebuilt output, plus
 # this script's startup and the poll's granularity of a few milliseconds.
 #
+# Before the timings, two sections read only the local disk:
+#
+#   footprint       each mise tool's installed size, from mise where and du -sb, with the column
+#                   it belongs to and each column's total.
+#   forms           lines and brotli bytes (quality 11, through bun's node:zlib; no brotli CLI is
+#                   pinned) of each file in src/{ts,jsdoc,js}, and each form's totals.
+#
 # Rows, each pass or FAIL with the observed fact; a row passes when the observation is the one
 # the spike expects, a refusal included:
 #
 #   refusals        node won't strip types under node_modules; pnpm refuses a git-tag package
-#                   that carries a git-tag dependency (ERR_PNPM_EXOTIC_SUBDEP), and bun installs it.
+#                   that carries a git-tag dependency (ERR_PNPM_EXOTIC_SUBDEP), and bun installs it;
+#                   pnpm installs it too with blockExoticSubdeps: false in the consumer's
+#                   pnpm-workspace.yaml, so the refusal is a default one setting lifts.
 #   prefixed tag    from a local, unpushed fixture/v0.1.0 tag with the package in fixture/,
 #                   pnpm installs the subdirectory with #fixture/v0.1.0&path:/fixture, each file
 #                   the fixture's byte for byte; bun can't, reading the whole fragment as the ref.
@@ -47,7 +56,9 @@
 #   jsDelivr        one file from cdn.jsdelivr.net/gh/<owner>/<repo>@<tag>: content type (a
 #                   module as JavaScript, a style as CSS, a .ts as text/plain with nosniff, which
 #                   a browser won't run), immutable caching, CORS open to any origin, and bytes
-#                   equal to the tag's; x-jsd-version-type is recorded.
+#                   equal to the tag's; x-jsd-version-type is recorded. Until this package's .ts
+#                   rows run, the .ts shape is observed on Lit's packages/lit/src/index.ts at
+#                   the tag of the Lit version this package depends on.
 #   file://         pages opened in the system Chromium's --headless --dump-dom load
 #                   spike-html-design v0.7.0 from jsDelivr, Lit through an import map to jsDelivr,
 #                   and the JS forms of the element; each page reports the design's registry and
@@ -130,6 +141,81 @@ version shellcheck "$(shellcheck --version | sed -n 's/^version: //p')"
 version chromium "$(chromium --version)"
 version git "$(git --version)"
 version lit "$lit (package dependency)"
+echo
+
+# ---- Footprint: each mise tool's install, from mise where, at its apparent size (du -sb, which
+# counts a hard link once, as pnpm's three hard-linked binaries are). MB are 10^6 bytes.
+
+echo "measure: footprint" >&2
+echo "## Footprint"
+echo
+echo "Each mise tool's installed size on this platform, $(uname -sm), from \`mise where\` and \`du -sb\`."
+echo
+echo "| tool | column | installed size |"
+echo "| --- | --- | ---: |"
+# tool|column, every pin in mise.toml.
+footprint_tools=(
+  "node|Node" "pnpm|Node" "npm:esbuild|Node, to bundle" "bun|Bun"
+  "github:microsoft/typescript-go|both (tsc)" "biome|both"
+  "shellcheck|the check only" "aqua:sharkdp/hyperfine|the measure task only"
+)
+# mb BYTES...: their sum in MB, to one decimal.
+mb() { printf '%s\n' "$@" | awk '{ s += $1 } END { printf "%.1f MB", s / 1e6 }'; }
+declare -A footprint_bytes
+for entry in "${footprint_tools[@]}"; do
+  tool=${entry%%|*}
+  # From the project root, so each tool resolves to its mise.toml pin.
+  bytes=$(du -sb "$(mise --cd "$root" where "$tool")" | cut -f1)
+  footprint_bytes[$tool]=$bytes
+  printf '| %s | %s | %s |\n' "$tool" "${entry#*|}" "$(mb "$bytes")"
+done
+echo
+node_column=$(mb "${footprint_bytes[node]}" "${footprint_bytes[pnpm]}")
+node_bundler=$(mb "${footprint_bytes[node]}" "${footprint_bytes[pnpm]}" "${footprint_bytes[npm:esbuild]}")
+bun_column=$(mb "${footprint_bytes[bun]}")
+echo "Tools each column adds: Node, node + pnpm = $node_column ($node_bundler with esbuild); Bun, bun = $bun_column. tsc and biome are in both."
+echo
+
+# ---- Forms: lines and brotli bytes per file and per form of src/. Brotli is quality 11 with
+# the brotli CLI's default 24-bit window, through bun's node:zlib (no brotli CLI is pinned), over
+# the unminified source as jsDelivr serves it. A form's brotli total leaves out globals.d.ts,
+# which no browser loads; its line total keeps it.
+
+echo "measure: forms" >&2
+echo "## Forms"
+echo
+echo "Lines (\`wc -l\`) and brotli bytes (quality 11, bun's node:zlib) of each file in src/."
+echo
+echo "| file | lines | brotli |"
+echo "| --- | ---: | ---: |"
+form_files=()
+for form in ts jsdoc js; do
+  for path in "$root"/src/"$form"/*; do form_files+=("${path#"$root/"}"); done
+done
+declare -A form_lines form_brotli form_count
+while IFS=$'\t' read -r path bytes; do
+  lines=$(wc -l <"$root/$path")
+  printf '| %s | %s | %s B |\n' "$path" "$lines" "$bytes"
+  form=${path#src/}
+  form=${form%%/*}
+  form_lines[$form]=$((${form_lines[$form]:-0} + lines))
+  form_count[$form]=$((${form_count[$form]:-0} + 1))
+  if [[ "$path" != *.d.ts ]]; then form_brotli[$form]=$((${form_brotli[$form]:-0} + bytes)); fi
+done < <(cd "$root" && bun -e '
+  const zlib = require("node:zlib");
+  const fs = require("node:fs");
+  const { BROTLI_PARAM_QUALITY, BROTLI_PARAM_LGWIN, BROTLI_PARAM_SIZE_HINT } = zlib.constants;
+  for (const path of process.argv.slice(1)) {
+    const data = fs.readFileSync(path);
+    const params = { [BROTLI_PARAM_QUALITY]: 11, [BROTLI_PARAM_LGWIN]: 24, [BROTLI_PARAM_SIZE_HINT]: data.length };
+    console.log(path + "\t" + zlib.brotliCompressSync(data, { params }).length);
+  }' "${form_files[@]}")
+echo
+echo "| form | files | lines | brotli, without .d.ts |"
+echo "| --- | ---: | ---: | ---: |"
+for form in ts jsdoc js; do
+  printf '| %s | %s | %s | %s B |\n' "src/$form" "${form_count[$form]}" "${form_lines[$form]}" "${form_brotli[$form]}"
+done
 echo
 
 # ---- Fixtures: the scratch repository, and one consumer project per manager and install mode.
@@ -380,6 +466,23 @@ if ((status != 0)) && [[ -n "$reason" ]]; then ok=1; fi
 row "pnpm refuses a git-tag package that carries a git-tag dependency" "$ok" \
   "exit $status; ${reason:-no ERR_PNPM_EXOTIC_SUBDEP; $(tail -n1 "$scratch/exotic-pnpm.log")}"
 
+# The refusal is a default: the same consumer with blockExoticSubdeps: false in its
+# pnpm-workspace.yaml installs the package and its git-tag dependency.
+lifted="$scratch/exotic-pnpm-lifted"
+mkdir -p "$lifted"
+cp "$scratch/exotic-pnpm/package.json" "$lifted/"
+echo "blockExoticSubdeps: false" >"$lifted/pnpm-workspace.yaml"
+status=0
+pnpm_warm "$lifted" --reporter append-only >"$scratch/exotic-pnpm-lifted.log" 2>&1 || status=$?
+ok=0
+# pnpm links the dependency beside the package in its virtual store; .. resolves from the link's
+# target.
+if ((status == 0)) && [[ -f "$lifted/node_modules/exotic/../spike-html-design/package.json" ]]; then
+  ok=1
+fi
+row "pnpm installs the same package with blockExoticSubdeps: false in the consumer's pnpm-workspace.yaml" \
+  "$ok" "exit $status; exotic's virtual-store node_modules holds $(names "$lifted/node_modules/exotic/..")"
+
 status=0
 bun_warm "$scratch/exotic-bun" >"$scratch/exotic-bun.log" 2>&1 || status=$?
 ok=0
@@ -544,10 +647,15 @@ jsdelivr_row() {
 tag_tree "$design_slug" "$design_tag"
 github_rows spike-html-design "$design_slug" "$design_tag"
 # A representative set: the module and stylesheet the file:// pages load, and the registry they
-# import. spike-html-design has no .ts, so the unloadable .ts row is this package's alone.
+# import. spike-html-design has no .ts; the unloadable .ts row is Lit's below, and this
+# package's once v0.1.0 is released.
 jsdelivr_row "$design_slug" "$design_tag" modules/register-full.js module
 jsdelivr_row "$design_slug" "$design_tag" modules/registry.js module
 jsdelivr_row "$design_slug" "$design_tag" full.css style
+# Until this package's .ts rows run, the unloadable shape is observed on another repository's .ts
+# at a tag: Lit's source entry, at the Lit version this package depends on.
+tag_tree lit/lit "lit@$lit"
+jsdelivr_row lit/lit "lit@$lit" packages/lit/src/index.ts unloadable
 
 # This package's rows, at v0.1.0: every module of every form its exports map names.
 mapfile -t own_modules < <(node -e '

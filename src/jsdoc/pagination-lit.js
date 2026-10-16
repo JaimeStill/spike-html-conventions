@@ -11,8 +11,8 @@ import { css, html, LitElement } from "lit";
 /** The tag this variant defines; each of the six variants defines its own. */
 export const tagName = "hd-pagination-lit-jsdoc";
 
-// The typedef's type stays on one line: tsc 7.0.2's declaration emit copies the leading `*` of
-// a type spread over several lines into the .d.ts, which then fails to parse.
+// One line: tsc 7.0.2's declaration emit copies each leading `*` of a multi-line object type with
+// quoted keys ("page-change") into the .d.ts, which then fails to parse; plain keys emit fine.
 /**
  * Each event the element dispatches, mapped to its `detail`.
  * @typedef {{ "page-change": { page: number }, "page-size-change": { size: number } }}
