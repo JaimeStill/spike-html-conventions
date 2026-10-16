@@ -143,7 +143,7 @@ Release       v0.1.0
 
 ## Progress
 
-slices 5/7 committed · standards — · spec — · editor —
+slices 6/7 committed · standards — · spec — · editor —
 
 ## Decisions
 
@@ -180,6 +180,7 @@ slices 5/7 committed · standards — · spec — · editor —
 - toolchain: tsc comes from mise as `github:microsoft/typescript-go` 7.0.2, the native binary; `npm:typescript` was rejected because its tsc needs Node to launch.
 - toolchain: test files are outside the type check, and no package manifest has a devDependency.
 - toolchain: v0.1.0 releases at SHIP; GitHub/jsDelivr rows run against spike-html-design v0.7.0 in BUILD, and the fixture's own v0.1.0 rows run after the release, recorded by the structure task's first step.
+- toolchain: architect: fix herald's `normalizePath` quirk in the port; the base path strips only at a segment boundary (base `/app`: `/application` stays).
 
 ## Pending edits
 
