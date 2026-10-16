@@ -97,7 +97,7 @@ Amendment (escalation, after slice 10): npm joins as a third column.
 
 ## Progress
 
-slices 11/12 committed · standards — · spec — · editor —
+slices 12/12 committed · standards — · spec — · editor —
 
 ## Decisions
 
