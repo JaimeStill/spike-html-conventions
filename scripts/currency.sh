@@ -13,7 +13,9 @@
 #                     tag in `git ls-remote --tags`. Neither `pnpm outdated` nor `bun outdated`
 #                     reports these, so the comparison is here.
 #   devDependencies   the root package's lint tooling, as `pnpm outdated --dev` reports it against
-#                     the registry's latest.
+#                     the registry's latest. pnpm outdated honors minimumReleaseAge, pnpm's
+#                     default of a day, so a release younger than that isn't yet its latest: a
+#                     devDependency held behind one is reported once the release is a day old.
 #   scratch packages  scripts/measure.sh's stylistic_packages, ESLint Stylistic's setup's packages
 #                     that install into measure's scratch, against the registry's latest through
 #                     `pnpm view`.
