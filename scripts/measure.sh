@@ -641,8 +641,12 @@ echo "measure: npm rows" >&2
 npm_project "$scratch/npm-default" "" spike-html-design "git+file://$design#$design_tag"
 status=0
 npm_warm "$scratch/npm-default" >"$scratch/npm-default.log" 2>&1 || status=$?
+# EALLOWGIT, refusing spike-html-design itself, by the default that disables every git
+# dependency, not the non-root one allow-git=root sets.
 ok=0
 if ((status != 0)) && grep -qx 'npm error code EALLOWGIT' "$scratch/npm-default.log" &&
+  grep -qx 'npm error Fetching packages of type "git" have been disabled' "$scratch/npm-default.log" &&
+  grep -qF 'npm error Refusing to fetch "spike-html-design@' "$scratch/npm-default.log" &&
   [[ ! -e "$scratch/npm-default/node_modules/spike-html-design" ]]; then
   ok=1
 fi
@@ -657,8 +661,12 @@ for allow in root all; do
   nested="$scratch/exotic-npm-$allow/node_modules/spike-html-design/package.json"
   ok=0
   if [[ "$allow" == root ]]; then
-    # root admits the consumer's own git dependency and refuses exotic's.
+    # root admits the consumer's own git dependency and refuses exotic's: the refusal is the
+    # non-root one, and names spike-html-design, which npm reads only from exotic's manifest.
     if ((status != 0)) && grep -qx 'npm error code EALLOWGIT' "$scratch/exotic-npm-$allow.log" &&
+      grep -qx 'npm error Fetching non-root packages of type "git" have been disabled' \
+        "$scratch/exotic-npm-$allow.log" &&
+      grep -qF 'npm error Refusing to fetch "spike-html-design@' "$scratch/exotic-npm-$allow.log" &&
       [[ ! -f "$nested" ]]; then
       ok=1
     fi
@@ -690,21 +698,29 @@ for variant in default ignore-scripts; do
     npm_warm "$scratch/prep-$variant" --ignore-scripts >"$scratch/prep-$variant.log" 2>&1 ||
       status=$?
   fi
-  if ((status == 0)) && [[ -f "$scratch/prep-$variant/node_modules/prep/prepared.txt" ]]; then
-    ran+=(yes)
+  # ran: installed with prepare's output; skipped: installed without it; failed: not installed.
+  installed="$scratch/prep-$variant/node_modules/prep"
+  if ((status != 0)) || [[ ! -f "$installed/package.json" ]]; then
+    ran+=(failed)
+    result="prep not installed"
+  elif [[ -f "$installed/prepared.txt" ]]; then
+    ran+=(ran)
     result="prepare ran (prepared.txt installed)"
   else
-    ran+=(no)
-    result="no prepared.txt installed"
+    ran+=(skipped)
+    result="installed, no prepared.txt"
   fi
   warned=$(grep -m1 '^npm warn install-scripts .*blocked' "$scratch/prep-$variant.log" |
     sed -e 's/^npm warn install-scripts //' -e 's/:$//' || true)
   observed+=("$variant: exit $status, $result${warned:+, npm warned: $warned}")
 done
-# The default installs prepare's output while warning the script was blocked; --ignore-scripts
-# installs none.
+# The default installs prepare's output while warning that prep's prepare was blocked;
+# --ignore-scripts installs prep without it.
 ok=0
-if [[ "${ran[*]}" == "yes no" ]] && grep -q 'blocked' "$scratch/prep-default.log"; then ok=1; fi
+if [[ "${ran[*]}" == "ran skipped" ]] &&
+  grep -qE '^npm warn install-scripts +prep@0\.0\.1 \(prepare: ' "$scratch/prep-default.log"; then
+  ok=1
+fi
 printf -v result '%s; ' "${observed[@]}"
 row "npm runs a git dependency's prepare when it packs the clone, though allowScripts reports it blocked; --ignore-scripts skips it" \
   "$ok" "${result%; }"
@@ -766,6 +782,7 @@ npm_warm "$scratch/prefixed-npm" >"$scratch/prefixed-npm.log" 2>&1 || status=$?
 # its root; any other outcome fails the row.
 ok=0
 if ((status != 0)) && grep -qF "ignoring unknown key \"fixture/$own_tag&path\"" "$scratch/prefixed-npm.log" &&
+  grep -q '^npm error enoent Could not read package.json' "$scratch/prefixed-npm.log" &&
   [[ ! -e "$scratch/prefixed-npm/node_modules/spike-html-conventions" ]]; then
   ok=1
 fi
@@ -776,10 +793,15 @@ row "npm can't install a subdirectory from a prefixed tag (the same spec)" "$ok"
 status=0
 npm_warm "$scratch/prefixed-npm-path" >"$scratch/prefixed-npm-path.log" 2>&1 || status=$?
 # npm resolves the subdirectory's manifest, then reifies from the resolved spec, a bare commit
-# with the path dropped, and finds no package.json at the clone's root. An install fails the row,
+# with the path dropped, and finds no package.json at the clone's root. The row asks for each
+# step: no key ignored, the tarball spec a bare commit, and the ENOENT. An install fails the row,
 # as a change to record.
 ok=0
-if ((status != 0)) && grep -q 'Could not read package.json' "$scratch/prefixed-npm-path.log"; then
+if ((status != 0)) && ! grep -q 'ignoring unknown key' "$scratch/prefixed-npm-path.log" &&
+  grep -qE "^npm warn tarball tarball data for spike-html-conventions@git\+file://$prefixed#[0-9a-f]{40} " \
+    "$scratch/prefixed-npm-path.log" &&
+  grep -q '^npm error enoent Could not read package.json' "$scratch/prefixed-npm-path.log" &&
+  [[ ! -e "$scratch/prefixed-npm-path/node_modules/spike-html-conventions" ]]; then
   ok=1
 fi
 row "npm can't install a subdirectory from a prefixed tag with its own syntax (#fixture/$own_tag::path:fixture)" \
