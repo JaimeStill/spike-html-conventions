@@ -83,11 +83,21 @@ Out of scope  As before: layout and lint tool (structure); vanilla
 Door          two-way, except the v0.1.0 tag (pushed, immutable on
               jsDelivr, never re-cut).
 Release       v0.1.0
+Amendment (escalation, after slice 10): npm joins as a third column.
+ 11. npm in the measure task: cold and warm install from a git tag,
+     `files` honoured, a subdirectory at a prefixed tag, a git-tag
+     package's own git-tag dependency, GitHub install of
+     spike-html-design v0.7.0, footprint (npm inside node); plus
+     fixtures/consumer-npm installed offline in the check.
+     Demo: the check passes with three consumers; measure prints npm rows.
+ 12. Evidence re-argued across Node + npm, Node + pnpm, and Bun, in the
+     same order, figures re-cited from one fresh measure run.
+     Demo: the README's Results.
 ```
 
 ## Progress
 
-slices 10/10 committed · standards — · spec — · editor —
+slices 10/12 committed · standards — · spec — · editor —
 
 ## Decisions
 
@@ -146,6 +156,9 @@ slices 10/10 committed · standards — · spec — · editor —
 - toolchain: the survey records release hosting as facts; the decision stays with spike-html-packages; npm is ruled out unless no workable alternative exists.
 - toolchain: this task records the toolchain pick after the survey.
 - Supersedes: the earlier result lines "pick Bun, on footprint" and "TS form JSDoc checked by tsc".
+- toolchain: escalation: npm is evaluated beside pnpm, in the measure task and as a third offline consumer fixture in the check.
+- toolchain: escalation: npm is the 12.2.1 bundled with node 26.12.0, tracked by node's pin; no separate mise pin.
+- toolchain: escalation: the pick is re-argued across Node + npm, Node + pnpm, and Bun.
 
 ## Pending edits
 
