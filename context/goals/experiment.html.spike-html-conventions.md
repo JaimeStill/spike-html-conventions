@@ -87,7 +87,7 @@ Release       v0.1.0
 
 ## Progress
 
-slices 7/10 committed · standards — · spec — · editor —
+slices 9/10 committed · standards — · spec — · editor —
 
 ## Decisions
 
