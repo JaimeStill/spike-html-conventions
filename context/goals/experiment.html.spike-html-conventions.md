@@ -1,13 +1,13 @@
 # goal · experiment.html.spike-html-conventions
 
-- **State:** brief ready
-- **Task:** structure
-- **Branch:** structure
+- **State:** idle
+- **Task:** none
+- **Branch:** none
 
 ## Tasks
 
 1. [x] toolchain
-2. [ ] structure
+2. [x] structure
 3. [ ] components
 4. [ ] testing
 5. [ ] branches
@@ -184,10 +184,6 @@ Out of scope  (replaces "Switching the check's lint tool"): nothing beyond
               linting.
 Door          two-way: no tag, nothing published.
 ```
-
-## Progress
-
-slices 7/7 committed · standards done · spec done · editor done (amendment: slices 5–7)
 
 ## Decisions
 
