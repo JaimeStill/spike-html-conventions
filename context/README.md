@@ -25,13 +25,16 @@ components, and apps) be built on, over the spike-html-design v0.7.0 baseline?
   decides how the layers release (a registry release reopens the choice between npm and pnpm).
   Libraries build with tsc emit and apps with Vite; esbuild doesn't earn its place.
 - **Components:** vanilla for the foundation and the static branch; Lit from components up.
+  Results 3 keeps the foundation free of every package and lets a static-branch app import Lit;
+  whether static pages use it is the `branches` task's call.
 - **Stack:** foundation (native only, no framework: the design system plus `.ts` modules shipped
   through a release build, per Results 2; its tools split into utilities, structure/layout, and
   meta components/variants, with layouts folded into structure); components (the element tier:
   props and attributes in, events out, internal UI state allowed, no services, data fetching, or
   app state; an app's internal element is promoted once a second app needs it); apps (a static
   branch, and an application branch, standalone or embedded, whose modules and views stay inside
-  the app).
+  the app). Results 3 lays these out as the directories of `layers/`, adds the application SDK
+  as a sibling of components, and enforces the import direction between them in the check.
 
 ## The evidence
 
@@ -160,8 +163,9 @@ Conflict of interest: this survey was drafted by an Anthropic model, and Anthrop
   packages.
 - The web-component libraries, read from each root manifest at the commit in the table below
   (for Ionic, `core/package.json`, since its root manifest declares only Lerna and semver):
-  ESLint in 10 and Prettier in 11. Catalyst and relative-time-element take Prettier through `@github/prettier-config` and
-  `eslint-plugin-github`, which runs it as an ESLint rule and depends on `prettier`
+  ESLint in 10 and Prettier in 11. Catalyst and relative-time-element take Prettier through
+  `@github/prettier-config` and `eslint-plugin-github`, which runs it as an ESLint rule and
+  depends on `prettier`
   ([s59][eslint-gh]). Web Awesome runs Prettier alone ([s60][m-wa]), FAST runs Biome alone
   (`@biomejs/biome` 2.4.8, [s61][m-fast]), and Material Web names neither, in its manifest or a
   root config file ([s27][r-mwc]). Shoelace and Spectrum add `eslint-plugin-lit` and
@@ -660,8 +664,8 @@ name, bare or with a subpath:
 STANDARDS.md holds the calls the check can't make: what belongs in each layer, and promoting an
 app's element once a second app needs it.
 
-**The mechanism.** Biome's `noRestrictedImports` ([rule][biome-nri]), at error level, in one
-`biome.json` override per layer directory. The foundation, components, and SDK refuse a layer by
+**The mechanism.** The check runs Biome's `noRestrictedImports` ([rule][biome-nri]) at error
+level, with one `biome.json` override per layer directory. The foundation, components, and SDK refuse a layer by
 its directory name, at any depth, and the foundation refuses every bare specifier. An app can't
 refuse a sibling by name, since a sibling is `../<name>`, so each app override refuses every
 specifier that climbs out of the app and re-allows the permitted layers named from `layers/`.
@@ -689,21 +693,27 @@ absolute specifier, `/layers/sdk/session.js`, which resolves against the origin 
 every layer rule. Normalized names that hold dots stay allowed: `./..x/y.js`,
 `./.well-known/a.js`, `x..y`, `...`.
 
-`test/layers.test.js` runs the pinned Biome over two scratch trees built from
-`test/layers-tree.js` in the check. The violation tree is 62 files, one import each, covering
-every forbidden edge, the four import forms (`import`, `export … from`, `import type`, and
-`import()`), the package's own name, an absolute path, fifteen paths that aren't normalized, and
-three bare climbs: 6 in the foundation, 8 in components, 5 in the SDK, 23 in the static app, 17
-in the application app, and 3 outside any layer or app, in `layers/` and in each branch
-directory. The non-normalized ones are `./../`, a descend-then-climb path, and a
-layer-name-then-`..` path in each app branch, a `.`, an empty, a `...`, and a `%2e%2e` segment,
-the trailing `./..`, `../../../foundation/..`, and `./views/..`, and one in components; the bare
-climbs are `..` from the static app and `../` and `../..` from
-the application app. Each non-normalized path, the bare `..`s, and the three files outside a
-layer passed `biome.json` before these rules. The allowed tree is 14 files of permitted imports in
-the same forms, with the dotted names above and a nested foundation index importing `..` and
-`./`. The test passes only when the rule flags exactly the 62 and none of the 14, so a rule that
-refuses everything or nothing fails it. Measured: 62 of 62 and 0 of 14 *(m 2026-10-16T18:23:55Z)*.
+In the check, `test/layers.test.js` runs the pinned Biome over two scratch trees built from
+`test/layers-tree.js`. The violation tree holds 62 files with one import each: 6 in the
+foundation, 8 in components, 5 in the SDK, 23 in the static app, 17 in the application app, and 3
+outside any layer or app, in `layers/` and in each branch directory. They cover every forbidden
+edge, the four import forms (`import`, `export … from`, `import type`, and `import()`), the
+package's own name, an absolute path, fifteen paths that aren't normalized, and three bare
+climbs. The non-normalized paths are:
+
+- in each app branch, `./../`, a descend-then-climb path, and a layer-name-then-`..` path, with a
+  second layer name in the static app;
+- a `.`, an empty, a `...`, and a `%2e%2e` segment;
+- the trailing `./..`, `../../../foundation/..`, and `./views/..`;
+- one in components.
+
+The bare climbs are `..` from the static app, and `../` and `../..` from the application app.
+Each non-normalized path, each bare climb, and the three files outside a layer passed
+`biome.json` before these rules. The allowed tree holds 14 files of permitted imports in the
+same forms, with the dotted names above and a nested foundation index importing `..` and `./`.
+The test passes only when the rule flags exactly the 62 and none of the 14, so a rule that
+refuses everything or nothing fails it. Measured: 62 of 62 and 0 of 14
+*(m 2026-10-16T18:23:55Z)*.
 
 **What it can't see.** The rule matches the import's text, never the resolved file, so a
 symlink or a server mapping the text doesn't show is outside it. The app overrides go one per
@@ -713,8 +723,8 @@ first characters, so a segment that starts with a non-ASCII character, followed 
 refused: `../../../foundation/é/../../sdk/session.js` from the static app passes (reproduced
 2026-10-16 against this `biome.json`; the `%` patterns refuse `%7Ex/..` and `%2e%2e`).
 
-The groups cost Biome time on every run, format included, so the cost is in loading the
-configuration rather than in linting: over the 21-file tree `biome lint` took 62.5 ms with them
+The groups add about 30 ms to every Biome run, format included, so the cost lies in loading the
+configuration, not in linting: over the 21-file tree `biome lint` took 62.5 ms with them
 against 32.3 ms without, and `biome format` 59.1 ms against 28.8 ms (hyperfine, 30 runs,
 2026-10-16). Results 6's timings include them.
 
@@ -758,8 +768,9 @@ against 32.3 ms without, and `biome format` 59.1 ms against 28.8 ms (hyperfine, 
 
 ### 6. Lint and format: Biome
 
-Three setups over one copy of `src/`, `layers/`, and `test/` (21 files), each from mise pins that
-only the measure task uses, plus Biome, the check's tool *(m 2026-10-16T18:23:55Z)*:
+Measure runs three setups over one copy of `src/`, `layers/`, and `test/` (21 files): Biome,
+the check's tool, and two whose tools come from mise pins only the measure task uses
+*(m 2026-10-16T18:23:55Z)*:
 
 | fact | A: Biome 2.5.15 | B: ESLint 10.13.0 + Prettier 3.9.10 | C: oxlint 1.88.0 + oxfmt 0.73.0 |
 | --- | --- | --- | --- |
@@ -833,8 +844,9 @@ groups' cost (Results 3). Speed doesn't decide it.
 on maintainability: it can't enforce the direction on `import()`, it needs Node and four packages
 in the check, and its formatter rewrites Markdown and the lockfile unless limited. Its
 configurability matched Biome's on this tree. Footprint favours the other two, C by 1.9 times,
-short of an order of magnitude, and speed doesn't decide it: ESLint + Prettier is 7.1 times slower together, under an order of magnitude
-and under a second, and oxlint + oxfmt is 1.3 times faster than Biome, a gap of 27 ms.
+short of an order of magnitude, and speed doesn't decide it: ESLint + Prettier is 7.1 times
+slower, under an order of magnitude and under a second, and oxlint + oxfmt is 1.3 times faster
+than Biome, a gap of 27 ms.
 
 **What would reverse it.** Toward ESLint + Prettier: ESLint's rule checking `import()`, or a
 measured plugin closing the gap at one more pin; or spike-html-packages making the layers
@@ -856,8 +868,8 @@ or SoJS taking up Oxc's tools.
   origin, and bytes equal to the tag's.
 - **file://** *(m 2026-10-16)*: four pages in headless Chromium load spike-html-design v0.7.0
   and Lit 3.3.3 from jsDelivr, Lit through an import map, and the element's JSDoc and plain JS
-  forms in Lit and vanilla, from this working tree until v0.1.0 is released; each element is
-  defined and renders page 3 of 7. The `.ts` form loads only once built (Results 2).
+  forms in Lit and vanilla, from this working tree, since v0.1.0 wasn't yet released at that run;
+  each element is defined and renders page 3 of 7. The `.ts` form loads only once built (Results 2).
 - **Refusals** *(m 2026-10-16)*: node won't strip `.ts` under node_modules, and bun imports it.
   npm 12 refuses any git-tag dependency by default (`EALLOWGIT`, allow-git=none); with
   allow-git=root it refuses a git-tag package's own git-tag dependency, and allow-git=all installs
@@ -949,7 +961,10 @@ or SoJS taking up Oxc's tools.
 
 - **Toolchain:** the runtime and package manager, their install, build, watch, and test paths.
 - **Language:** the TypeScript form and its type check.
-- **Structure:** the directory and module layout, and the enforced import direction.
+- **Structure:** the layer tree in `layers/`, and its import direction, which Biome enforces in
+  the check and `test/layers.test.js` proves against a tree of violations.
+- **Lint and format:** Biome in the check, compared in `mise run measure` against ESLint +
+  Prettier and oxlint + oxfmt.
 - **Components:** the element-tier convention, vanilla and Lit.
 - **Testing:** the unit and browser tiers in the check.
 - **Consumption:** installing and loading tagged releases, from git and jsDelivr.

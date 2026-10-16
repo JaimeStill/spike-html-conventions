@@ -43,14 +43,14 @@ The architecture pages that apply, in the architecture repository:
 ## Layers
 
 - The stack's layers are the directories of `layers/`, beside the frozen per-form tree in `src/`;
-  the import direction between them is `biome.json`'s `noRestrictedImports` overrides.
-- The foundation is native platform code only: what every other layer may lean on.
-- Components are the element tier: properties in, events out, and no services, data, or app
-  state.
+  `biome.json`'s `noRestrictedImports` overrides enforce the import direction between them.
+- The foundation holds native platform code only, the code every other layer may build on.
+- Components are the element tier: an element takes properties in and sends events out, and
+  holds no services, data, or app state.
 - The SDK holds what application-branch apps share: the router, the API client, the auth hook,
   formatting, and the domain-service pattern.
-- Apps split into the static branch, pages of content, and the application branch, interactive
-  clients on the SDK.
+- Apps split into two branches: the static branch holds pages of content, and the application
+  branch holds interactive clients built on the SDK.
 - An app-internal element is promoted to `components/` once a second app needs it.
 - Whether the static branch uses Lit is undecided, not a rule; the branches task decides it.
 
