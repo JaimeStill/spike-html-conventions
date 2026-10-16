@@ -9,8 +9,8 @@
 #   scripts/measure.sh rebuild SRC OUT COUNT   one watch-rebuild sample, the command hyperfine
 #                                              times (see "Watch rebuild" below)
 #
-# Timings, each hyperfine's mean of several runs, Node (node 26 with pnpm, and with npm) against
-# Bun:
+# Timings, each hyperfine's mean of several runs, Node (node 26 with pnpm, and with npm in its
+# default hoisted layout and in its linked one, --install-strategy=linked) against Bun:
 #
 #   install, cold   a consumer fixture installs spike-html-design v0.7.0 and this package by git
 #                   tag, each source pointed at a local repository (git+file://, tag kept) so
@@ -20,6 +20,8 @@
 #                   reads the fixture's .npmrc, allow-git=root, its opt-in to git dependencies.
 #   install, warm   the same with the store or cache kept, and node_modules and the lockfile
 #                   removed before every run.
+#                   npm's linked layout installs the same fixture into a project and a cache of
+#                   its own.
 #   type check      tsc --noEmit over the .ts and JSDoc forms: one tool, the same in both columns.
 #   build           Node: tsc emit, an esbuild bundle, and a Vite library build; Bun: bun build.
 #                   Each bundler takes all six element entries in one invocation, Lit bundled and
@@ -68,6 +70,24 @@
 #                   allowBuilds names the package's resolved spec, which runs prepare, and
 #                   --ignore-scripts installs it without; bun installs it without running prepare,
 #                   reporting it blocked, and runs it once the package is in trustedDependencies.
+#   layout          how each layout answers the concerns pnpm was made for, in projects of its own
+#                   with a cache or store of its own: npm hoisted (its default), npm linked, pnpm
+#                   isolated (its default), pnpm hoisted (nodeLinker: hoisted), bun install's
+#                   default (hoisted, for a project with no workspaces), and bun's isolated
+#                   linker (--linker isolated); disk and determinism leave out pnpm hoisted and
+#                   bun isolated.
+#                   Phantom dependency: local packages a, b, and c, each a tarball, a depending
+#                   on b and b on c, and a consumer declaring only a. The consumer imports a,
+#                   then b (its own phantom), then a/reach.js, which imports c (a dependency's
+#                   phantom); a row passes when a resolves and the phantom resolves or doesn't
+#                   as the row's name says. Determinism: a consumer of lit installs, then two fresh copies
+#                   install from its lockfile (npm ci, --frozen-lockfile otherwise); a row
+#                   passes when the three trees, every path, link target, and file's bytes, are
+#                   the same. Disk: two consumers of lit install in turn against one cache or
+#                   store; a row records the bytes the second adds (du -sb over the cache or store
+#                   and both node_modules, which counts each inode once) and how many of its
+#                   package files are hard links, passing on the sharing the name says: none
+#                   under npm, every file under pnpm and bun.
 #   prefixed tag    from a local, unpushed fixture/v0.1.0 tag with the package in fixture/,
 #                   pnpm installs the subdirectory with #fixture/v0.1.0&path:/fixture, each file
 #                   the fixture's byte for byte; bun can't, reading the whole fragment as the ref;
@@ -276,6 +296,7 @@ for mode in cold warm; do
   mkdir -p "$scratch/$mode"
   consumer "$scratch/$mode/pnpm" pnpm
   consumer "$scratch/$mode/npm" npm
+  consumer "$scratch/$mode/npm-linked" npm
   consumer "$scratch/$mode/bun" bun
 done
 
@@ -291,9 +312,15 @@ pnpm_install() {
   echo "env XDG_CACHE_HOME=$scratch/$mode/pnpm-xdg/cache XDG_STATE_HOME=$scratch/$mode/pnpm-xdg/state" \
     "pnpm --dir $scratch/$mode/pnpm install --store-dir $scratch/$mode/pnpm-store"
 }
+# npm_install MODE [linked]: npm's default hoisted layout, or with linked its linked one, in a
+# project and cache of its own.
 npm_install() {
   local mode=$1
-  echo "$npm install --prefix $scratch/$mode/npm --cache $scratch/$mode/npm-cache ${npm_flags[*]}"
+  if [[ "${2:-}" == linked ]]; then
+    echo "$npm install --prefix $scratch/$mode/npm-linked --cache $scratch/$mode/npm-linked-cache ${npm_flags[*]} --install-strategy=linked"
+  else
+    echo "$npm install --prefix $scratch/$mode/npm --cache $scratch/$mode/npm-cache ${npm_flags[*]}"
+  fi
 }
 bun_install() {
   local mode=$1
@@ -409,6 +436,8 @@ timing "Install from a git tag, cold" \
   -n "Node: pnpm install" "$(pnpm_install cold)" \
   --prepare "$(clean_project "$scratch/cold/npm") $scratch/cold/npm-cache" \
   -n "Node: npm install" "$(npm_install cold)" \
+  --prepare "$(clean_project "$scratch/cold/npm-linked") $scratch/cold/npm-linked-cache" \
+  -n "Node: npm install --install-strategy=linked" "$(npm_install cold linked)" \
   --prepare "$(clean_project "$scratch/cold/bun") $scratch/cold/bun-cache" \
   -n "Bun: bun install" "$(bun_install cold)"
 
@@ -419,6 +448,8 @@ timing "Install from a git tag, warm" \
   -n "Node: pnpm install" "$(pnpm_install warm)" \
   --prepare "$(clean_project "$scratch/warm/npm")" \
   -n "Node: npm install" "$(npm_install warm)" \
+  --prepare "$(clean_project "$scratch/warm/npm-linked")" \
+  -n "Node: npm install --install-strategy=linked" "$(npm_install warm linked)" \
   --prepare "$(clean_project "$scratch/warm/bun")" \
   -n "Bun: bun install" "$(bun_install warm)"
 
@@ -802,6 +833,185 @@ fi
 printf -v result '%s; ' "${observed[@]}"
 row "Bun installs a git dependency without running its prepare and reports it blocked; trustedDependencies runs it" \
   "$ok" "${result%; }"
+
+echo "measure: layout rows" >&2
+# Each layout installs into projects of its own, against a cache or store of its own under
+# $layout: npm-hoisted is npm's default, npm-linked is --install-strategy=linked, pnpm is pnpm's
+# default isolated layout, pnpm-hoisted is nodeLinker: hoisted in the project's
+# pnpm-workspace.yaml, bun is bun install's default, and bun-isolated is --linker isolated.
+layout="$scratch/layout"
+mkdir -p "$layout"
+declare -A layout_label=(
+  [npm-hoisted]="npm hoisted (default)" [npm-linked]="npm --install-strategy=linked"
+  [pnpm]="pnpm isolated (default)" [pnpm-hoisted]="pnpm nodeLinker: hoisted"
+  [bun]="bun install (default; hoisted for a project with no workspaces)"
+  [bun-isolated]="bun install --linker isolated"
+)
+# layout_project LAYOUT DIR DEPENDENCIES: a project with the dependencies object DEPENDENCIES, and
+# under pnpm-hoisted its pnpm-workspace.yaml.
+layout_project() {
+  mkdir -p "$2"
+  printf '{ "name": "%s", "private": true, "dependencies": %s }\n' "${2##*/}" "$3" >"$2/package.json"
+  if [[ "$1" == pnpm-hoisted ]]; then echo "nodeLinker: hoisted" >"$2/pnpm-workspace.yaml"; fi
+}
+# layout_install LAYOUT DIR [frozen]: installs DIR in LAYOUT against the layout's cache or store;
+# with frozen, from its lockfile only (npm ci, pnpm install --frozen-lockfile, bun install
+# --frozen-lockfile).
+layout_install() {
+  local cache="$layout/$1-cache" verb=install
+  case $1 in
+    npm-*)
+      if [[ "${3:-}" == frozen ]]; then verb=ci; fi
+      local flags=("${npm_flags[@]}")
+      if [[ "$1" == npm-linked ]]; then flags+=(--install-strategy=linked); fi
+      "$npm" "$verb" --prefix "$2" --cache "$cache" "${flags[@]}"
+      ;;
+    pnpm*)
+      local flags=(--store-dir "$cache" --reporter append-only)
+      if [[ "${3:-}" == frozen ]]; then flags+=(--frozen-lockfile); fi
+      XDG_CACHE_HOME=$cache-xdg/cache XDG_STATE_HOME=$cache-xdg/state \
+        pnpm --dir "$2" install "${flags[@]}"
+      ;;
+    bun*)
+      local flags=()
+      if [[ "$1" == bun-isolated ]]; then flags+=(--linker isolated); fi
+      if [[ "${3:-}" == frozen ]]; then flags+=(--frozen-lockfile); fi
+      BUN_INSTALL_CACHE_DIR=$cache bun install --cwd "$2" "${flags[@]}"
+      ;;
+  esac
+}
+# The files each manager writes into node_modules about the install rather than a package's.
+layout_meta=(! -name .package-lock.json ! -name .modules.yaml ! -name '.pnpm-workspace-state*'
+  ! -path '*/.pnpm/lock.yaml' ! -name .bun-tag)
+
+# Phantom dependency: three local packages as tarballs, a depending on b and b on c, and a
+# consumer declaring only a. a's second module, a/reach.js, imports c, which a doesn't declare:
+# a dependency's own phantom, where the consumer's import of b is the consumer's.
+phantom="$layout/phantom"
+for each in c: b:c a:b; do
+  name=${each%%:*} dependency=${each#*:} dependencies='{}'
+  if [[ -n "$dependency" ]]; then dependencies="{ \"$dependency\": \"file:$phantom/$dependency.tgz\" }"; fi
+  mkdir -p "$phantom/$name/package"
+  printf '{ "name": "%s", "version": "1.0.0", "type": "module", "main": "index.js", "dependencies": %s }\n' \
+    "$name" "$dependencies" >"$phantom/$name/package/package.json"
+  if [[ -n "$dependency" ]]; then
+    echo "import d from \"$dependency\"; export default \"$name, with \" + d;" >"$phantom/$name/package/index.js"
+  else
+    echo "export default \"$name\";" >"$phantom/$name/package/index.js"
+  fi
+  if [[ "$name" == a ]]; then echo 'import c from "c"; export default c;' >"$phantom/a/package/reach.js"; fi
+  tar -czf "$phantom/$name.tgz" -C "$phantom/$name" package
+done
+# resolves PROJECT SPECIFIER: "resolves", or node's error code, importing SPECIFIER from PROJECT.
+resolves() {
+  local out
+  if out=$(cd "$1" && node --input-type=module -e "await import(\"$2\")" 2>&1); then
+    echo resolves
+  else
+    grep -m1 -o 'ERR_[A-Z_]*' <<<"$out" || echo "fails: $(tail -n1 <<<"$out")"
+  fi
+}
+# Each layout with the outcome it should give the consumer's import of b, then a/reach.js's of c.
+# pnpm's and bun's isolated layouts hoist every package into a hidden node_modules inside their
+# store (pnpm's hoistPattern ['*'], bun's install.hoist), which a dependency resolves from and the
+# consumer doesn't; npm's linked layout has none.
+for each in npm-hoisted:resolves:resolves npm-linked:ERR_MODULE_NOT_FOUND:ERR_MODULE_NOT_FOUND \
+  pnpm:ERR_MODULE_NOT_FOUND:resolves pnpm-hoisted:resolves:resolves bun:resolves:resolves \
+  bun-isolated:ERR_MODULE_NOT_FOUND:resolves; do
+  IFS=: read -r name want_b want_c <<<"$each"
+  project="$layout/phantom-$name"
+  layout_project "$name" "$project" "{ \"a\": \"file:$phantom/a.tgz\" }"
+  status=0
+  layout_install "$name" "$project" >"$project.log" 2>&1 || status=$?
+  got_a=$(resolves "$project" a)
+  got_b=$(resolves "$project" b)
+  got_c=$(resolves "$project" a/reach.js)
+  for case in b c; do
+    if [[ "$case" == b ]]; then
+      want=$want_b got=$got_b what="a consumer's import of b, undeclared and a's dependency,"
+    else
+      want=$want_c got=$got_c what="a dependency's import of c (a/reach.js), undeclared by a and b's dependency,"
+    fi
+    ok=0
+    if ((status == 0)) && [[ "$got_a" == resolves && "$got" == "$want" ]]; then ok=1; fi
+    if [[ "$want" == resolves ]]; then expect="resolves"; else expect="doesn't resolve"; fi
+    row "${layout_label[$name]}: $what $expect" "$ok" \
+      "exit $status; import a: $got_a; import $([[ $case == b ]] && echo b || echo a/reach.js): $got;
+       node_modules holds $(names "$project/node_modules")"
+  done
+done
+
+# tree_digest DIR: a digest of DIR/node_modules, every path, link target, and file's bytes, the
+# managers' own metadata files left out, with the count of entries.
+tree_digest() {
+  local kind path target count
+  count=$(cd "$1/node_modules" && find . \( -type f -o -type l \) "${layout_meta[@]}" | wc -l)
+  (cd "$1/node_modules" && find . \( -type f -o -type l \) "${layout_meta[@]}" -printf '%y\t%p\t%l\n' |
+    LC_ALL=C sort | while IFS=$'\t' read -r kind path target; do
+      if [[ "$kind" == f ]]; then printf 'f %s %s\n' "$path" "$(sha256sum <"$path" | cut -d' ' -f1)"; else
+        printf 'l %s %s\n' "$path" "$target"
+      fi
+    done) | sha256sum | cut -c1-16 | tr '\n' ' '
+  echo "($count entries)"
+}
+# package_files DIR: DIR/node_modules' package files, the managers' own metadata left out.
+package_files() {
+  find "$1/node_modules" -type f "${layout_meta[@]}" "${@:2}" | wc -l
+}
+# bytes PATH...: du -sb's total over PATH..., which counts a file hard-linked among them once.
+bytes() { du -sbc "$@" | tail -n1 | cut -f1; }
+fs=$(stat -f -c %T "$layout")
+
+for name in npm-hoisted npm-linked pnpm bun; do
+  # Disk: two consumers of lit, one after the other, against the layout's cache or store.
+  status=0
+  for n in 1 2; do
+    layout_project "$name" "$layout/lit-$name-$n" "{ \"lit\": \"$lit\" }"
+    layout_install "$name" "$layout/lit-$name-$n" >>"$layout/lit-$name.log" 2>&1 || status=$?
+  done
+  first="$layout/lit-$name-1" second="$layout/lit-$name-2" cache="$layout/$name-cache"
+  total=$(package_files "$second")
+  linked=$(package_files "$second" -links +1)
+  added=$(($(bytes "$cache" "$first/node_modules" "$second/node_modules") - $(bytes "$cache" "$first/node_modules")))
+  ok=0
+  case $name in
+    npm-*)
+      expect="copies every package file from its cache, hard-linking none"
+      if ((status == 0 && total > 0 && linked == 0)); then ok=1; fi
+      ;;
+    pnpm | bun)
+      expect="hard-links every package file from its store or cache"
+      if ((status == 0 && total > 0 && linked == total)); then ok=1; fi
+      ;;
+  esac
+  row "${layout_label[$name]}: a second project of lit $lit $expect" "$ok" \
+    "exit $status; on $fs, $linked of the second project's $total package files are hard links;
+     the second project adds $added bytes (du -sb over the cache or store and both node_modules);
+     its node_modules $(du -sb "$second/node_modules" | cut -f1) bytes apparent;
+     the cache or store $(du -sb "$cache" | cut -f1) bytes"
+
+  # Determinism: two fresh copies of the first consumer install from its lockfile.
+  digests=("$(tree_digest "$first")")
+  status=0
+  for copy in a b; do
+    project="$layout/lit-$name-$copy"
+    mkdir -p "$project"
+    cp "$first/package.json" "$project/"
+    cp "$first"/package-lock.json "$first"/pnpm-lock.yaml "$first"/bun.lock "$project/" 2>/dev/null || true
+    layout_install "$name" "$project" frozen >>"$layout/lit-$name.log" 2>&1 || status=$?
+    digests+=("$(tree_digest "$project")")
+  done
+  ok=0
+  if ((status == 0)) && [[ "${digests[0]}" == "${digests[1]}" && "${digests[0]}" == "${digests[2]}" ]]; then
+    ok=1
+  fi
+  case $name in
+    npm-*) frozen="npm ci" ;;
+    *) frozen="$name install --frozen-lockfile" ;;
+  esac
+  row "${layout_label[$name]}: two installs from one lockfile ($frozen) give the first install's tree" \
+    "$ok" "exit $status; trees: first ${digests[0]}, copies ${digests[1]}, ${digests[2]}"
+done
 
 echo "measure: prefixed-tag rows" >&2
 # A throwaway repository with this package's tag tree in fixture/, tagged fixture/v0.1.0, never
