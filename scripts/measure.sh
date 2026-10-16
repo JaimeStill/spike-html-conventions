@@ -36,7 +36,8 @@
 #   refusals        node won't strip types under node_modules; pnpm refuses a git-tag package
 #                   that carries a git-tag dependency (ERR_PNPM_EXOTIC_SUBDEP), and bun installs it.
 #   prefixed tag    from a local, unpushed fixture/v0.1.0 tag with the package in fixture/,
-#                   pnpm installs the subdirectory with #fixture/v0.1.0&path:/fixture; bun can't.
+#                   pnpm installs the subdirectory with #fixture/v0.1.0&path:/fixture, each file
+#                   the fixture's byte for byte; bun can't, reading the whole fragment as the ref.
 #   GitHub          a scratch consumer installs the package from github:<owner>/<repo>#<tag> under
 #                   pnpm and under bun, each with a store or cache of its own in scratch; it
 #                   passes when every installed file equals the tag's byte for byte and every
@@ -50,7 +51,7 @@
 #   file://         pages opened in the system Chromium's --headless --dump-dom load
 #                   spike-html-design v0.7.0 from jsDelivr, Lit through an import map to jsDelivr,
 #                   and the JS forms of the element; each page reports the design's registry and
-#                   a token, and the element defined and rendered.
+#                   a token, and the element defined and rendering page 3 of 7.
 #
 # The GitHub and jsDelivr rows run against spike-html-design v0.7.0 always, and against this
 # package's v0.1.0 once that tag is on GitHub (git ls-remote); until then each of the latter
@@ -318,6 +319,19 @@ names() {
   find "$1/" -mindepth 1 -maxdepth 1 -printf '%f\n' 2>/dev/null | LC_ALL=C sort | tr '\n' ' '
 }
 
+# files DIR: DIR's files, relative and sorted, leaving out bun's .bun-tag marker.
+files() {
+  (cd "$1" && find . -type f ! -name .bun-tag | sed 's|^\./||' | LC_ALL=C sort)
+}
+
+# differing DIR TREE: the files in DIR that aren't TREE's byte for byte, on one line.
+differing() {
+  local path
+  while IFS= read -r path; do
+    cmp -s "$2/$path" "$1/$path" || printf '%s ' "$path"
+  done < <(files "$1")
+}
+
 # first_line PATTERN FILE: the first line of FILE matching PATTERN, trimmed of box drawing.
 first_line() {
   grep -m1 -E "$1" "$2" | sed -e 's/^[[:space:]│×╰─▶]*//' || true
@@ -393,7 +407,11 @@ status=0
 pnpm_warm "$scratch/prefixed-pnpm" --reporter append-only >"$scratch/prefixed-pnpm.log" 2>&1 || status=$?
 installed="$scratch/prefixed-pnpm/node_modules/spike-html-conventions"
 ok=0
-if ((status == 0)) && cmp -s "$installed/package.json" "$prefixed/fixture/package.json"; then ok=1; fi
+# Passes when every installed file is the fixture tree's, byte for byte.
+if ((status == 0)) && [[ -f "$installed/package.json" ]] &&
+  [[ -z "$(differing "$installed" "$prefixed/fixture")" ]]; then
+  ok=1
+fi
 row "pnpm installs a subdirectory from a prefixed tag (#fixture/$own_tag&path:/fixture)" "$ok" \
   "exit $status; installed $(cd "$installed" 2>/dev/null && find . -type f | wc -l) files: $(names "$installed")"
 
@@ -401,8 +419,13 @@ status=0
 bun_warm "$scratch/prefixed-bun" >"$scratch/prefixed-bun.log" 2>&1 || status=$?
 # Every error line bun prints, git's included, joined.
 reason=$(grep -E '^(error|fatal):' "$scratch/prefixed-bun.log" | paste -s -d ';' - | sed 's/;/; /g' || true)
+# The refusal is bun reading the whole fragment, &path: included, as the ref; any other failure
+# fails the row.
 ok=0
-if ((status != 0)); then ok=1; fi
+if ((status != 0)) && grep -qF "no commit matching \"fixture/$own_tag&path:/fixture\"" \
+  "$scratch/prefixed-bun.log"; then
+  ok=1
+fi
 row "Bun can't install a subdirectory from a prefixed tag (the same spec)" "$ok" \
   "exit $status; ${reason:-$(tail -n1 "$scratch/prefixed-bun.log")}"
 
@@ -430,19 +453,6 @@ tag_tree() {
   git -C "$repo" fetch -q --depth 1 "https://github.com/$1" "refs/tags/$2:refs/tags/$2"
   mkdir -p "$scratch/tag-${1##*/}"
   git -C "$repo" archive "$2" | tar -x -C "$scratch/tag-${1##*/}"
-}
-
-# files DIR: DIR's files, relative and sorted, leaving out bun's .bun-tag marker.
-files() {
-  (cd "$1" && find . -type f ! -name .bun-tag | sed 's|^\./||' | LC_ALL=C sort)
-}
-
-# differing DIR TREE: the files in DIR that aren't TREE's byte for byte, on one line.
-differing() {
-  local path
-  while IFS= read -r path; do
-    cmp -s "$2/$path" "$1/$path" || printf '%s ' "$path"
-  done < <(files "$1")
 }
 
 # github_rows NAME SLUG TAG: one row per manager, each installing NAME from github:SLUG#TAG into a
@@ -613,7 +623,9 @@ page() {
     const shadow = el.shadowRoot;
     const total = [...shadow.querySelectorAll("span")].at(-1)?.textContent.trim();
     const page = shadow.querySelector("input")?.value;
-    report.textContent = (color && bg ? "ok" : "FAIL") + ": design color profiles " + color +
+    // The element rendered its attributes: page 3 of 7.
+    const rendered = page === "3" && total === "/ 7";
+    report.textContent = (color && bg && rendered ? "ok" : "FAIL") + ": design color profiles " + color +
       ", --bg " + bg + "; $tag defined, renders page " + page + " \"" + total + "\"";
   }
 </script>

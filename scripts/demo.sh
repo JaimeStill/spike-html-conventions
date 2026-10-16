@@ -5,7 +5,8 @@
 # `chromium --headless --dump-dom file://...`, and prints the page's one-line report: whether
 # the element is defined, its rendered shadow text, and the pages its input clamps 99 and -4
 # to (with page 3 of 7, those are 7 and 1). The full dumped DOM, with the shadow root's HTML,
-# is kept next to each page as <name>.dom.html. Exits nonzero if any page fails.
+# is kept next to each page as <name>.dom.html. Exits nonzero if any page fails or reports
+# other values than those.
 #
 # Two ways to load a module from file:// are used:
 #   esbuild, bun   the bundle is inlined into the page, which needs no flag;
@@ -75,9 +76,12 @@ probe() {
     }
     const sizes = [...shadow.querySelectorAll("option")].map((o) => o.textContent.trim());
     const total = [...shadow.querySelectorAll("span")].at(-1).textContent.trim();
+    // Page 3 of 7 with the default sizes, and the two typed pages clamped to 7 and 1.
+    const ok = sizes.join("/") === "12/24/48/96" && shown === "3" && total === "/ 7" &&
+      pages.join() === "7,1";
     report.textContent =
-      "ok: defined; renders sizes " + sizes.join("/") + ", page " + shown + " \"" +
-      total + "\"; clamps 99 to " + pages[0] + ", -4 to " + pages[1];
+      (ok ? "ok" : "FAIL") + ": defined; renders sizes " + sizes.join("/") + ", page " + shown +
+      " \"" + total + "\"; clamps 99 to " + pages[0] + ", -4 to " + pages[1];
   }
 </script>
 EOF
