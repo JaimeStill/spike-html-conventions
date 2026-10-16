@@ -1,6 +1,6 @@
 # goal · experiment.html.spike-html-conventions
 
-- **State:** brief ready
+- **State:** building
 - **Task:** toolchain
 - **Branch:** toolchain
 
@@ -93,11 +93,18 @@ Amendment (escalation, after slice 10): npm joins as a third column.
  12. Evidence re-argued across Node + npm, Node + pnpm, and Bun, in the
      same order, figures re-cited from one fresh measure run.
      Demo: the README's Results.
+Amendment (redirect at BRIEF): npm against pnpm, today.
+ 13. The README evaluates npm and pnpm as they stand today, and whether
+     npm has mitigated the concerns that drove pnpm's creation (nested
+     then hoisted node_modules, phantom dependencies, nondeterminism,
+     disk duplication, speed, monorepo support): measured where the
+     measure task can show it (phantom dependency, npm's linked install
+     strategy, disk use), sourced otherwise; Results 1 re-weighed.
 ```
 
 ## Progress
 
-slices 12/12 committed · standards done (3 passes) · spec done (2 rounds after the redirect) · editor done
+slices 12/12 committed · standards done (3 passes) · spec done (2 rounds after the redirect) · editor done · amendment 13 —
 
 ## Decisions
 
