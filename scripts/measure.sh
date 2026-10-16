@@ -21,7 +21,8 @@
 #   type check      tsc --noEmit over the .ts and JSDoc forms: one tool, the same in both columns.
 #   build           Node: tsc emit, an esbuild bundle, and a Vite library build; Bun: bun build.
 #                   Each bundler takes all six element entries in one invocation, Lit bundled and
-#                   nothing minified, with Lit's production build, into scratch.
+#                   nothing minified, with Lit's production build, into scratch; each bundle's
+#                   shape is checked after the timing.
 #   watch rebuild   see below.
 #   test            node --test against bun test, over the shared suite.
 #
@@ -301,9 +302,9 @@ entries() {
 mapfile -t root_entries < <(entries "$root")
 mapfile -t work_entries < <(entries "$work")
 
-# vite_config BASE OUT DIR: a Vite config, DIR/vite.config.mjs, building BASE's six element entries as an ES
-# library into OUT, each output named for its entry under src (ts/pagination-lit.js, as the other
-# bundlers name it). Lit is bundled (a library build externalizes nothing unasked), nothing is
+# vite_config BASE OUT DIR: a Vite config, DIR/vite.config.mjs, building BASE's six element
+# entries as an ES library into OUT, each output named for its entry under src
+# (ts/pagination-lit.js, as the other bundlers name it). Lit is bundled (a library build externalizes nothing unasked), nothing is
 # minified, and mode production resolves Lit's production export. Vite's root and cache are DIR,
 # in scratch; the config is a plain object, with no import of vite, so it loads natively.
 vite_config() {
@@ -391,6 +392,39 @@ timing "Build" \
   -n "Node: esbuild" "esbuild ${root_entries[*]} --bundle --format=esm --log-level=warning --outbase=$root/src --outdir=$scratch/build/esbuild" \
   -n "Node: vite build" "vite build --configLoader native --config $scratch/vite-build/vite.config.mjs" \
   -n "Bun: bun build" "env NODE_ENV=production bun build ${root_entries[*]} --target=browser --format=esm --root=$root/src --outdir=$scratch/build/bun"
+
+# The bundles are what the Build note says, or the timings compare something else: each of the
+# six entries is written; esbuild and bun build inline Lit, so no entry imports anything; Vite
+# writes one shared chunk beside them, which each Lit entry imports and no vanilla one does; and
+# no output carries Lit's development build, whose lit-html warns "Lit is in dev mode".
+shapes=()
+for tool in esbuild vite bun; do
+  out="$scratch/build/$tool"
+  mapfile -t chunks < <(find "$out" -maxdepth 1 -type f -name '*.js' -printf '%f\n')
+  if [[ "$tool" == vite ]]; then want=1; else want=0; fi
+  ((${#chunks[@]} == want)) || fail "$tool wrote ${#chunks[@]} shared chunks, not $want: ${chunks[*]}"
+  for entry in "${root_entries[@]}"; do
+    name=${entry#"$root/src/"}
+    file="$out/${name%.*}.js"
+    [[ -f "$file" ]] || fail "$tool wrote no ${name%.*}.js"
+    imports=$(grep -c '^import ' "$file" || true)
+    if [[ "$tool" == vite && "$name" == *-lit.* ]]; then
+      grep -q "^import .* from \"\.\./${chunks[0]}\";\$" "$file" ||
+        fail "vite's ${name%.*}.js doesn't import the shared chunk ${chunks[0]}"
+    elif ((imports != 0)); then
+      fail "$tool's ${name%.*}.js imports $imports modules, where Lit should be inlined"
+    fi
+  done
+  ! grep -rqF "Lit is in dev mode" "$out" || fail "$tool bundled Lit's development build"
+  if [[ "$tool" == vite ]]; then
+    shapes+=("vite: six entries and one shared chunk, ${chunks[0]}, $(wc -c <"$out/${chunks[0]}") bytes, imported by each Lit entry")
+  else
+    shapes+=("$tool: six self-contained entries, Lit inlined in each Lit entry")
+  fi
+done
+printf -v shape '%s; ' "${shapes[@]}"
+echo "Each bundle's shape, checked: ${shape%; }. None carries Lit's development build."
+echo
 
 # The watchers, each over the scratch copy, into its own output directory.
 echo "measure: starting watchers" >&2
