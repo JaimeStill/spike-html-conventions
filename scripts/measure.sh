@@ -52,8 +52,10 @@
 # scripts/lint-compare.js and written into scratch, never the working tree: ESLint's flat config
 # (@eslint/js's and typescript-eslint's recommended rules, the globals package's browser globals,
 # and biome.json's layer overrides as no-restricted-imports, each pattern group translated to one
-# regex with Biome's meaning), oxlint's .oxlintrc.json (the overrides' groups copied), and the
-# Prettier options oxfmt also reads, matching Biome's formatter. ESLint and Prettier, oxlint and
+# regex with Biome's meaning), oxlint's .oxlintrc.json (each override's groups merged into one
+# group with Biome's meaning, since oxlint lets one group's ! pattern re-allow what another group
+# refuses and runs no lookaround regex), and the Prettier options oxfmt also reads, matching
+# Biome's formatter. ESLint and Prettier, oxlint and
 # oxfmt are mise tools; typescript-eslint, @eslint/js, globals, and typescript, the parser's peer,
 # install from the registry into scratch at eslint_packages' versions below, with
 # --legacy-peer-deps so npm installs no second ESLint, and ESLint 10 finds each flat config by
@@ -630,7 +632,7 @@ mkdir -p "$tree"
 cp -r "$root/src" "$root/layers" "$root/test" "$tree/"
 cp "$root/biome.json" "$tree/"
 lint_compare eslint-config "$root/biome.json" "$tree/eslint.config.mjs" regex
-lint_compare oxlint-config "$root/biome.json" "$tree/.oxlintrc.json"
+lint_compare oxlint-config "$root/biome.json" "$tree/.oxlintrc.json" merged
 # The Prettier options both Prettier and oxfmt read, and the same with embedded formatting at its
 # default, auto, to show what that one option changes.
 format_options=$(lint_compare format-options "$root/biome.json" "$lint/format.json")
@@ -1717,8 +1719,8 @@ for setup in A B C; do
     "$ok" "exit $status; ${list%; }${skipped:+; code files the default run never reached: $skipped}"
 done
 
-# Direction: the layer rules over the violation and allowed trees. ESLint's copy of biome.json's
-# groups runs too, in trees of its own, as a fact beside its regex form.
+# Direction: the layer rules over the violation and allowed trees. ESLint's and oxlint's copies of
+# biome.json's groups run too, in trees of their own, as a fact beside their translated forms.
 for kind in violations allowed; do
   mkdir -p "$lint/$kind" "$lint/globs/$kind"
   lint_compare tree "$lint/$kind" "$kind"
@@ -1726,7 +1728,8 @@ for kind in violations allowed; do
   cp "$root/biome.json" "$lint/$kind/"
   lint_compare eslint-config "$root/biome.json" "$lint/$kind/eslint.config.mjs" regex
   lint_compare eslint-config "$root/biome.json" "$lint/globs/$kind/eslint.config.mjs" globs
-  lint_compare oxlint-config "$root/biome.json" "$lint/$kind/.oxlintrc.json"
+  lint_compare oxlint-config "$root/biome.json" "$lint/$kind/.oxlintrc.json" merged
+  lint_compare oxlint-config "$root/biome.json" "$lint/globs/$kind/.oxlintrc.json" globs
 done
 # direction LINTER DIR: the files LINTER flags with its restricted-imports rule in DIR/layers,
 # one per line, after checking that it linted every file there; a short run fails the row.
@@ -1773,6 +1776,12 @@ for setup in A B C; do
     globs_flagged=$(direction eslint "$lint/globs/violations")
     globs_drawn=$(direction eslint "$lint/globs/allowed")
     fact+="; with biome.json's groups copied as ESLint groups rather than translated, it flags $(grep -c . <<<"$globs_flagged" || true) violation files and $(grep -c . <<<"$globs_drawn" || true) of $allowed_count allowed files: ESLint reads a group as gitignore lines, where ** excludes ./ and ../ themselves and a ! line can't re-include a path under an excluded parent"
+  fi
+  if [[ "$linter" == oxlint ]]; then
+    globs_flagged=$(direction oxlint "$lint/globs/violations")
+    globs_drawn=$(direction oxlint "$lint/globs/allowed")
+    globs_short=$(LC_ALL=C comm -23 <(echo "$want") <(echo "$globs_flagged") | paste -s -d ' ' -)
+    fact+="; with biome.json's groups copied rather than merged, it flags $(grep -c . <<<"$globs_flagged" || true) violation files and $(grep -c . <<<"$globs_drawn" || true) of $allowed_count allowed files${globs_short:+, missing $globs_short}: oxlint reads the globs' braces, but a ! pattern that matches in one group re-allows what another group refuses"
   fi
   row "$prefix: ${linter}'s restricted-imports rule, configured as biome.json's layer overrides, flags the violation tree and not the allowed one" \
     "$ok" "$fact"

@@ -10,8 +10,12 @@
 // names no layer, so each app override refuses every specifier that climbs out of the app and
 // re-allows only the permitted layers named from layers/, which takes one override per file
 // depth. The deepest one, three directories into an app, also covers every file below it and
-// refuses their outward imports, so a deeper file fails closed. No alias exists, and every
-// layer refuses the package's own name.
+// refuses their outward imports, so a deeper file fails closed. A re-allowed prefix would let
+// `../../../foundation/../sdk/x.js` through, so every layer also refuses a relative specifier
+// that isn't normalized: one with a ., .., or empty segment after its leading ./ or ../ run. With
+// no character classes in Biome's globs, a name segment is one that starts with an enumerated
+// character, in brace alternation. No alias exists, and every layer refuses an absolute path and
+// the package's own name.
 
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";

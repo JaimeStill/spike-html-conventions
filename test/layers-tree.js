@@ -31,6 +31,7 @@ export const violations = {
   "layers/components/static-type.ts": `import type { Page } from "../apps/static/site/main.js";`,
   "layers/components/nested/sdk.ts": `import "../../sdk/session.js";`,
   "layers/components/self.ts": `import "${self}";`,
+  "layers/components/unnormalized.ts": `import "./x/../../foundation/dom.js";`,
   // SDK: never components or an app
   "layers/sdk/components.ts": `import { StatusBadge } from "../components/status-badge.js";`,
   "layers/sdk/components-type.ts": `import type { StatusBadge } from "../components/status-badge.js";`,
@@ -50,6 +51,15 @@ export const violations = {
   "layers/apps/static/site/a/b/c/sibling.ts": `import "../../../../blog/main.js";`,
   "layers/apps/static/site/a/b/c/d/sdk.ts": `import "../../../../../../../sdk/session.js";`,
   "layers/apps/static/site/self.ts": `import "${self}/layers/sdk/session.js";`,
+  "layers/apps/static/site/absolute.ts": `import "/layers/sdk/session.js";`,
+  // the same edges by a path that isn't normalized, climbing back through a name, a . or ..
+  // segment, or an empty one, which a re-allowed layer prefix would otherwise let through
+  "layers/apps/static/site/dot-climb.ts": `import "./../../../sdk/session.js";`,
+  "layers/apps/static/site/descend-climb.ts": `import "./x/../../../../sdk/session.js";`,
+  "layers/apps/static/site/foundation-climb.ts": `import "../../../foundation/../sdk/session.js";`,
+  "layers/apps/static/site/components-climb.ts": `import "../../../components/../sdk/session.js";`,
+  "layers/apps/static/site/dot-segment.ts": `import "../../../foundation/./../sdk/session.js";`,
+  "layers/apps/static/site/empty-segment.ts": `import "../../../foundation//../sdk/session.js";`,
   // application-branch app: never another app
   "layers/apps/application/documents/sibling.ts": `import { x } from "../prompts/main.js";`,
   "layers/apps/application/documents/sibling-export.ts": `export { x } from "../prompts/main.js";`,
@@ -61,9 +71,14 @@ export const violations = {
   "layers/apps/application/documents/a/b/sibling.ts": `import "../../../prompts/main.js";`,
   "layers/apps/application/documents/a/b/c/sibling.ts": `import "../../../../prompts/main.js";`,
   "layers/apps/application/documents/self.ts": `import "${self}/layers/apps/application/prompts/main.js";`,
+  "layers/apps/application/documents/dot-climb.ts": `import "./../prompts/main.js";`,
+  "layers/apps/application/documents/descend-climb.ts": `import "./x/../../../../apps/static/site/main.js";`,
+  "layers/apps/application/documents/sdk-climb.ts": `import "../../../sdk/../apps/application/prompts/main.js";`,
+  "layers/apps/application/documents/dots-climb.ts": `import "../../../sdk/.../../../apps/application/prompts/main.js";`,
 };
 
-// The same layout, every import one the layer may make, in each form.
+// The same layout, every import one the layer may make, in each form, and normalized specifiers
+// whose names hold dots, which the normalization rule must tell from . and .. segments.
 export const allowed = {
   "layers/foundation/dom.ts": `export { x } from "./events.js";`,
   "layers/foundation/nested/own.ts": `import type { X } from "../dom.js";\nawait import("../../foundation/dom.js");`,
@@ -101,6 +116,13 @@ export const allowed = {
   "layers/apps/application/documents/a/b/deep.ts": `import "../../main.js";\nimport "../../../../../sdk/session.js";`,
   "layers/apps/application/documents/a/b/c/deeper.ts": `import "../../../main.js";\nimport "../../../../../../foundation/dom.js";`,
   "layers/apps/application/prompts/main.ts": `import "./shell.js";\nimport "../../../sdk/session.js";`,
+  "layers/components/dotted.ts": `import "./..x/y.js";\nimport "../foundation/x..y/z.js";`,
+  "layers/apps/static/site/dotted.ts": [
+    `import "./..x/y.js";`,
+    `import "./.well-known/a.js";`,
+    `import "../../../components/x..y/z.js";`,
+    `import "../../../foundation/.../a.js";`,
+  ].join("\n"),
 };
 
 /** Writes `files`, one of the trees above, under `dir`, each source with a trailing newline. */
