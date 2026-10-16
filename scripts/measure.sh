@@ -135,7 +135,8 @@
 #                   timings' means, passing when the lint and the format check both pass on the
 #                   tree; configurability, each formatter configured to biome.json's options and
 #                   Biome's defaults, written over a copy of the tree, passing when every file
-#                   comes out byte for byte the tree's; scope, each formatter over a copy of the
+#                   comes out byte for byte the tree's, from a copy padded as below so a file
+#                   the formatter skips fails it; scope, each formatter over a copy of the
 #                   repository's tracked files, every file padded with three trailing newlines,
 #                   which a formatter strips from any file it formats, so the files that change
 #                   are the files it touched: the default scope recorded, and the row passing
@@ -143,9 +144,10 @@
 #                   .prettierignore that Prettier and oxfmt both read) is the code files exactly;
 #                   rewrites, the same unpadded, recording each file the default run rewrites
 #                   and its changed lines, every Markdown file named, passing when no code file
-#                   changes; direction, the layer rules over test/layers-tree.js's trees,
-#                   passing when the flagged files are the violation files less the edges the
-#                   rule can't express and the allowed tree draws none.
+#                   changes and the padded default run reached every code file; direction, the
+#                   layer rules over test/layers-tree.js's trees, passing when the flagged files
+#                   are the violation files less the edges the rule can't express and the
+#                   allowed tree draws none.
 #                   Per tool, whether it runs as a native binary or on Node, as expected below.
 #
 # The GitHub and jsDelivr rows run against spike-html-design v0.7.0 always, and against this
@@ -1582,6 +1584,9 @@ for setup in A B C; do
     dir="$lint/format-$setup-$variant"
     mkdir -p "$dir"
     cp -r "$root/src" "$root/layers" "$root/test" "$dir/"
+    # Three trailing newlines on every file, which a formatter strips from any file it formats,
+    # so a file it skips differs from the tree and fails the row.
+    while IFS= read -r path; do printf '\n\n\n' >>"$dir/$path"; done < <(files "$dir")
     config="$lint/format.json"
     if [[ "$variant" == embedded ]]; then config="$lint/format-embedded.json"; fi
     status=0
@@ -1702,11 +1707,14 @@ for setup in A B C; do
     if [[ "$path" =~ \.(js|ts)$ ]]; then code_changed=1; fi
     changes+=("$path -$(diff "$root/$path" "$dir/$path" | grep -c '^<') +$(diff "$root/$path" "$dir/$path" | grep -c '^>') of $(wc -l <"$root/$path") lines")
   done
+  # The padded default run above shows the formatter reached every code file, so an unchanged
+  # code file is one it formatted and left as it was, not one it skipped.
+  skipped=$(LC_ALL=C comm -23 <(printf '%s\n' "${code[@]}" | LC_ALL=C sort) <(LC_ALL=C sort <<<"${scope_files[default]}") | paste -s -d ' ' -)
   ok=0
-  if ((status == 0 && code_changed == 0)); then ok=1; fi
+  if ((status == 0 && code_changed == 0)) && [[ -z "$skipped" ]]; then ok=1; fi
   printf -v list '%s; ' "${changes[@]}"
   row "$prefix: $formatter over the repository by default, with the matched options, rewrites no code file" \
-    "$ok" "exit $status; ${list%; }"
+    "$ok" "exit $status; ${list%; }${skipped:+; code files the default run never reached: $skipped}"
 done
 
 # Direction: the layer rules over the violation and allowed trees. ESLint's copy of biome.json's
