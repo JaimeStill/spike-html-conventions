@@ -61,6 +61,8 @@ export const violations = {
   "layers/apps/static/site/dot-segment.ts": `import "../../../foundation/./../sdk/session.js";`,
   "layers/apps/static/site/empty-segment.ts": `import "../../../foundation//../sdk/session.js";`,
   "layers/apps/static/site/percent.ts": `import "../../../foundation/%2e%2e/sdk/session.js";`,
+  "layers/apps/static/site/dot-parent.ts": `import "./..";`,
+  "layers/apps/static/site/foundation-parent.ts": `import "../../../foundation/..";`,
   // ...or by the bare climb, which resolves to the branch directory's index
   "layers/apps/static/site/bare-parent.ts": `export * from "..";`,
   // application-branch app: never another app
@@ -78,6 +80,7 @@ export const violations = {
   "layers/apps/application/documents/descend-climb.ts": `import "./x/../../../../apps/static/site/main.js";`,
   "layers/apps/application/documents/sdk-climb.ts": `import "../../../sdk/../apps/application/prompts/main.js";`,
   "layers/apps/application/documents/dots-climb.ts": `import "../../../sdk/.../../../apps/application/prompts/main.js";`,
+  "layers/apps/application/documents/name-parent.ts": `import "./views/..";`,
   "layers/apps/application/documents/bare-parent.ts": `import "../";`,
   "layers/apps/application/documents/views/bare-parent.ts": `import "../..";`,
   // outside a layer directory or an app: a file there could re-export any layer
@@ -91,6 +94,7 @@ export const violations = {
 export const allowed = {
   "layers/foundation/dom.ts": `export { x } from "./events.js";`,
   "layers/foundation/nested/own.ts": `import type { X } from "../dom.js";\nawait import("../../foundation/dom.js");`,
+  "layers/foundation/nested/index.ts": `import "..";\nexport * from "./";`,
   "layers/components/badge.ts": [
     `import { html, LitElement } from "lit";`,
     `import { define } from "../foundation/dom.js";`,
