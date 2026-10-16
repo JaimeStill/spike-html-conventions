@@ -60,6 +60,9 @@ export const violations = {
   "layers/apps/static/site/components-climb.ts": `import "../../../components/../sdk/session.js";`,
   "layers/apps/static/site/dot-segment.ts": `import "../../../foundation/./../sdk/session.js";`,
   "layers/apps/static/site/empty-segment.ts": `import "../../../foundation//../sdk/session.js";`,
+  "layers/apps/static/site/percent.ts": `import "../../../foundation/%2e%2e/sdk/session.js";`,
+  // ...or by the bare climb, which resolves to the branch directory's index
+  "layers/apps/static/site/bare-parent.ts": `export * from "..";`,
   // application-branch app: never another app
   "layers/apps/application/documents/sibling.ts": `import { x } from "../prompts/main.js";`,
   "layers/apps/application/documents/sibling-export.ts": `export { x } from "../prompts/main.js";`,
@@ -75,6 +78,12 @@ export const violations = {
   "layers/apps/application/documents/descend-climb.ts": `import "./x/../../../../apps/static/site/main.js";`,
   "layers/apps/application/documents/sdk-climb.ts": `import "../../../sdk/../apps/application/prompts/main.js";`,
   "layers/apps/application/documents/dots-climb.ts": `import "../../../sdk/.../../../apps/application/prompts/main.js";`,
+  "layers/apps/application/documents/bare-parent.ts": `import "../";`,
+  "layers/apps/application/documents/views/bare-parent.ts": `import "../..";`,
+  // outside a layer directory or an app: a file there could re-export any layer
+  "layers/index.ts": `export * from "./sdk/session.js";`,
+  "layers/apps/static/index.ts": `export * from "../../sdk/session.js";`,
+  "layers/apps/application/index.ts": `export * from "${self}/layers/apps/static/site/main.js";`,
 };
 
 // The same layout, every import one the layer may make, in each form, and normalized specifiers

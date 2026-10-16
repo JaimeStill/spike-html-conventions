@@ -47,9 +47,11 @@
                       "./**/./**",
                       "../**/./**",
                       "./**//**",
-                      "../**//**"
+                      "../**//**",
+                      "**/*%*",
+                      "**/*%*/**"
                     ],
-                    "message": "A relative specifier is written normalized: it starts with ./ or with its ../ segments, and no later segment is ., .., or empty."
+                    "message": "A relative specifier is written normalized: it starts with ./ or with its ../ segments, no later segment is ., .., or empty, and none is percent-encoded."
                   },
                   {
                     "group": ["/**"],
@@ -88,9 +90,11 @@
                       "./**/./**",
                       "../**/./**",
                       "./**//**",
-                      "../**//**"
+                      "../**//**",
+                      "**/*%*",
+                      "**/*%*/**"
                     ],
-                    "message": "A relative specifier is written normalized: it starts with ./ or with its ../ segments, and no later segment is ., .., or empty."
+                    "message": "A relative specifier is written normalized: it starts with ./ or with its ../ segments, no later segment is ., .., or empty, and none is percent-encoded."
                   },
                   {
                     "group": ["/**"],
@@ -129,13 +133,39 @@
                       "./**/./**",
                       "../**/./**",
                       "./**//**",
-                      "../**//**"
+                      "../**//**",
+                      "**/*%*",
+                      "**/*%*/**"
                     ],
-                    "message": "A relative specifier is written normalized: it starts with ./ or with its ../ segments, and no later segment is ., .., or empty."
+                    "message": "A relative specifier is written normalized: it starts with ./ or with its ../ segments, no later segment is ., .., or empty, and none is percent-encoded."
                   },
                   {
                     "group": ["/**"],
                     "message": "A specifier is relative or a package name, never an absolute path, which resolves against the origin and escapes every layer rule."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["layers/*", "layers/apps/*", "layers/apps/*/*"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [".", "./", "./**", "..", "../", "../**", "/**"],
+                    "message": "Code lives in a layer directory, and an app in its own, layers/apps/<branch>/<app>/: a file directly in layers/, layers/apps/, or a branch directory imports no file, so it can re-export no layer."
+                  },
+                  {
+                    "group": ["spike-html-conventions", "spike-html-conventions/**"],
+                    "message": "The layers name each other by relative path, never by the package's own name, whose subpaths don't show which layer they reach."
                   }
                 ]
               }
@@ -156,6 +186,8 @@
                   {
                     "group": [
                       "../**",
+                      "..",
+                      "../",
                       "!../../../foundation",
                       "!../../../foundation/**",
                       "!../../../components",
@@ -176,9 +208,11 @@
                       "./**/./**",
                       "../**/./**",
                       "./**//**",
-                      "../**//**"
+                      "../**//**",
+                      "**/*%*",
+                      "**/*%*/**"
                     ],
-                    "message": "A relative specifier is written normalized: it starts with ./ or with its ../ segments, and no later segment is ., .., or empty."
+                    "message": "A relative specifier is written normalized: it starts with ./ or with its ../ segments, no later segment is ., .., or empty, and none is percent-encoded."
                   },
                   {
                     "group": ["/**"],
@@ -203,6 +237,8 @@
                   {
                     "group": [
                       "../../**",
+                      "../..",
+                      "../../",
                       "!../../../../foundation",
                       "!../../../../foundation/**",
                       "!../../../../components",
@@ -223,9 +259,11 @@
                       "./**/./**",
                       "../**/./**",
                       "./**//**",
-                      "../**//**"
+                      "../**//**",
+                      "**/*%*",
+                      "**/*%*/**"
                     ],
-                    "message": "A relative specifier is written normalized: it starts with ./ or with its ../ segments, and no later segment is ., .., or empty."
+                    "message": "A relative specifier is written normalized: it starts with ./ or with its ../ segments, no later segment is ., .., or empty, and none is percent-encoded."
                   },
                   {
                     "group": ["/**"],
@@ -250,6 +288,8 @@
                   {
                     "group": [
                       "../../../**",
+                      "../../..",
+                      "../../../",
                       "!../../../../../foundation",
                       "!../../../../../foundation/**",
                       "!../../../../../components",
@@ -270,9 +310,11 @@
                       "./**/./**",
                       "../**/./**",
                       "./**//**",
-                      "../**//**"
+                      "../**//**",
+                      "**/*%*",
+                      "**/*%*/**"
                     ],
-                    "message": "A relative specifier is written normalized: it starts with ./ or with its ../ segments, and no later segment is ., .., or empty."
+                    "message": "A relative specifier is written normalized: it starts with ./ or with its ../ segments, no later segment is ., .., or empty, and none is percent-encoded."
                   },
                   {
                     "group": ["/**"],
@@ -297,6 +339,8 @@
                   {
                     "group": [
                       "../../../../**",
+                      "../../../..",
+                      "../../../../",
                       "!../../../../../../foundation",
                       "!../../../../../../foundation/**",
                       "!../../../../../../components",
@@ -317,9 +361,11 @@
                       "./**/./**",
                       "../**/./**",
                       "./**//**",
-                      "../**//**"
+                      "../**//**",
+                      "**/*%*",
+                      "**/*%*/**"
                     ],
-                    "message": "A relative specifier is written normalized: it starts with ./ or with its ../ segments, and no later segment is ., .., or empty."
+                    "message": "A relative specifier is written normalized: it starts with ./ or with its ../ segments, no later segment is ., .., or empty, and none is percent-encoded."
                   },
                   {
                     "group": ["/**"],
@@ -344,6 +390,8 @@
                   {
                     "group": [
                       "../**",
+                      "..",
+                      "../",
                       "!../../../foundation",
                       "!../../../foundation/**",
                       "!../../../components",
@@ -366,9 +414,11 @@
                       "./**/./**",
                       "../**/./**",
                       "./**//**",
-                      "../**//**"
+                      "../**//**",
+                      "**/*%*",
+                      "**/*%*/**"
                     ],
-                    "message": "A relative specifier is written normalized: it starts with ./ or with its ../ segments, and no later segment is ., .., or empty."
+                    "message": "A relative specifier is written normalized: it starts with ./ or with its ../ segments, no later segment is ., .., or empty, and none is percent-encoded."
                   },
                   {
                     "group": ["/**"],
@@ -393,6 +443,8 @@
                   {
                     "group": [
                       "../../**",
+                      "../..",
+                      "../../",
                       "!../../../../foundation",
                       "!../../../../foundation/**",
                       "!../../../../components",
@@ -415,9 +467,11 @@
                       "./**/./**",
                       "../**/./**",
                       "./**//**",
-                      "../**//**"
+                      "../**//**",
+                      "**/*%*",
+                      "**/*%*/**"
                     ],
-                    "message": "A relative specifier is written normalized: it starts with ./ or with its ../ segments, and no later segment is ., .., or empty."
+                    "message": "A relative specifier is written normalized: it starts with ./ or with its ../ segments, no later segment is ., .., or empty, and none is percent-encoded."
                   },
                   {
                     "group": ["/**"],
@@ -442,6 +496,8 @@
                   {
                     "group": [
                       "../../../**",
+                      "../../..",
+                      "../../../",
                       "!../../../../../foundation",
                       "!../../../../../foundation/**",
                       "!../../../../../components",
@@ -464,9 +520,11 @@
                       "./**/./**",
                       "../**/./**",
                       "./**//**",
-                      "../**//**"
+                      "../**//**",
+                      "**/*%*",
+                      "**/*%*/**"
                     ],
-                    "message": "A relative specifier is written normalized: it starts with ./ or with its ../ segments, and no later segment is ., .., or empty."
+                    "message": "A relative specifier is written normalized: it starts with ./ or with its ../ segments, no later segment is ., .., or empty, and none is percent-encoded."
                   },
                   {
                     "group": ["/**"],
@@ -491,6 +549,8 @@
                   {
                     "group": [
                       "../../../../**",
+                      "../../../..",
+                      "../../../../",
                       "!../../../../../../foundation",
                       "!../../../../../../foundation/**",
                       "!../../../../../../components",
@@ -513,9 +573,11 @@
                       "./**/./**",
                       "../**/./**",
                       "./**//**",
-                      "../**//**"
+                      "../**//**",
+                      "**/*%*",
+                      "**/*%*/**"
                     ],
-                    "message": "A relative specifier is written normalized: it starts with ./ or with its ../ segments, and no later segment is ., .., or empty."
+                    "message": "A relative specifier is written normalized: it starts with ./ or with its ../ segments, no later segment is ., .., or empty, and none is percent-encoded."
                   },
                   {
                     "group": ["/**"],
