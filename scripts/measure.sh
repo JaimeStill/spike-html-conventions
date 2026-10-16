@@ -37,12 +37,26 @@
 #                   that carries a git-tag dependency (ERR_PNPM_EXOTIC_SUBDEP), and bun installs it.
 #   prefixed tag    from a local, unpushed fixture/v0.1.0 tag with the package in fixture/,
 #                   pnpm installs the subdirectory with #fixture/v0.1.0&path:/fixture; bun can't.
+#   GitHub          a scratch consumer installs the package from github:<owner>/<repo>#<tag> under
+#                   pnpm and under bun, each with a store or cache of its own in scratch; it
+#                   passes when every installed file equals the tag's byte for byte and every
+#                   exports target is installed. The tag's tree comes from a fresh shallow fetch
+#                   from GitHub, archived as GitHub's tarball is. The row records the file count
+#                   and whether the set is the one the git+file:// install of the timings got.
+#   jsDelivr        one file from cdn.jsdelivr.net/gh/<owner>/<repo>@<tag>: content type (a
+#                   module as JavaScript, a style as CSS, a .ts as text/plain with nosniff, which
+#                   a browser won't run), immutable caching, CORS open to any origin, and bytes
+#                   equal to the tag's; x-jsd-version-type is recorded.
 #   file://         pages opened in the system Chromium's --headless --dump-dom load
 #                   spike-html-design v0.7.0 from jsDelivr, Lit through an import map to jsDelivr,
-#                   and this repository's local JS forms of the element; each page reports the
-#                   design's registry and a token, and the element defined and rendered.
+#                   and the JS forms of the element; each page reports the design's registry and
+#                   a token, and the element defined and rendered.
 #
-# The fixture package's own v0.1.0 rows, from GitHub and jsDelivr, wait for the release.
+# The GitHub and jsDelivr rows run against spike-html-design v0.7.0 always, and against this
+# package's v0.1.0 once that tag is on GitHub (git ls-remote); until then each of the latter
+# reports "not yet released", neither pass nor fail. Likewise the file:// pages load the
+# element's JS forms from this working tree until v0.1.0 is released, and from jsDelivr at
+# v0.1.0 after.
 set -euo pipefail
 
 root=$(cd "$(dirname "$0")/.." && pwd)
@@ -65,7 +79,9 @@ fi
 design=${SPIKE_HTML_DESIGN:-$root/../spike-html-design}
 design_tag=v0.7.0
 own_tag=v0.1.0
-jsdelivr=https://cdn.jsdelivr.net/gh/JaimeStill/spike-html-design@$design_tag
+design_slug=JaimeStill/spike-html-design
+own_slug=JaimeStill/spike-html-conventions
+jsdelivr=https://cdn.jsdelivr.net/gh/$design_slug@$design_tag
 lit=$(node -p 'require(process.argv[1]).dependencies.lit' "$root/package.json")
 
 fail() {
@@ -292,6 +308,11 @@ row() {
   fi
 }
 
+# unreleased NAME: a row that waits for this package's release, neither pass nor fail.
+unreleased() {
+  rows+=("| $1 | not yet released | no $own_tag tag on github.com/$own_slug (git ls-remote) |")
+}
+
 # names DIR: the names in DIR, sorted, on one line.
 names() {
   find "$1/" -mindepth 1 -maxdepth 1 -printf '%f\n' 2>/dev/null | LC_ALL=C sort | tr '\n' ' '
@@ -385,17 +406,188 @@ if ((status != 0)); then ok=1; fi
 row "Bun can't install a subdirectory from a prefixed tag (the same spec)" "$ok" \
   "exit $status; ${reason:-$(tail -n1 "$scratch/prefixed-bun.log")}"
 
+echo "measure: GitHub and jsDelivr rows" >&2
+# released SLUG TAG: whether TAG is on github.com/SLUG. Any git failure but a missing ref ends the
+# run, so a network fault is never reported as an unreleased tag.
+released() {
+  local status=0
+  GIT_TERMINAL_PROMPT=0 git ls-remote --tags --exit-code "https://github.com/$1" "refs/tags/$2" \
+    >/dev/null || status=$?
+  case $status in
+    0) return 0 ;;
+    2) return 1 ;;
+    *) fail "git ls-remote of github.com/$1 failed (exit $status)" ;;
+  esac
+}
+own_released=0
+if released "$own_slug" "$own_tag"; then own_released=1; fi
+
+# tag_tree SLUG TAG: the tag's tree from a fresh shallow fetch from GitHub, extracted to
+# $scratch/tag-<repo>; git archive honours export-ignore as GitHub's tarball does.
+tag_tree() {
+  local repo="$scratch/fetch-${1##*/}"
+  git init -q --bare "$repo"
+  git -C "$repo" fetch -q --depth 1 "https://github.com/$1" "refs/tags/$2:refs/tags/$2"
+  mkdir -p "$scratch/tag-${1##*/}"
+  git -C "$repo" archive "$2" | tar -x -C "$scratch/tag-${1##*/}"
+}
+
+# files DIR: DIR's files, relative and sorted, leaving out bun's .bun-tag marker.
+files() {
+  (cd "$1" && find . -type f ! -name .bun-tag | sed 's|^\./||' | LC_ALL=C sort)
+}
+
+# differing DIR TREE: the files in DIR that aren't TREE's byte for byte, on one line.
+differing() {
+  local path
+  while IFS= read -r path; do
+    cmp -s "$2/$path" "$1/$path" || printf '%s ' "$path"
+  done < <(files "$1")
+}
+
+# github_rows NAME SLUG TAG: one row per manager, each installing NAME from github:SLUG#TAG into a
+# fresh scratch consumer with a store or cache of its own, compared with the tag's tree and with
+# the timings' git+file:// install of the same package.
+github_rows() {
+  local name=$1 slug=$2 tag=$3 manager project installed status ok bad count local_install left_out
+  local tree="$scratch/tag-${2##*/}" commit
+  commit=$(git -C "$scratch/fetch-${2##*/}" rev-parse --short "$tag^{commit}")
+  for manager in pnpm bun; do
+    project="$scratch/github-$name-$manager"
+    mkdir -p "$project"
+    printf '{ "name": "github-%s", "private": true, "dependencies": { "%s": "github:%s#%s" } }\n' \
+      "$manager" "$name" "$slug" "$tag" >"$project/package.json"
+    status=0
+    if [[ "$manager" == pnpm ]]; then
+      XDG_CACHE_HOME=$project-xdg/cache XDG_STATE_HOME=$project-xdg/state \
+        pnpm --dir "$project" install --store-dir "$project-store" --reporter append-only \
+        >"$project.log" 2>&1 || status=$?
+    else
+      BUN_INSTALL_CACHE_DIR=$project-cache bun install --cwd "$project" >"$project.log" 2>&1 ||
+        status=$?
+    fi
+    installed="$project/node_modules/$name"
+    ok=0
+    if ((status != 0)) || [[ ! -f "$installed/package.json" ]]; then
+      row "$manager installs $name from github:$slug#$tag" 0 \
+        "exit $status; $(tail -n1 "$project.log")"
+      continue
+    fi
+    bad=$(differing "$installed" "$tree")
+    count=$(files "$installed" | wc -l)
+    if [[ -z "$bad" ]] && node "$root/scripts/consumers.js" exports "$installed" \
+      >>"$project.log" 2>&1; then
+      ok=1
+    fi
+    # The timings' consumers installed the same package by git+file:// at the same tag name.
+    local_install="$scratch/warm/$manager/node_modules/$name"
+    if [[ "$(files "$installed")" == "$(files "$local_install")" ]]; then
+      local_install="the same file set as the git+file:// install"
+    else
+      local_install="the git+file:// install has $(files "$local_install" | wc -l) files"
+    fi
+    if [[ -n "$bad" ]]; then bad="not the tag's: $bad"; else bad="each the tag's byte for byte"; fi
+    # The tag's files the manager left out, as `files` or its packing defaults leave them.
+    left_out=$(LC_ALL=C comm -23 <(files "$tree") <(files "$installed") | paste -s -d ' ' -)
+    row "$manager installs $name from github:$slug#$tag" "$ok" \
+      "exit $status; $count of the tag's $(files "$tree" | wc -l) files (commit $commit), $bad;
+       ${left_out:+left out: $left_out;} $local_install"
+  done
+}
+
+# jsdelivr_row SLUG TAG PATH KIND: one file from jsDelivr, its headers recorded, compared with
+# the tag's tree. KIND is module (served as JavaScript), style (CSS), or unloadable (text/plain
+# with nosniff, which a browser won't run as a module).
+jsdelivr_row() {
+  local slug=$1 tag=$2 path=$3 kind=$4 url body ok=0 served code type cache cors sniff version bytes
+  url="https://cdn.jsdelivr.net/gh/$slug@$tag/$path"
+  body="$scratch/jsdelivr-body"
+  # A cold tag can answer 503 briefly, so the fetch is retried with backoff; curl retries a
+  # transient HTTP status without -f, and the headers written are the final response's.
+  if ! served=$(curl -sS --retry 5 --retry-all-errors --retry-delay 2 -o "$body" \
+    -w '%{http_code}|%header{content-type}|%header{cache-control}|%header{access-control-allow-origin}|%header{x-content-type-options}|%header{x-jsd-version-type}' \
+    "$url" 2>&1); then
+    row "jsDelivr serves $path at $slug@$tag ($kind)" 0 "$url: $served"
+    return
+  fi
+  IFS='|' read -r code type cache cors sniff version <<<"$served"
+  if [[ "$code" != 200 ]]; then
+    row "jsDelivr serves $path at $slug@$tag ($kind)" 0 "$url: HTTP $code"
+    return
+  fi
+  case $kind in
+    module) [[ "$type" =~ ^(application|text)/javascript ]] && ok=1 ;;
+    style) [[ "$type" == text/css* ]] && ok=1 ;;
+    unloadable) [[ "$type" == text/plain* && "$sniff" == nosniff ]] && ok=1 ;;
+  esac
+  [[ "$cache" == *immutable* && "$cors" == '*' ]] || ok=0
+  if cmp -s "$body" "$scratch/tag-${slug##*/}/$path"; then bytes="equal to the tag's"; else
+    bytes="NOT equal to the tag's"
+    ok=0
+  fi
+  row "jsDelivr serves $path at $slug@$tag ($kind)" "$ok" \
+    "content-type $type; cache-control $cache; access-control-allow-origin ${cors:-none};
+     x-content-type-options ${sniff:-none}; x-jsd-version-type ${version:-none};
+     $(wc -c <"$body") bytes, $bytes"
+}
+
+tag_tree "$design_slug" "$design_tag"
+github_rows spike-html-design "$design_slug" "$design_tag"
+# A representative set: the module and stylesheet the file:// pages load, and the registry they
+# import. spike-html-design has no .ts, so the unloadable .ts row is this package's alone.
+jsdelivr_row "$design_slug" "$design_tag" modules/register-full.js module
+jsdelivr_row "$design_slug" "$design_tag" modules/registry.js module
+jsdelivr_row "$design_slug" "$design_tag" full.css style
+
+# This package's rows, at v0.1.0: every module of every form its exports map names.
+mapfile -t own_modules < <(node -e '
+  const { exports } = require(process.argv[1]);
+  for (const target of Object.values(exports)) {
+    if (!target.endsWith(".d.ts")) console.log(target.replace(/^\.\//, ""));
+  }' "$root/package.json")
+if ((own_released)); then
+  tag_tree "$own_slug" "$own_tag"
+  github_rows spike-html-conventions "$own_slug" "$own_tag"
+  for path in "${own_modules[@]}"; do
+    if [[ "$path" == *.ts ]]; then kind=unloadable; else kind=module; fi
+    jsdelivr_row "$own_slug" "$own_tag" "$path" "$kind"
+  done
+else
+  for manager in pnpm bun; do
+    unreleased "$manager installs spike-html-conventions from github:$own_slug#$own_tag"
+  done
+  for path in "${own_modules[@]}"; do
+    if [[ "$path" == *.ts ]]; then kind=unloadable; else kind=module; fi
+    unreleased "jsDelivr serves $path at $own_slug@$own_tag ($kind)"
+  done
+fi
+
 echo "measure: file:// rows" >&2
+# The element's JS forms: from jsDelivr once this package's tag is released, and from the working
+# tree until then.
+if ((own_released)); then
+  element=https://cdn.jsdelivr.net/gh/$own_slug@$own_tag/src
+  element_from="spike-html-design $design_tag, Lit $lit, and this package at $own_tag, all from jsDelivr:"
+else
+  element=file://$root/src
+  element_from="spike-html-design $design_tag and Lit $lit from jsDelivr, local"
+fi
 # Warm jsDelivr first: a cold tag can answer 503 briefly, so each URL is retried with backoff.
-for url in "$jsdelivr/full.css" "$jsdelivr/modules/register-full.js" \
-  "$jsdelivr/modules/registry.js" "https://cdn.jsdelivr.net/npm/lit@$lit/+esm"; do
+warm=("$jsdelivr/full.css" "$jsdelivr/modules/register-full.js" "$jsdelivr/modules/registry.js"
+  "https://cdn.jsdelivr.net/npm/lit@$lit/+esm")
+if ((own_released)); then
+  for form in jsdoc js; do
+    warm+=("$element/$form/pagination-lit.js" "$element/$form/pagination-vanilla.js")
+  done
+fi
+for url in "${warm[@]}"; do
   curl -fsS -o /dev/null --retry 5 --retry-all-errors --retry-delay 2 "$url" ||
     echo "measure: jsDelivr didn't serve $url" >&2
 done
 
 profile="$scratch/chromium"
-# page FORM BASE: a file:// page with spike-html-design from jsDelivr and the local element, and
-# its report from the dumped DOM.
+# page FORM BASE: a file:// page with spike-html-design from jsDelivr and the element from
+# $element, and its report from the dumped DOM.
 page() {
   local form=$1 base=$2 tag="hd-pagination-$2-$1" html="$scratch/page-$1-$2.html"
   cat >"$html" <<EOF
@@ -404,7 +596,7 @@ page() {
 <link rel="stylesheet" href="$jsdelivr/full.css">
 <script type="importmap">{ "imports": { "lit": "https://cdn.jsdelivr.net/npm/lit@$lit/+esm" } }</script>
 <script type="module" src="$jsdelivr/modules/register-full.js"></script>
-<script type="module" src="file://$root/src/$form/pagination-$base.js"></script>
+<script type="module" src="$element/$form/pagination-$base.js"></script>
 </head><body>
 <$tag page="3" total-pages="7"></$tag>
 <pre id="report">FAIL: the report didn't run</pre>
@@ -442,15 +634,20 @@ for form in jsdoc js; do
     done
     ok=0
     if [[ "$report" == ok:* ]]; then ok=1; fi
-    row "file:// page: spike-html-design $design_tag and Lit $lit from jsDelivr, local $form/pagination-$base.js" \
+    row "file:// page: $element_from $form/pagination-$base.js" \
       "$ok" "${report:-no report in the dumped DOM}"
   done
 done
+if ((!own_released)); then
+  unreleased "file:// page: spike-html-design $design_tag, Lit $lit, and each JS form of the element from jsDelivr at $own_tag"
+fi
 
 echo "## Rows"
 echo
-echo "Fixture package $own_tag rows (install from GitHub, jsDelivr) wait for its release."
-echo
+if ((!own_released)); then
+  echo "This package's $own_tag isn't on GitHub yet: its GitHub and jsDelivr rows report not yet released, and the file:// pages load the element from the working tree."
+  echo
+fi
 echo "| row | result | observed |"
 echo "| --- | --- | --- |"
 printf '%s\n' "${rows[@]}"
