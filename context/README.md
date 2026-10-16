@@ -21,7 +21,9 @@ components, and apps) be built on, over the spike-html-design v0.7.0 baseline?
 
 - **Toolchain:** Node 26 LTS + pnpm for packages; Bun 1.4 only for bundling, the dev server, and
   CSS. Results 1 rules out the split by role and, across Node + npm, Node + pnpm, and Bun, picks
-  Node with pnpm, never npm or Bun beside it, with tsc emit for library builds and Vite for apps.
+  Node, never Bun beside it, with one manager: pnpm provisionally, until spike-html-packages
+  decides how the layers release (a registry release makes it npm). Libraries build with tsc
+  emit and apps with Vite; esbuild doesn't earn its place.
 - **Components:** vanilla for the foundation and the static branch; Lit from components up.
 - **Stack:** foundation (native only, no framework: the design system plus `.ts` modules shipped
   through a release build, per Results 2; its tools split into utilities, structure/layout, and
@@ -33,8 +35,8 @@ components, and apps) be built on, over the spike-html-design v0.7.0 baseline?
 
 ## The evidence
 
-1. Node 26 + pnpm against Bun 1.4, measured on git-tag install, TS, build, watch, test, lint,
-   and jsDelivr, with a pick.
+1. Node 26 with npm or pnpm against Bun 1.4, measured on git-tag install, TS, build, watch,
+   test, lint, and jsDelivr, with a pick.
 2. The three-way TS form comparison on the same element and module: `.ts` with type stripping,
    JS with JSDoc and a type check, and plain JS, with the spike's own conclusion. DHH/Turbo and
    Svelte/JSDoc are positions to weigh, not answers.
@@ -187,8 +189,8 @@ All 13 rows publish to npm. relative-time-element also publishes to GitHub Packa
 and Web Awesome also ship CDN builds. No library surveyed releases through git tags, release
 assets, JSR, or a self-hosted registry alone.
 
-The hosting decision belongs to spike-html-packages, not this survey. The standing decision (plan
-round 4) rules npm out unless no workable alternative exists, so these rows are its facts, and
+The hosting decision belongs to spike-html-packages, not this survey. The architect's standing
+decision rules npm out unless no workable alternative exists, so these rows are its facts, and
 npm's adoption among the libraries doesn't decide it.
 
 ### The consensus
@@ -272,18 +274,17 @@ SoJS lists neither Web Test Runner nor a 2025 package-manager question.
 ## Results
 
 Every measured figure below is from one run of `mise run measure`, dated
-**2026-10-16T13:18:28Z (UTC)**, cited as *(m 2026-10-16)*; it replaces the runs of 01:32:50Z and
-11:51:40Z the same day, and is the first run with the pnpm and bun `prepare` rows. That covers the
-timings and rows, each mise tool's installed size (its Footprint section, `mise where` and
-`du -sb`), and the lines and brotli bytes of `src/` (its Forms section), with every tool's version
-as pinned in `mise.toml`. File counts from the offline installs are from `mise run check` the same
-day. Survey figures cite the Ecosystem survey's sources, and other facts from outside the spike
-carry their own source and date.
+**2026-10-16T13:18:28Z (UTC)**, cited as *(m 2026-10-16)*. That covers the timings and rows,
+each mise tool's installed size (its Footprint section, `mise where` and `du -sb`), and the lines
+and brotli bytes of `src/` (its Forms section), with every tool's version as pinned in
+`mise.toml`. File counts from the offline installs are from `mise run check` the same day.
+Survey figures cite the Ecosystem survey's sources, and other facts from outside the spike carry
+their own source and date.
 
 Conflict of interest: this evidence was drafted by an Anthropic model, and Anthropic owns Bun.
 The pick rests on the measured rows and the cited facts; weigh it with that in mind.
 
-### 1. The toolchain: Node with pnpm
+### 1. The toolchain: Node, with pnpm provisionally
 
 Three columns, with tsc (the native 7.0.2 binary) and biome shared:
 
@@ -332,11 +333,11 @@ ships JS, so bun's `.ts` support under node_modules buys a consumer nothing. The
   future" ([open-source terms][npm-terms], legal notices to GitHub), and it sets registry and
   client policy unilaterally: npm 12 made git dependencies and dependency lifecycle scripts opt-in
   ([v12.0.0][npm-12]), and classic tokens were revoked 2025-12-09 ([s49][npm-tokens]). Bun is
-  Oven's, acquired by Anthropic in December 2025 ([heise][bun-heise]), still MIT ([LICENSE.md][bun-lic]) and developed in the open; it released
-  35 times in the 12 months before the acquisition and 15 in the 10.5 since, with a gap from
-  2026-05-13 to 2026-08-20 that ended with 1.4.0, a feature release ([releases][bun-rel],
-  [bun.com/1.4][bun-14]). Two core engineers wrote 74 of its 100 most recent commits
-  ([commits][bun-commits]). It has no foundation and no published support window. So the setup's
+  Oven's, acquired by Anthropic in December 2025 ([heise][bun-heise]), still MIT
+  ([LICENSE.md][bun-lic]) and developed in the open; it released 35 times in the 12 months
+  before the acquisition and 15 in the 10.5 since, with a gap from 2026-05-13 to 2026-08-20 that
+  ended with 1.4.0, a feature release ([releases][bun-rel], [bun.com/1.4][bun-14]). Two core
+  engineers wrote 74 of its 100 most recent commits ([commits][bun-commits]). It has no foundation and no published support window. So the setup's
   Deno test ("patches only after its acquisition") doesn't rule Bun out, but a foundation and an
   LTS window outweigh one company and none. Between the managers, npm's stewardship is the
   stronger: a corporate owner, release lines kept in parallel, and authorship spread wider,
@@ -367,17 +368,14 @@ ships JS, so bun's `.ts` support under node_modules buys a consumer nothing. The
   repositories.
 
 The first criterion picks Node, clearly: the consensus runtime, both standard builds, and the
-stronger stewardship. Between its managers it still picks pnpm, more narrowly than before npm's
-stewardship was weighed. npm has the standard by use (the default, and the web-component
-libraries' majority) and the stronger stewardship. pnpm has the multi-package practice this stack
+stronger stewardship. Between its managers it picks pnpm, narrowly. npm has the standard by use
+(the default, and the web-component libraries' majority) and the stronger stewardship. pnpm has the multi-package practice this stack
 is, and the repository-release facts: it is the only manager measured that installs a
 subdirectory at a prefixed tag; of the two that guard git dependencies, it takes a consumer's own
 without a setting; and it never runs a git dependency's `prepare` while saying it didn't. Those
 facts decide it only if spike-html-packages releases the layers from their repositories, the path
 where npm is weakest. If it releases through a registry (GitHub Packages, JSR, or a self-hosted
-one), npm's standard and stewardship carry the first criterion, and the pick changes to npm. The
-runtime is settled here; the manager is pnpm provisionally, until spike-html-packages decides how
-the layers release.
+one), npm's standard and stewardship carry the first criterion, and the pick changes to npm.
 
 **Second: footprint.** Bun is smallest: 89.0 MB for one binary, against Node + npm's 236.8 MB
 (271.1 MB with Vite for an app) and Node + pnpm's 283.3 MB (317.6 MB with Vite)
@@ -409,11 +407,12 @@ are under 700 ms per run at this size, and the edit loop, a Vite watch rebuild, 
 Bun's. Speed is the last criterion and these gaps don't reach a scale anyone waits on, so they
 don't overturn the first either.
 
-**The pick: Node 26 with pnpm, never npm or Bun beside it.** The industry standard and
-maintainability decide it: Node over Bun clearly, and pnpm over npm narrowly, on the
+**The pick: Node 26 with one manager, pnpm provisionally, and never Bun beside it.** The industry
+standard and maintainability decide it: Node over Bun clearly, and pnpm over npm narrowly, on the
 multi-package practice and the repository-release facts, against npm's standard by use and its
-stronger stewardship. Footprint is Bun's real advantage at about a third the size, and
-npm's at 46.5 MB; speed gaps of an order of magnitude exist only where the absolute times are
+stronger stewardship. The runtime is settled; pnpm holds until spike-html-packages decides how
+the layers release, and a registry release makes it npm. Footprint is Bun's real advantage at
+about a third the size, and npm's at 46.5 MB; speed gaps of an order of magnitude exist only where the absolute times are
 under a second.
 
 **The build tool: tsc emit for the foundation and components, Vite for apps.** A library build is

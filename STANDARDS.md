@@ -18,9 +18,10 @@ The architecture pages that apply, in the architecture repository:
 
 ## Tools and dependencies
 
-- The toolchain is Node with pnpm, never npm or Bun beside it: tsc emit builds libraries and Vite
-  builds apps. The npm and Bun columns and the esbuild pin are the comparison's evidence only;
-  nothing shipped depends on a Bun-only API.
+- The toolchain is Node with one package manager, pnpm provisionally (npm if spike-html-packages
+  releases the layers through a registry), and never Bun beside it. tsc emit builds libraries and
+  Vite builds apps; esbuild builds nothing. The Bun column, the manager not picked, and the
+  esbuild pin are the comparison's evidence only; nothing shipped depends on a Bun-only API.
 - Every tool comes from a pin in `mise.toml`. The system Chromium is the one exception, by the
   architect's decision; `mise run measure` records its version.
 - Lit is the only package dependency, and no package manifest has a devDependency.
