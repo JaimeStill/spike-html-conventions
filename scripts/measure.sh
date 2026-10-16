@@ -2035,13 +2035,16 @@ declare -A plugin_rules=(
   [import-x]="import-x/no-restricted-paths,import-x/no-unresolved"
 )
 declare -A plugin_label=(
-  [boundaries]="eslint-plugin-boundaries' dependencies rule (eslint-import-resolver-typescript) with import-x's no-unresolved"
+  [boundaries]="eslint-plugin-boundaries' dependencies rule (eslint-import-resolver-typescript), the plugin whose rule alone passes both trees, with import-x's no-unresolved"
   [import-x]="eslint-plugin-import-x's no-restricted-paths (its built-in resolver, .js to .ts by extensionAlias) with its no-unresolved"
 )
 # import-x's no-restricted-paths reads an import as outside a zone's directory when its path
 # relative to the directory starts with "..", so a directory inside the layer named ..x or ...
 # is outside it: the allowed tree's dotted files draw it.
 declare -A plugin_missed=([boundaries]="" [import-x]="")
+# A plugin named here passes only when its own rule, without no-unresolved, flags every file it
+# should: boundaries' row label says its rule alone passes both trees.
+declare -A plugin_alone=([boundaries]=1 [import-x]=0)
 declare -A plugin_drawn=([boundaries]="" [import-x]="layers/apps/static/site/dotted.ts layers/components/dotted.ts")
 for plugin in boundaries import-x; do
   rules=${plugin_rules[$plugin]}
@@ -2054,6 +2057,7 @@ for plugin in boundaries import-x; do
   unresolved=$(LC_ALL=C comm -23 <(lint_compare flagged eslint "$lint/$plugin/violations/eslint-report.json" "$lint/$plugin/violations" import-x/no-unresolved) <(lint_compare flagged eslint "$lint/$plugin/violations/eslint-report.json" "$lint/$plugin/violations" "$rule") | paste -s -d ' ' -)
   ok=0
   if [[ "$flagged" == "$want" && "$(paste -s -d ' ' - <<<"$drawn")" == "${plugin_drawn[$plugin]}" ]]; then ok=1; fi
+  if ((plugin_alone[$plugin])) && [[ "$by_rule" != "$(grep -c . <<<"$want" || true)" ]]; then ok=0; fi
   fact="under eslint $(tool_version eslint), flags $(grep -c . <<<"$flagged" || true) of ${#violation_files[@]} violation files ($by_rule by ${rule}${unresolved:+, the rest by no-unresolved alone: $unresolved}) and $(grep -c . <<<"$drawn" || true) of $allowed_count allowed files"
   short=$(LC_ALL=C comm -23 <(printf '%s\n' "${violation_files[@]}") <(echo "$flagged") | paste -s -d ' ' -)
   extra=$(LC_ALL=C comm -13 <(printf '%s\n' "${violation_files[@]}") <(echo "$flagged") | paste -s -d ' ' -)
@@ -2072,7 +2076,7 @@ done
 declare -A surface_binaries=([A]="biome" [B]="eslint prettier node" [C]="oxlint oxfmt node" [D]="eslint node")
 declare -A surface_configs=(
   [A]="biome.json, the linter's and the formatter's options and the layer rules in one"
-  [B]="eslint.config.js, the lint rules and the layer table; .prettierrc.json, the formatter's options; .prettierignore, to limit Prettier to the code and JSON"
+  [B]="eslint.config.js, the lint rules and the layer table; .prettierrc.json, the formatter's options; .prettierignore, to limit Prettier to the code and JSON; pnpm-workspace.yaml, the pnpm settings the devDependencies' install needs (allowBuilds)"
   [C]=".oxlintrc.json, the lint rules and the layer rules; .oxfmtrc.json, the formatter's options; .prettierignore, which oxfmt reads too, to limit it to the code and JSON"
   [D]="eslint.config.js, the lint rules, the layer table, and Stylistic's and jsonc's formatting rules in one"
 )
