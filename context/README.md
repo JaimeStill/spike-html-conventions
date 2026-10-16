@@ -20,8 +20,8 @@ components, and apps) be built on, over the spike-html-design v0.7.0 baseline?
 ## Hypotheses
 
 - **Toolchain:** Node 26 LTS + pnpm for packages; Bun 1.4 only for bundling, the dev server, and
-  CSS. Results 1 rules out the split by role and picks Node with pnpm, never Bun beside it, with
-  tsc emit for library builds and Vite for apps.
+  CSS. Results 1 rules out the split by role and, across Node + npm, Node + pnpm, and Bun, picks
+  Node with pnpm, never npm or Bun beside it, with tsc emit for library builds and Vite for apps.
 - **Components:** vanilla for the foundation and the static branch; Lit from components up.
 - **Stack:** foundation (native only, no framework: the design system plus `.ts` modules shipped
   through a release build, per Results 2; its tools split into utilities, structure/layout, and
@@ -259,43 +259,48 @@ SoJS lists neither Web Test Runner nor a 2025 package-manager question.
 ## Results
 
 Every measured figure below is from one run of `mise run measure`, dated
-**2026-10-16T01:32:50Z (UTC)**, cited as *(m 2026-10-16)*; it replaces the run of 00:25:08Z the
-same day. That covers the timings and rows, each mise tool's installed size (its Footprint
-section, `mise where` and `du -sb`), and the lines and brotli bytes of `src/` (its Forms section),
-with every tool's version as pinned in `mise.toml`. File counts from the offline installs are from
-`mise run check` the same day. Survey figures cite the Ecosystem survey's sources, and other facts
-from outside the spike carry their own source and date.
+**2026-10-16T11:51:40Z (UTC)**, cited as *(m 2026-10-16)*; it replaces the run of 01:32:50Z the
+same day, and is the first run that checks each bundle's shape. That covers the timings and rows,
+each mise tool's installed size (its Footprint section, `mise where` and `du -sb`), and the lines
+and brotli bytes of `src/` (its Forms section), with every tool's version as pinned in
+`mise.toml`. File counts from the offline installs are from `mise run check` the same day. Survey
+figures cite the Ecosystem survey's sources, and other facts from outside the spike carry their own
+source and date.
 
 Conflict of interest: this evidence was drafted by an Anthropic model, and Anthropic owns Bun.
 The pick rests on the measured rows and the cited facts; weigh it with that in mind.
 
 ### 1. The toolchain: Node with pnpm
 
-The two columns, with tsc (the native 7.0.2 binary) and biome shared:
+Three columns, with tsc (the native 7.0.2 binary) and biome shared:
 
-| role | Node column | Bun column |
-| --- | --- | --- |
-| install from a git tag | pnpm | bun |
-| TypeScript | tsc; node strips `.ts`, but not under node_modules | tsc; bun runs any `.ts` |
-| library build | tsc emit | bun build |
-| app build | Vite (or esbuild) | bun build |
-| test | node --test | bun test |
-| tools added | node, pnpm (+ Vite for an app) | bun |
+| role | Node + npm | Node + pnpm | Bun |
+| --- | --- | --- | --- |
+| install from a git tag | npm 12.2.1 | pnpm | bun |
+| TypeScript | tsc; node strips `.ts`, but not under node_modules | the same | tsc; bun runs any `.ts` |
+| library build | tsc emit | tsc emit | bun build |
+| app build | Vite (or esbuild) | Vite (or esbuild) | bun build |
+| test | node --test | node --test | bun test |
+| tools added | node, npm (+ Vite for an app) | node, pnpm (+ Vite for an app) | bun |
+
+npm is its own pin: node 26.12.0 bundles npm 11.20.0, from before npm 12 refused git dependencies
+by default *(m 2026-10-16)*.
 
 **First: industry standard and maintainability.** Readable, type-safe source doesn't separate the
-columns: both write the same `.ts` (Results 2), checked by the same tsc, and a release build ships
-JS, so bun's `.ts` support under node_modules buys a consumer nothing. The standard does:
+columns: all three write the same `.ts` (Results 2), checked by the same tsc, and a release build
+ships JS, so bun's `.ts` support under node_modules buys a consumer nothing. The standard does:
 
 - Runtime: Node is the consensus, 90.3% use against Bun's 20.8% in SoJS 2025
   ([s1][sj25-other]), and 48.7% against 5.5% of all Stack Overflow 2025 respondents
   ([s3][so25]). Bun is growing (16.4% in 2024, [s2][sj24-other]), from a minority.
-- Package manager: no consensus, npm by default. pnpm leads monorepo use at 38.4% against Bun's
-  11.0% ([s1][sj25-other]), and draws 223.2M npm downloads a week against bun's 4.0M, a lower
-  bound ([s4][npm-pm]). None of the 13 web-component libraries uses either: 10 use npm, 3 Yarn.
-  npm wasn't measured; the setup's Node column is pnpm.
+- Package manager: no consensus. npm is the default and the majority by use, 56.8% against pnpm's
+  13.4% in Stack Overflow 2025 ([s3][so25]), and 10 of the 13 web-component libraries use it (3
+  use Yarn, none pnpm or bun). pnpm leads multi-package repositories, 38.4% of SoJS 2025 monorepo
+  use against npm workspaces' 20.8% and Bun's 11.0% ([s1][sj25-other]), and this stack is
+  several layers released from one repository. bun install is a minority on both counts.
 - Build: library builds are tsc emit to unbundled ESM with `.d.ts` (Lit, Material, FAST, Fluent,
   and Catalyst emit with tsc), apps trend to Vite (84% use, 98% retention, [s13][sj25-build]), and
-  none of the 13 libraries uses `bun build`. The Node column's builds are both standards; the Bun
+  none of the 13 libraries uses `bun build`. Both Node columns' builds are the standards; the Bun
   column's is neither.
 - Stewardship, as of 2026-10-16. Node is an [OpenJS Foundation project][openjs]; Node 26 is LTS
   from 2026-10-28 and supported to 2029-04-30 ([schedule.json][node-sched]), and from 27 every
@@ -310,70 +315,92 @@ JS, so bun's `.ts` support under node_modules buys a consumer nothing. The stand
   ([commits][bun-commits]). It has no foundation and no published support window. So the setup's
   Deno test ("patches only after its acquisition") doesn't rule Bun out, but a foundation and an
   LTS window outweigh one company and none. Commit counts are the author logins of each default
-  branch's 100 most recent commits, read 2026-10-16 with `gh api`.
-- Repository releases, measured *(m 2026-10-16)* and the check: pnpm honours `files` (11 files of
-  this package, against bun's whole tag tree of 38) and installs a subdirectory at a prefixed tag
-  (`#fixture/v0.1.0&path:/fixture`, 11 files), where bun can't resolve the spec. pnpm 12 refuses a
-  git-tag package with a git-tag dependency by default (`ERR_PNPM_EXOTIC_SUBDEP`), and one consumer
-  setting, `blockExoticSubdeps: false`, lifts it; bun installs it as is. Two facts favour pnpm,
-  and its one refusal costs a line. Whether the layers use prefixed tags or git-tag dependencies is
-  spike-html-packages' to settle, so these lean the pick, not decide it.
+  branch's 100 most recent commits, read 2026-10-16 with `gh api`. npm's stewardship wasn't
+  surveyed.
+- Repository releases, measured *(m 2026-10-16)* and in the check, weighed across all three:
 
-The first criterion picks Node with pnpm, clearly: the consensus runtime, both standard builds,
-the stronger stewardship, and the better repository-release behaviour.
+  | fact | npm 12.2.1 | pnpm | bun |
+  | --- | --- | --- | --- |
+  | honours `files` | yes, 11 files | yes, 11 files | no, the tag's whole tree, 43 files |
+  | a subdirectory at a prefixed tag | no | yes, `#fixture/v0.1.0&path:/fixture`, 11 files | no, can't resolve the spec |
+  | a git-tag dependency | refused by default (`EALLOWGIT`, allow-git=none); allow-git=root admits it | installed | installed |
+  | that package's own git-tag dependency | refused under allow-git=root; allow-git=all installs it | refused (`ERR_PNPM_EXOTIC_SUBDEP`); `blockExoticSubdeps: false` installs it | installed, no setting |
+  | a git dependency's `prepare` | runs at pack time, while npm warns that the package's install scripts were blocked; only `--ignore-scripts` skips it | not measured | not measured |
 
-**Second: footprint.** It favours Bun: 89.0 MB for one binary, against node and pnpm's 283.3 MB,
-317.6 MB with Vite for an app *(m 2026-10-16)*, 3.2 to 3.6 times the size. That is under an order
-of magnitude, on the second criterion; it doesn't overturn the first.
+  npm ignores `&path:` as an unknown key, and its own `#fixture/v0.1.0::path:fixture` resolves the
+  tag to its commit and then fails to install it (`ENOENT` on the clone's package.json). npm and
+  pnpm guard git dependencies by default, npm at the root and pnpm only below it; bun has no guard.
+  npm's `prepare` warning says the opposite of what it does, a cost to anyone auditing a git
+  dependency. Whether the layers use prefixed tags or git-tag dependencies is spike-html-packages'
+  to settle, so these lean the pick, not decide it.
+
+The first criterion picks Node, clearly: the consensus runtime, both standard builds, and the
+stronger stewardship. Between its managers it picks pnpm, narrowly. npm is the default and the
+web-component libraries' majority, but pnpm leads the multi-package repositories this stack is,
+and it is the only manager measured that installs a subdirectory at a prefixed tag; of the two
+that guard git dependencies, it takes a consumer's own without a setting.
+
+**Second: footprint.** Bun is smallest: 89.0 MB for one binary, against Node + npm's 236.8 MB
+(271.1 MB with Vite for an app) and Node + pnpm's 283.3 MB (317.6 MB with Vite)
+*(m 2026-10-16)*, 2.7 to 3.6 times the size. npm is 46.5 MB smaller than pnpm, node + npm 1.2
+times smaller than node + pnpm. Neither gap is an order of magnitude, on the second criterion; they
+don't overturn the first.
 
 **Third: speed**, which counts only on an order-of-magnitude gap, bundler to bundler, like for like
-*(m 2026-10-16, hyperfine means; the ratio is how many times faster Bun is)*:
+*(m 2026-10-16, hyperfine means; each ratio is how many times faster Bun is than the Node step)*:
 
-| step | Node | Bun | ratio |
-| --- | ---: | ---: | ---: |
-| install, cold | pnpm 731.4 ms | 665.0 ms | 1.1x |
-| install, warm | pnpm 172.7 ms | 14.1 ms | 12.3x |
-| type check (shared tsc) | 71.3 ms | 71.3 ms | 1x |
-| library build | tsc emit 73.9 ms | bun build 5.3 ms | not like for like |
-| app bundle | vite build 125.4 ms; esbuild 37.0 ms | bun build 5.3 ms | 23.7x; 7.0x |
-| watch rebuild | vite 17.4 ms; tsc 69.0 ms; esbuild 107.5 ms | 12.5 ms | 1.4x; 5.5x; 8.6x |
-| test | node --test 118.8 ms | bun test 17.7 ms | 6.7x |
+| step | Node + npm | Node + pnpm | Bun | ratio, npm; pnpm |
+| --- | ---: | ---: | ---: | ---: |
+| install, cold | 952.5 ms | 434.6 ms | 345.6 ms | 2.8x; 1.3x |
+| install, warm | 679.0 ms | 170.8 ms | 14.4 ms | 47.2x; 11.9x |
+| type check (shared tsc) | 72.9 ms | 72.9 ms | 72.9 ms | 1x |
+| library build | tsc emit 77.1 ms | the same | bun build 5.4 ms | not like for like |
+| app bundle | vite build 124.7 ms; esbuild 36.2 ms | the same | bun build 5.4 ms | 23.1x; 6.7x |
+| watch rebuild | vite 17.5 ms; tsc 67.8 ms; esbuild 107.7 ms | the same | 12.6 ms | 1.4x; 5.4x; 8.5x |
+| test | node --test 123.2 ms | the same | bun test 19.4 ms | 6.4x |
 
-tsc emit transpiles each file and bundles nothing, so it isn't compared with `bun build`. Vite's
-build puts Lit in one shared chunk where `bun build` inlines it per entry, and its 125.4 ms
-includes starting node and loading its config. Two gaps clear 10x: a warm install (12.3x) and a
-one-shot Vite bundle (23.7x). Both are under 200 ms per run at this size, and the edit loop, a
-Vite watch rebuild, is within 1.4x of Bun's. Speed is the last criterion and these gaps don't
-reach a scale anyone waits on, so they don't overturn the first either.
+Only the installs differ between the Node columns: pnpm installs 2.2 times faster than npm cold and
+4.0 times warm, under an order of magnitude. tsc emit transpiles each file and bundles nothing, so
+it isn't compared with `bun build`. The same run checked each bundle's shape: Vite wrote six
+entries and one shared Lit chunk (20,567 bytes) that each Lit entry imports, esbuild and `bun
+build` each wrote six self-contained entries with Lit inlined, and none holds Lit's development
+build. Vite's 124.7 ms includes starting node and loading its config. Three gaps clear 10x: a
+warm install against npm (47.2x) and against pnpm (11.9x), and a one-shot Vite bundle (23.1x). All
+are under 700 ms per run at this size, and the edit loop, a Vite watch rebuild, is within 1.4x of
+Bun's. Speed is the last criterion and these gaps don't reach a scale anyone waits on, so they
+don't overturn the first either.
 
-**The pick: Node 26 with pnpm, and never Bun beside it.** The industry standard and
-maintainability decide it, footprint is Bun's real advantage at about a third the size, and speed
-gaps of an order of magnitude exist only where the absolute times are a few hundred milliseconds.
+**The pick: Node 26 with pnpm, never npm or Bun beside it.** The industry standard and
+maintainability decide it: Node over Bun clearly, and pnpm over npm on the multi-package practice
+and the repository-release facts. Footprint is Bun's real advantage at about a third the size, and
+npm's at 46.5 MB; speed gaps of an order of magnitude exist only where the absolute times are
+under a second.
 
 **The build tool: tsc emit for the foundation and components, Vite for apps.** A library build is
 tsc emit to unbundled ESM with `.d.ts`, the survey's library practice and Lit's guidance, which
 leaves bundling to the app ([s17][lit-pub]): the same tsc that type-checks, so it adds no tool
-(`mise run build:tsc`, 73.9 ms *(m 2026-10-16)*). An app's bundle is Vite, the survey's trend
+(`mise run build:tsc`, 77.1 ms *(m 2026-10-16)*). An app's bundle is Vite, the survey's trend
 ([s13][sj25-build], [s15][vite8-blog]), adding 34.3 MB *(m 2026-10-16)* only where an app needs
 it; the branches task confirms it at application scale. `bun build` leaves with Bun.
 
-**esbuild doesn't earn its place.** Its build is 2.0x tsc emit's (37.0 ms against 73.9 ms) and
-3.4x Vite's, and its watch rebuild is the slowest of the three (107.5 ms) *(m 2026-10-16)*: no
-order-of-magnitude gap over the tools the column keeps. It adds a second native binary to mirror
-for offline installs: esbuild 0.28.2 on npm is a stub with a `postinstall` and 26 per-platform
-optional packages ([registry][esb-npm]). Vite 8 bundles with Rolldown and lists esbuild only as
-optional ([migration guide][vite8]), so an app doesn't need it either; its 303.5M weekly
-downloads ([s14][npm-build]) are mostly transitive. It is 0.x, and one maintainer wrote 93 of its
-100 most recent commits ([commits][esb-commits], read 2026-10-16). Its pin stays in `mise.toml`
-only for the measure task's comparison.
+**esbuild doesn't earn its place.** Its build is 2.1x faster than tsc emit (36.2 ms against
+77.1 ms) and 3.4x faster than Vite, and its watch rebuild is the slowest of the three (107.7 ms)
+*(m 2026-10-16)*: no order-of-magnitude gap over the tools the column keeps. It adds a second
+native binary to mirror for offline installs: esbuild 0.28.2 on npm is a stub with a `postinstall`
+and 26 per-platform optional packages ([registry][esb-npm]). Vite 8 bundles with Rolldown and
+lists esbuild only as optional ([migration guide][vite8]), so an app doesn't need it either; its
+303.5M weekly downloads ([s14][npm-build]) are mostly transitive. It is 0.x, and one maintainer
+wrote 93 of its 100 most recent commits ([commits][esb-commits], read 2026-10-16). Its pin stays
+in `mise.toml` only for the measure task's comparison.
 
-**What would reverse it.** The survey's consensus moving: Bun's runtime use nearing Node's, or
-the web-component libraries adopting bun install or `bun build`. Node losing its foundation or
-its LTS windows. An application-scale bundle where Vite against `bun build` is seconds against
-tenths, in the edit loop rather than a one-shot build (the branches task measures it). A hard
-footprint limit, such as an offline mirror, that the extra 194 MB breaks. spike-html-packages
-choosing a release form where neither `files` nor prefixed tags matter would remove pnpm's
-measured edge, but not the first criterion.
+**What would reverse it.** Toward npm: spike-html-packages releasing through a registry rather
+than git tags, which leaves no prefixed tags or git-tag dependencies to weigh, so npm's majority
+among the libraries and its smaller footprint would decide; or npm installing a subdirectory with
+`::path:`. Toward Bun: the survey's consensus moving, Bun's runtime use nearing Node's or the
+web-component libraries adopting bun install or `bun build`; Node losing its foundation or its LTS
+windows; an application-scale bundle where Vite against `bun build` is seconds against tenths, in
+the edit loop rather than a one-shot build (the branches task measures it); or a hard footprint
+limit, such as an offline mirror, that the extra 194.3 MB breaks.
 
 ### 2. The TypeScript form: `.ts` with a release build
 
@@ -448,7 +475,8 @@ a release needs, for each `.ts` module:
 - the built files in the tag (committed on the tagged commit) or in a release asset, because
   jsDelivr `/gh/` and a git-tag install serve only what the tag holds;
 - `exports` pointing at the built `.js`, with its types, so no consumer resolves a `.ts`, and
-  `files` naming the built output (pnpm honours it; bun installs the whole tree regardless).
+  `files` naming the built output (npm and pnpm honour it; bun installs the whole tree
+  regardless).
 
 Not exercised: a relative import between `.ts` modules (the sources have none), which tsc emits
 as written unless `rewriteRelativeImportExtensions` rewrites `./x.ts` to `./x.js`.
@@ -457,13 +485,13 @@ The JSDoc and plain JS forms stay in `src/` as this comparison's evidence, not a
 
 ### 7. Consumption
 
-- **Installed by git tag, offline** (the check, 2026-10-16): pnpm installs this package's
+- **Installed by git tag, offline** (the check, 2026-10-16): npm and pnpm install this package's
   `files` (package.json and `src/`, 11 files) and 114 of spike-html-design v0.7.0's 115, leaving
-  out `.gitignore`; bun installs the tag's whole tree (38 and 115 files), ignoring `files`. Every
-  file equals the tag's byte for byte.
+  out `.gitignore`; npm only with allow-git=root in the consumer's `.npmrc`. bun installs the tag's
+  whole tree (43 and 115 files), ignoring `files`. Every file equals the tag's byte for byte.
 - **Installed from GitHub by tag** *(m 2026-10-16)*: spike-html-design v0.7.0 (commit fe75220)
-  under pnpm (114 of 115 files) and bun (115 of 115), each the tag's byte for byte and the same
-  set as the offline install.
+  under npm and pnpm (114 of 115 files each) and bun (115 of 115), each the tag's byte for byte
+  and the same set as the offline install.
 - **jsDelivr** *(m 2026-10-16)*: spike-html-design v0.7.0's two modules and its stylesheet, each
   with its JavaScript or CSS content type, `max-age=31536000, immutable`, CORS open to any
   origin, and bytes equal to the tag's.
@@ -471,15 +499,19 @@ The JSDoc and plain JS forms stay in `src/` as this comparison's evidence, not a
   and Lit 3.3.3 from jsDelivr, Lit through an import map, and the element's JSDoc and plain JS
   forms in Lit and vanilla, from this working tree until v0.1.0 is released; each element is
   defined and renders page 3 of 7. The `.ts` form loads only once built (Results 2).
-- **Refusals** *(m 2026-10-16)*: node won't strip `.ts` under node_modules, and bun imports it;
-  pnpm refuses a git-tag package with a git-tag dependency (`ERR_PNPM_EXOTIC_SUBDEP`) by default,
-  installs it with `blockExoticSubdeps: false` in the consumer's `pnpm-workspace.yaml`, and bun
-  installs it as is. Handed to spike-html-packages.
+- **Refusals** *(m 2026-10-16)*: node won't strip `.ts` under node_modules, and bun imports it.
+  npm 12 refuses any git-tag dependency by default (`EALLOWGIT`, allow-git=none); with
+  allow-git=root it refuses a git-tag package's own git-tag dependency, and allow-git=all installs
+  it. pnpm refuses that nested dependency (`ERR_PNPM_EXOTIC_SUBDEP`) by default and installs it
+  with `blockExoticSubdeps: false` in the consumer's `pnpm-workspace.yaml`; bun installs it as is.
+  npm runs a git dependency's `prepare` when it packs the clone while warning that its install
+  scripts were blocked; `--ignore-scripts` skips it. Handed to spike-html-packages.
 - **Prefixed tags** *(m 2026-10-16)*, from a local, unpushed `fixture/v0.1.0`: pnpm installs the
-  subdirectory with `#fixture/v0.1.0&path:/fixture` (11 files); bun can't resolve the spec.
-  Handed to spike-html-packages.
+  subdirectory with `#fixture/v0.1.0&path:/fixture` (11 files); bun can't resolve the spec; npm
+  ignores `&path:` as an unknown key, and its own `#fixture/v0.1.0::path:fixture` resolves the tag
+  to its commit, then fails to install it. Handed to spike-html-packages.
 - **Pending:** this package's v0.1.0 rows, *not yet released* at *m 2026-10-16*: its GitHub
-  install under each manager, jsDelivr serving each of its nine source files (the three `.ts`
+  install under npm, pnpm, and bun, jsDelivr serving each of its nine source files (the three `.ts`
   as unloadable), and the file:// page loading its JS forms from jsDelivr. v0.1.0 ships source
   only; the release build is spike-html-packages'. The structure task runs these rows after the
   release.
