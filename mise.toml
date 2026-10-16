@@ -6,6 +6,8 @@ pnpm = "12.11.2"
 shellcheck = "0.11.0"
 "github:microsoft/typescript-go" = { version = "7.0.2", version_prefix = "typescript/v", bin_path = "package/lib" }
 "npm:esbuild" = "0.28.2"
+# Vite through mise's npm: backend; its vite runs on the pinned node.
+"npm:vite" = "8.3.4"
 "aqua:sharkdp/hyperfine" = "2.0.0"
 
 [tasks.check]
@@ -63,7 +65,7 @@ run = "scripts/demo.sh"
 dir = "{{config_root}}"
 
 [tasks.measure]
-description = "Record each mise tool's installed size and each TypeScript form's lines and brotli bytes, time each toolchain with hyperfine, and record every row, the GitHub and jsDelivr ones for v0.1.0 once it is released, as a dated markdown report on stdout; reads the network, writes nothing to the working tree"
+description = "Record each mise tool's installed size and each TypeScript form's lines and brotli bytes, time each toolchain with hyperfine (Node: tsc, esbuild, and Vite; Bun: bun build), and record every row, the GitHub and jsDelivr ones for v0.1.0 once it is released, as a dated markdown report on stdout; reads the network, writes nothing to the working tree"
 run = "scripts/measure.sh"
 dir = "{{config_root}}"
 

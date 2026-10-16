@@ -19,21 +19,31 @@
 #   install, warm   the same with the store or cache kept, and node_modules and the lockfile
 #                   removed before every run.
 #   type check      tsc --noEmit over the .ts and JSDoc forms: one tool, the same in both columns.
-#   build           Node: tsc emit and an esbuild bundle; Bun: bun build. Each bundler takes all
-#                   six element entries in one invocation, into scratch.
+#   build           Node: tsc emit, an esbuild bundle, and a Vite library build; Bun: bun build.
+#                   Each bundler takes all six element entries in one invocation, Lit bundled and
+#                   nothing minified, with Lit's production build, into scratch.
 #   watch rebuild   see below.
 #   test            node --test against bun test, over the shared suite.
 #
-# Watch rebuild: each watcher (tsc --watch, esbuild --watch, bun build --watch) runs over a
-# scratch copy of the sources, never the working tree. One sample rewrites the copy's
-# src/ts/pagination-lit.ts with a new `export const stamp = N;` line and polls the output until
-# it holds `stamp = N`, so hyperfine's time is from the source change to the rebuilt output, plus
-# this script's startup and the poll's granularity of a few milliseconds.
+# Vite: its config is written into scratch (see vite_config below), never the working tree, and
+# loaded natively (--configLoader native), so Vite writes no bundled config beside it. Vite's
+# library build splits the six entries' shared Lit into one chunk, its default for several
+# entries, where esbuild and bun build without --splitting inline Lit into each entry. The watch
+# row times vite build --watch, not Vite's dev server: the dev server serves modules unbundled on
+# request and pushes changes over HMR, writing no output to poll, so it isn't like for like with
+# the other watchers.
+#
+# Watch rebuild: each watcher (tsc --watch, esbuild --watch, vite build --watch, bun build
+# --watch) runs over a scratch copy of the sources, never the working tree. One sample rewrites
+# the copy's src/ts/pagination-lit.ts with a new `export const stamp = N;` line and polls the
+# output until it holds `stamp = N`, so hyperfine's time is from the source change to the rebuilt
+# output, plus this script's startup and the poll's granularity of a few milliseconds.
 #
 # Before the timings, two sections read only the local disk:
 #
 #   footprint       each mise tool's installed size, from mise where and du -sb, with the column
-#                   it belongs to and each column's total.
+#                   it belongs to and each column's total: the Node column alone, and with each of
+#                   its bundlers, esbuild or Vite.
 #   forms           lines and brotli bytes (quality 11, through bun's node:zlib; no brotli CLI is
 #                   pinned) of each file in src/{ts,jsdoc,js}, and each form's totals.
 #
@@ -135,6 +145,7 @@ version pnpm "$(pnpm --version)"
 version bun "$(bun --version)"
 version tsc "$(tsc --version)"
 version esbuild "$(esbuild --version)"
+version vite "$(vite --version | cut -d' ' -f1 | cut -d/ -f2)"
 version hyperfine "$(hyperfine --version)"
 version biome "$(biome --version)"
 version shellcheck "$(shellcheck --version | sed -n 's/^version: //p')"
@@ -155,7 +166,7 @@ echo "| tool | column | installed size |"
 echo "| --- | --- | ---: |"
 # tool|column, every pin in mise.toml.
 footprint_tools=(
-  "node|Node" "pnpm|Node" "npm:esbuild|Node, to bundle" "bun|Bun"
+  "node|Node" "pnpm|Node" "npm:esbuild|Node, to bundle" "npm:vite|Node, to bundle" "bun|Bun"
   "github:microsoft/typescript-go|both (tsc)" "biome|both"
   "shellcheck|the check only" "aqua:sharkdp/hyperfine|the measure task only"
 )
@@ -172,8 +183,9 @@ done
 echo
 node_column=$(mb "${footprint_bytes[node]}" "${footprint_bytes[pnpm]}")
 node_bundler=$(mb "${footprint_bytes[node]}" "${footprint_bytes[pnpm]}" "${footprint_bytes[npm:esbuild]}")
+node_vite=$(mb "${footprint_bytes[node]}" "${footprint_bytes[pnpm]}" "${footprint_bytes[npm:vite]}")
 bun_column=$(mb "${footprint_bytes[bun]}")
-echo "Tools each column adds: Node, node + pnpm = $node_column ($node_bundler with esbuild); Bun, bun = $bun_column. tsc and biome are in both."
+echo "Tools each column adds: Node, node + pnpm = $node_column, $node_bundler with esbuild, $node_vite with Vite (Vite runs on node); Bun, bun = $bun_column. tsc and biome are in both."
 echo
 
 # ---- Forms: lines and brotli bytes per file and per form of src/. Brotli is quality 11 with
@@ -289,6 +301,47 @@ entries() {
 mapfile -t root_entries < <(entries "$root")
 mapfile -t work_entries < <(entries "$work")
 
+# vite_config BASE OUT DIR: a Vite config, DIR/vite.config.mjs, building BASE's six element entries as an ES
+# library into OUT, each output named for its entry under src (ts/pagination-lit.js, as the other
+# bundlers name it). Lit is bundled (a library build externalizes nothing unasked), nothing is
+# minified, and mode production resolves Lit's production export. Vite's root and cache are DIR,
+# in scratch; the config is a plain object, with no import of vite, so it loads natively.
+vite_config() {
+  local base=$1 out=$2 dir=$3 entry name list=""
+  while IFS= read -r entry; do
+    name=${entry#"$base/src/"}
+    list+="      \"${name%.*}\": \"$entry\",
+"
+  done < <(entries "$base")
+  mkdir -p "$dir"
+  cat >"$dir/vite.config.mjs" <<EOF
+export default {
+  root: "$dir",
+  cacheDir: "$dir/vite-cache",
+  publicDir: false,
+  logLevel: "warn",
+  mode: "production",
+  build: {
+    outDir: "$out",
+    emptyOutDir: false,
+    minify: false,
+    reportCompressedSize: false,
+    lib: {
+      formats: ["es"],
+      // .js, and the shared chunk below, whatever the nearest package.json's type, which would
+      // otherwise pick .mjs or .js.
+      fileName: (_format, name) => name + ".js",
+      entry: {
+$list      },
+    },
+    rolldownOptions: { output: { chunkFileNames: "[name]-[hash].js" } },
+  },
+};
+EOF
+}
+vite_config "$root" "$scratch/build/vite" "$scratch/vite-build"
+vite_config "$work" "$work/out/vite" "$scratch/vite-watch"
+
 # ---- Timings.
 
 # timing TITLE NOTE HYPERFINE_ARGS...: one hyperfine run, its markdown table under a heading.
@@ -332,10 +385,11 @@ timing "Type check" \
   -n "Both: tsc --noEmit" "tsc --noEmit -p $root"
 
 timing "Build" \
-  "Node: tsc emit of the .ts and JSDoc forms, and esbuild bundling all six element entries, Lit included, in one invocation; Bun: bun build of the same six. Output in scratch." \
+  "Node: tsc emit of the .ts and JSDoc forms, esbuild bundling all six element entries, Lit included, in one invocation, and a Vite library build of the same six (Lit in one shared chunk); Bun: bun build of the same six. None minified; output in scratch." \
   --runs 10 --warmup 1 \
   -n "Node: tsc emit" "tsc -p $root/tsconfig.build.json --outDir $scratch/build/tsc" \
   -n "Node: esbuild" "esbuild ${root_entries[*]} --bundle --format=esm --log-level=warning --outbase=$root/src --outdir=$scratch/build/esbuild" \
+  -n "Node: vite build" "vite build --configLoader native --config $scratch/vite-build/vite.config.mjs" \
   -n "Bun: bun build" "env NODE_ENV=production bun build ${root_entries[*]} --target=browser --format=esm --root=$root/src --outdir=$scratch/build/bun"
 
 # The watchers, each over the scratch copy, into its own output directory.
@@ -347,11 +401,15 @@ watchers+=($!)
 esbuild "${work_entries[@]}" --bundle --format=esm --log-level=warning --outbase="$work/src" \
   --outdir="$work/out/esbuild" --watch=forever >"$scratch/watch-esbuild.log" 2>&1 &
 watchers+=($!)
+# Vite's watcher runs from its scratch config directory, its root.
+(cd "$scratch/vite-watch" && exec vite build --configLoader native --config vite.config.mjs --watch) \
+  >"$scratch/watch-vite.log" 2>&1 &
+watchers+=($!)
 NODE_ENV=production bun build "${work_entries[@]}" --target=browser --format=esm \
   --root="$work/src" --outdir="$work/out/bun" --watch --no-clear-screen \
   >"$scratch/watch-bun.log" 2>&1 &
 watchers+=($!)
-for tool in tsc esbuild bun; do
+for tool in tsc esbuild vite bun; do
   for ((i = 0; i < 600; i++)); do
     [[ -f "$work/out/$tool/ts/pagination-lit.js" ]] && break
     sleep 0.1
@@ -360,7 +418,7 @@ for tool in tsc esbuild bun; do
     fail "the $tool watcher built nothing; its log: $(cat "$scratch/watch-$tool.log")"
 done
 sleep 1
-for tool in tsc esbuild bun; do echo 0 >"$scratch/count-$tool"; done
+for tool in tsc esbuild vite bun; do echo 0 >"$scratch/count-$tool"; done
 
 rebuild() {
   echo "$root/scripts/measure.sh rebuild $work/src/ts/pagination-lit.ts $work/out/$1/ts/pagination-lit.js $scratch/count-$1"
@@ -370,6 +428,7 @@ timing "Watch rebuild" \
   --runs 10 --warmup 2 \
   -n "Node: tsc --watch" "$(rebuild tsc)" \
   -n "Node: esbuild --watch" "$(rebuild esbuild)" \
+  -n "Node: vite build --watch" "$(rebuild vite)" \
   -n "Bun: bun build --watch" "$(rebuild bun)"
 kill "${watchers[@]}" 2>/dev/null || true
 watchers=()
