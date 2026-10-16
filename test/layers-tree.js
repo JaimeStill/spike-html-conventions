@@ -1,13 +1,14 @@
 // The layer tree's direction cases, as files: one tree of violations, one import per file and a
 // file per forbidden edge and per import form, and one of allowed imports in the same layout.
-// test/layers.test.js runs biome.json's rules over them, and scripts/measure.sh runs the same rules
-// as ESLint's and oxlint's over them, so both read the cases from here. Each maps a path under the
-// repository root to its source, one line or several, without the trailing newline.
+// test/layers.test.js runs eslint.config.js's layer rules over them, and scripts/measure.sh runs
+// those and each compared setup's rules over them, so both read the cases from here. Each maps a
+// path under the repository root to its source, one line or several, without the trailing newline.
 //
-// Biome, oxlint, and ESLint's no-restricted-imports match specifier text, but measure's
-// resolved-file rules (eslint-plugin-boundaries, eslint-plugin-import-x) classify the file an
-// import resolves to and skip one that resolves to nothing, so each tree is written with the
-// files its imports name: see targets below.
+// The check's rule (eslint-plugin-boundaries) and measure's other resolved-file rule
+// (eslint-plugin-import-x) classify the file an import resolves to, and a specifier that resolves
+// to nothing fails no-unresolved, so each tree is written with the files its imports name: see
+// targets below. measure's text rules (Biome, oxlint, and ESLint's no-restricted-imports) match
+// the specifier's text instead.
 
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -34,7 +35,6 @@ export const violations = {
   "layers/components/static-type.ts": `import type { Page } from "../apps/static/site/main.js";`,
   "layers/components/nested/sdk.ts": `import "../../sdk/session.js";`,
   "layers/components/self.ts": `import "${self}";`,
-  "layers/components/unnormalized.ts": `import "./x/../../foundation/dom.js";`,
   // SDK: never components or an app
   "layers/sdk/components.ts": `import { StatusBadge } from "../components/status-badge.js";`,
   "layers/sdk/components-type.ts": `import type { StatusBadge } from "../components/status-badge.js";`,
@@ -83,7 +83,6 @@ export const violations = {
   "layers/apps/application/documents/descend-climb.ts": `import "./x/../../../../apps/static/site/main.js";`,
   "layers/apps/application/documents/sdk-climb.ts": `import "../../../sdk/../apps/application/prompts/main.js";`,
   "layers/apps/application/documents/dots-climb.ts": `import "../../../sdk/.../../../apps/application/prompts/main.js";`,
-  "layers/apps/application/documents/name-parent.ts": `import "./views/..";`,
   "layers/apps/application/documents/bare-parent.ts": `import "../";`,
   "layers/apps/application/documents/views/bare-parent.ts": `import "../..";`,
   // outside a layer directory or an app: a file there could re-export any layer
@@ -92,8 +91,8 @@ export const violations = {
   "layers/apps/application/index.ts": `export * from "${self}/layers/apps/static/site/main.js";`,
 };
 
-// The same layout, every import one the layer may make, in each form, and normalized specifiers
-// whose names hold dots, which the normalization rule must tell from . and .. segments.
+// The same layout, every import one the layer may make, in each form, with names that hold dots,
+// which a rule must tell from . and .. segments.
 export const allowed = {
   "layers/foundation/dom.ts": `export { x } from "./events.js";`,
   "layers/foundation/nested/own.ts": `import type { X } from "../dom.js";\nawait import("../../foundation/dom.js");`,
@@ -139,6 +138,11 @@ export const allowed = {
     `import "../../../components/x..y/z.js";`,
     `import "../../../foundation/.../a.js";`,
   ].join("\n"),
+  // Paths that aren't normalized but reach a file the layer may import: the foundation's dom.ts,
+  // and the app's own index.ts. Biome's text rules refused them by a normalization convention;
+  // the direction is judged by the file an import resolves to, so they cross no layer (Results 3).
+  "layers/components/unnormalized.ts": `import "./x/../../foundation/dom.js";`,
+  "layers/apps/application/documents/name-parent.ts": `import "./views/..";`,
 };
 
 /** The files the relative and absolute specifiers in `files` name and `files` doesn't hold,

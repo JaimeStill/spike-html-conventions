@@ -1,57 +1,45 @@
-// The layer tree's import direction: biome.json's noRestrictedImports overrides, run by the
-// pinned Biome against scratch trees outside the working tree that mirror layers/. One tree holds
-// one violating import per file, a file per forbidden edge and per import form, and passes only
-// when each of its files draws the rule's diagnostic; the other holds only allowed imports and
-// passes only when it draws none, so a rule that refuses everything or nothing fails here.
-// Biome matches specifier text, never resolved files; the trees hold the files their imports
-// name all the same, for measure's resolved-file rules, and Biome lints those too.
-//
-// The text decides how the overrides are written. The foundation, components, and SDK refuse a
-// layer by its directory name, at any depth. An app can't: a sibling app is `../<name>`, which
-// names no layer, so each app override refuses every specifier that climbs out of the app and
-// re-allows only the permitted layers named from layers/, which takes one override per file
-// depth. Biome's `../**` doesn't match a bare `..`, so each also names the bare climb. The
-// deepest one, three directories into an app, also covers every file below it and refuses their
-// outward imports, so a deeper file fails closed, as does a file directly in layers/, layers/apps/,
-// or a branch directory, whose index a bare climb reaches. A re-allowed prefix would let
-// `../../../foundation/../sdk/x.js` through, so every layer also refuses a relative specifier
-// that isn't normalized: one with a ., .., or empty segment after its leading ./ or ../ run, or a
-// percent-encoded one. With no character classes in Biome's globs, a name segment is one that
-// starts with an enumerated character, in brace alternation. No alias exists, and every layer
-// refuses an absolute path and the package's own name.
+// The layer tree's import direction: eslint.config.js's layer rules (eslint-plugin-boundaries'
+// dependencies rule with import-x's no-unresolved), run by the ESLint package.json pins against
+// scratch trees outside the working tree that mirror layers/. One tree holds one violating import
+// per file, a file per forbidden edge and per import form, and passes only when the files flagged
+// are exactly its files; the other holds only allowed imports and passes only when it draws
+// nothing, so a rule that refuses everything or nothing fails here. Each tree holds the files its
+// imports name, so the rules judge the file an import resolves to, as they do in layers/.
 
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { copyFileSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, test } from "node:test";
 import { allowed, violations, writeTree } from "./layers-tree.js";
 
 const root = join(import.meta.dirname, "..");
-const rule = "lint/style/noRestrictedImports";
+const eslint = join(root, "node_modules", ".bin", "eslint");
+const rules = ["boundaries/dependencies", "import-x/no-unresolved"];
 
-/** Writes `files` to a scratch tree with the repo's biome.json and returns the files Biome
- * flagged with the rule, after checking that it linted every file written under layers/. */
+/** Writes `files` to a scratch tree, with lit linked into its node_modules so the resolver finds
+ * it, and returns the files ESLint flagged with a layer rule, after checking that it linted every
+ * file written under layers/. -c takes the repo's config, whose patterns then match from the
+ * working directory, the scratch tree, and whose plugins load from the repo's node_modules. */
 function flagged(files) {
   const scratch = mkdtempSync(join(tmpdir(), "layers-"));
   try {
-    copyFileSync(join(root, "biome.json"), join(scratch, "biome.json"));
     const written = writeTree(scratch, files);
-    // The scratch tree isn't a git repository, so the config's VCS integration is off for it.
-    const run = spawnSync(
-      "biome",
-      ["lint", "--vcs-enabled=false", "--reporter=json", "--max-diagnostics=none", "layers"],
-      { cwd: scratch, encoding: "utf8" },
-    );
-    assert.equal(run.error, undefined, `biome didn't run: ${run.error}`);
+    mkdirSync(join(scratch, "node_modules"));
+    symlinkSync(join(root, "node_modules", "lit"), join(scratch, "node_modules", "lit"));
+    const run = spawnSync(eslint, ["-c", join(root, "eslint.config.js"), "-f", "json", "layers"], {
+      cwd: scratch,
+      encoding: "utf8",
+    });
+    assert.equal(run.error, undefined, `eslint didn't run: ${run.error}`);
+    assert.ok(run.status === 0 || run.status === 1, `eslint exited ${run.status}: ${run.stderr}`);
     const report = JSON.parse(run.stdout);
-    assert.equal(
-      report.summary.unchanged + report.summary.changed,
-      written.filter((path) => path.startsWith("layers/")).length,
-    );
+    assert.equal(report.length, written.filter((path) => path.startsWith("layers/")).length);
     return new Set(
-      report.diagnostics.filter((d) => d.category === rule).map((d) => d.location.path),
+      report
+        .filter((file) => file.messages.some((m) => rules.includes(m.ruleId)))
+        .map((file) => file.filePath.slice(scratch.length + 1)),
     );
   } finally {
     rmSync(scratch, { recursive: true, force: true });
@@ -59,13 +47,13 @@ function flagged(files) {
 }
 
 describe("layer import direction", () => {
-  test("the biome on PATH is the one mise.toml pins", () => {
-    const pin = readFileSync(join(root, "mise.toml"), "utf8").match(/^biome = "(.+)"$/m)[1];
-    const run = spawnSync("biome", ["--version"], { encoding: "utf8" });
-    assert.equal(run.stdout.trim(), `Version: ${pin}`);
+  test("the eslint installed is the one package.json pins", () => {
+    const pin = JSON.parse(readFileSync(join(root, "package.json"), "utf8")).devDependencies.eslint;
+    const run = spawnSync(eslint, ["--version"], { encoding: "utf8" });
+    assert.equal(run.stdout.trim(), `v${pin}`);
   });
 
-  test("every forbidden import draws the rule's diagnostic at its file", () => {
+  test("every forbidden import draws a layer rule's diagnostic at its file", () => {
     assert.deepEqual([...flagged(violations)].sort(), Object.keys(violations).sort());
   });
 

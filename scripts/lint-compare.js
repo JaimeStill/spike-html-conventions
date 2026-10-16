@@ -1,8 +1,10 @@
-// The configuration steps of scripts/measure.sh's lint and format comparison, under node. Each
-// config is derived from biome.json, so ESLint, oxlint, Prettier, oxfmt, and ESLint Stylistic run
-// the rules and options the repository already holds, never a second copy of them; the
-// resolved-file direction plugins take the layer table below, which biome.json holds only as
-// specifier patterns:
+// The configuration steps of scripts/measure.sh's lint and format comparison, under node. The
+// compared setups run the rules and options the repository already holds, never a second copy of
+// them: B's lint is eslint.config.js itself, whose layer table import-x's zones and D's lint take
+// too; the formatters' options come from biome.json's formatter; and the text rules (Biome's,
+// oxlint's, and ESLint's no-restricted-imports) come from biome-layers.json, beside this file,
+// which holds the layer overrides biome.json carried while Biome was the check's linter, the
+// superseded mechanism kept as measure's baseline (README Results 3):
 //
 //   lint-compare.js tree <dir> <violations|allowed>
 //       writes one of test/layers-tree.js's direction trees under dir, with the files its imports
@@ -14,16 +16,19 @@
 //   lint-compare.js disturb <prefix> <dir> <path>...
 //       rewrites each file's line breaks and indentation for the restores rows (see below), with
 //       the typescript installed under prefix parsing the code, and prints what it did
+//   lint-compare.js biome-config <biome.json> <out>
+//       writes biome.json with biome-layers.json's overrides, Biome's baseline config
 //   lint-compare.js eslint-config <biome.json> <out> <part[+part]>
 //       writes an ESLint flat config of the parts: regex or globs, @eslint/js's and
 //       typescript-eslint's recommended rules, browser globals (node's too under test/), and
-//       biome.json's layer overrides as no-restricted-imports, each override's includes as the
+//       biome-layers.json's overrides as no-restricted-imports, each override's includes as the
 //       block's files, with regex each pattern group becoming one regex with Biome's meaning,
-//       with globs the groups copied; boundaries or import-x, the same recommended rules with the
-//       layer table in that plugin and import-x's no-unresolved; stylistic, ESLint Stylistic's
+//       with globs the groups copied; import-x, the same recommended rules with the layer table
+//       in import-x's no-restricted-paths and its no-unresolved; repo, the repository's
+//       eslint.config.js, imported; stylistic, ESLint Stylistic's
 //       rules matching Biome's formatter for the code and eslint-plugin-jsonc's for the JSON
-//   lint-compare.js oxlint-config <biome.json> <out> <merged|globs>
-//       writes an .oxlintrc.json with biome.json's layer overrides as no-restricted-imports; with
+//   lint-compare.js oxlint-config <out> <merged|globs>
+//       writes an .oxlintrc.json with biome-layers.json's overrides as no-restricted-imports; with
 //       merged each override's groups become one group with Biome's meaning, with globs the groups
 //       are copied
 //   lint-compare.js format-options <biome.json> <out>
@@ -33,6 +38,8 @@
 //       prints the options the stylistic part passes to Stylistic's customize, one line
 //   lint-compare.js packages <dir>...
 //       prints how many distinct packages, by name and version, are installed under the dirs
+//   lint-compare.js packages-at <dir>...
+//       prints how many distinct packages, by name and version, the package directories hold
 //   lint-compare.js flagged <biome|eslint|oxlint> <json report> <base> [rule,...]
 //       prints the files the report flags with the restricted-imports rule, or for ESLint with any
 //       of the rules, relative to base, sorted, one per line
@@ -42,13 +49,19 @@
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { basename, dirname, join, relative } from "node:path";
+import { layers } from "../eslint.config.js";
 import { allowed, violations, writeTree } from "../test/layers-tree.js";
 
 const [command, ...args] = process.argv.slice(2);
 
-/** biome.json's layer overrides, each as its includes and its noRestrictedImports patterns. */
-function layerOverrides(biomeJson) {
-  return JSON.parse(readFileSync(biomeJson, "utf8")).overrides.map((override) => ({
+/** biome-layers.json's overrides, Biome's layer rules by text. */
+const biomeLayers = JSON.parse(
+  readFileSync(join(import.meta.dirname, "biome-layers.json"), "utf8"),
+);
+
+/** The layer overrides, each as its includes and its noRestrictedImports patterns. */
+function layerOverrides() {
+  return biomeLayers.overrides.map((override) => ({
     files: override.includes,
     patterns: override.linter.rules.style.noRestrictedImports.options.patterns,
   }));
@@ -151,75 +164,6 @@ const formatterMap = [
   ],
   ["operatorLinebreak", "after", "javascript", "experimentalOperatorPosition", { after: "end" }],
 ];
-
-// The layer table, as the resolved-file direction plugins take it: each layer's directory and the
-// layers it may import, "own" an app's own directory and "lit" the one package. No app imports
-// another, and a file directly in layers/, layers/apps/, or a branch directory imports nothing.
-// biome.json's overrides hold the same table as specifier patterns; these plugins classify the
-// file an import resolves to instead, so a package's own name and an absolute path, which resolve
-// to no file, are left to each plugin's no-unresolved rule.
-const layers = [
-  { name: "foundation", path: "layers/foundation", may: ["foundation"] },
-  { name: "components", path: "layers/components", may: ["foundation", "components", "lit"] },
-  { name: "sdk", path: "layers/sdk", may: ["foundation", "sdk", "lit"] },
-  { name: "static", path: "layers/apps/static/*", may: ["foundation", "components", "own", "lit"] },
-  {
-    name: "application",
-    path: "layers/apps/application/*",
-    may: ["foundation", "components", "sdk", "own", "lit"],
-  },
-];
-
-/** eslint-plugin-boundaries' settings and rule for the layer table. Each layer is an element by
- * its directory, matched from the root (partialMatch false), with a second pattern for a file in a
- * directory whose name starts with a dot, which micromatch's ** never enters, so `./.well-known/`
- * and `./..x/` stay in their layer; an app captures its directory's name, which its own policy
- * names. A file directly in layers/, layers/apps/, or a branch directory is a "loose" element with
- * no policy. The dependencies rule's default is disallow, and it checks every origin (lit is
- * external) and local files no element holds (src/), which it skips by default. The resolver is
- * eslint-import-resolver-typescript, which resolves a .js specifier to its .ts source. */
-function boundariesBlock() {
-  const elements = layers.map(({ name, path }) => ({
-    type: name,
-    pattern: [path, `${path}/**/.*`],
-    partialMatch: false,
-    ...(path.endsWith("*") ? { capture: ["app"] } : {}),
-  }));
-  elements.push({
-    type: "loose",
-    pattern: ["layers", "layers/apps", "layers/apps/*"],
-    partialMatch: false,
-  });
-  const policies = layers.map(({ name, may }) => ({
-    from: { element: { type: name } },
-    allow: {
-      to: may.map((target) => {
-        if (target === "lit") return { module: { origin: "external", source: "lit" } };
-        if (target === "own") {
-          return { element: { type: name, captured: { app: "{{from.element.captured.app}}" } } };
-        }
-        return { element: { type: target } };
-      }),
-    },
-  }));
-  return `{
-    plugins: { boundaries, "import-x": importX },
-    settings: {
-      "import/resolver": { typescript: true },
-      "import-x/resolver": { typescript: true },
-      "boundaries/elements": ${JSON.stringify(elements)},
-    },
-    rules: {
-      "import-x/no-unresolved": "error",
-      "boundaries/dependencies": ["error", ${JSON.stringify({
-        default: "disallow",
-        checkAllOrigins: true,
-        checkUnknownLocals: true,
-        policies,
-      })}],
-    },
-  }`;
-}
 
 /** eslint-plugin-import-x's no-restricted-paths and no-unresolved for the layer table, with its
  * built-in resolver (unrs-resolver) taking a .js specifier to its .ts source and a directory to
@@ -363,13 +307,14 @@ function stylisticBlocks(biomeJson) {
 }
 
 /** An ESLint flat config of `parts`: regex or globs, @eslint/js's and typescript-eslint's
- * recommended rules with biome.json's layer overrides as no-restricted-imports (see the head of
- * this file); boundaries or import-x, the same recommended rules with that plugin's direction
- * rules; stylistic, the formatting rules. The lint rules apply to the code only. */
+ * recommended rules with biome-layers.json's overrides as no-restricted-imports (see the head of
+ * this file); import-x, the same recommended rules with that plugin's direction rules; repo, the
+ * repository's config, imported; stylistic, the formatting rules. The lint
+ * rules apply to the code only. */
 function eslintConfig(biomeJson, parts) {
   const imports = [];
   const blocks = [];
-  if (parts.some((part) => part !== "stylistic")) {
+  if (parts.some((part) => part !== "stylistic" && part !== "repo")) {
     imports.push(
       `import js from "@eslint/js";`,
       `import globals from "globals";`,
@@ -380,13 +325,13 @@ function eslintConfig(biomeJson, parts) {
       `{ files: code, languageOptions: { globals: globals.browser } },`,
       `{ files: ["test/**"], languageOptions: { globals: globals.node } },`,
     );
-  } else {
+  } else if (!parts.includes("repo")) {
     imports.push(`import tseslint from "typescript-eslint";`);
     blocks.push(`{ files: ["**/*.ts"], languageOptions: { parser: tseslint.parser } },`);
   }
   for (const part of parts) {
     if (part === "regex" || part === "globs") {
-      for (const { files, patterns } of layerOverrides(biomeJson)) {
+      for (const { files, patterns } of layerOverrides()) {
         const options = patterns.map(({ group, message }) =>
           part === "regex"
             ? { regex: groupRegex(group), caseSensitive: true, message }
@@ -398,12 +343,11 @@ function eslintConfig(biomeJson, parts) {
         };
         blocks.push(`${JSON.stringify(block)},`);
       }
-    } else if (part === "boundaries") {
+    } else if (part === "repo") {
       imports.push(
-        `import boundaries from "eslint-plugin-boundaries";`,
-        `import importX from "eslint-plugin-import-x";`,
+        `import repo from ${JSON.stringify(new URL("../eslint.config.js", import.meta.url).href)};`,
       );
-      blocks.push(`${boundariesBlock()},`);
+      blocks.push(`...repo,`);
     } else if (part === "import-x") {
       imports.push(
         `import { existsSync, readdirSync } from "node:fs";`,
@@ -695,12 +639,16 @@ if (command === "tree") {
   for (const [path, source] of Object.entries(violations)) {
     if (source.includes("import(")) console.log(path);
   }
+} else if (command === "biome-config") {
+  const [biomeJson, out] = args;
+  const biome = JSON.parse(readFileSync(biomeJson, "utf8"));
+  writeFileSync(out, `${JSON.stringify({ ...biome, ...biomeLayers }, null, 2)}\n`);
 } else if (command === "eslint-config") {
   const [biomeJson, out, form] = args;
   writeFileSync(out, eslintConfig(biomeJson, form.split("+")));
 } else if (command === "oxlint-config") {
-  const [biomeJson, out, form] = args;
-  const overrides = layerOverrides(biomeJson).map(({ files, patterns }) => ({
+  const [out, form] = args;
+  const overrides = layerOverrides().map(({ files, patterns }) => ({
     files,
     rules: {
       "no-restricted-imports": [
@@ -760,6 +708,15 @@ if (command === "tree") {
   };
   for (const dir of args) walk(dir);
   console.log(found.size);
+} else if (command === "packages-at") {
+  // Each distinct name@version among the package directories given, as pnpm list --parseable
+  // prints a project's dependencies.
+  const found = new Set();
+  for (const dir of args) {
+    const { name, version } = JSON.parse(readFileSync(join(dir, "package.json"), "utf8"));
+    found.add(`${name}@${version}`);
+  }
+  console.log(found.size);
 } else if (command === "flagged") {
   const [tool, report, base, rules = "no-restricted-imports"] = args;
   const ruleIds = rules.split(",");
@@ -787,6 +744,6 @@ if (command === "tree") {
   else console.log(json.number_of_files);
 } else {
   throw new Error(
-    `unknown command ${command}; expected tree, dynamic, disturb, eslint-config, oxlint-config, format-options, stylistic-options, packages, flagged, or linted`,
+    `unknown command ${command}; expected tree, cases, dynamic, disturb, biome-config, eslint-config, oxlint-config, format-options, stylistic-options, packages, packages-at, flagged, or linted`,
   );
 }

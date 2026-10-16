@@ -1,6 +1,6 @@
 // The foundation layer: the platform alone, no package and no other layer. Every other layer may
-// import it. biome.json's overrides hold the import rules for this tree; STANDARDS.md says what
-// belongs in each layer.
+// import it. eslint.config.js's layer table holds the import rules for this tree; STANDARDS.md
+// says what belongs in each layer.
 
 /** Defines a custom element once, so a second import of its module is harmless. */
 export function define(tag: string, element: CustomElementConstructor): void {

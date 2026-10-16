@@ -1118,10 +1118,11 @@ Prettier's, reopens it too.
 
 - **Toolchain:** the runtime and package manager, their install, build, watch, and test paths.
 - **Language:** the TypeScript form and its type check.
-- **Structure:** the layer tree in `layers/`, and its import direction, which Biome enforces in
-  the check and `test/layers.test.js` proves against a tree of violations.
-- **Lint and format:** Biome in the check, compared in `mise run measure` against ESLint +
-  Prettier and oxlint + oxfmt.
+- **Structure:** the layer tree in `layers/`, and its import direction, which the layer table in
+  `eslint.config.js` (eslint-plugin-boundaries, by resolved file) enforces in the check and
+  `test/layers.test.js` proves against a tree of violations and a tree of allowed imports.
+- **Lint and format:** ESLint + Prettier in the check, provisionally, from the devDependencies,
+  compared in `mise run measure` against Biome, oxlint + oxfmt, and ESLint + ESLint Stylistic.
 - **Components:** the element-tier convention, vanilla and Lit.
 - **Testing:** the unit and browser tiers in the check.
 - **Consumption:** installing and loading tagged releases, from git and jsDelivr.

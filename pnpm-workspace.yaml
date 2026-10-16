@@ -1,0 +1,12 @@
+# pnpm's settings for this package's install (mise run install), which has no workspace packages.
+#
+# eslint 10.13.0, measure's pin and a devDependency, was published 2026-10-16, younger than pnpm's
+# default minimumReleaseAge of a day, so pnpm refuses it unless excluded; the entry is moot once
+# the release ages past a day, and goes with the next eslint bump.
+minimumReleaseAgeExclude:
+  - eslint@10.13.0
+# unrs-resolver, under eslint-plugin-import-x and eslint-import-resolver-typescript, has a
+# postinstall that fetches its native binding when the optional dependency holding it is missing;
+# pnpm installs that dependency, so the script isn't run.
+allowBuilds:
+  unrs-resolver: false

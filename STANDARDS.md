@@ -23,9 +23,10 @@ The architecture pages that apply, in the architecture repository:
   beside it. tsc emit builds libraries and Vite builds apps; esbuild builds nothing. The Bun
   column, the manager not picked, and the esbuild pin are the comparison's evidence only; nothing
   shipped depends on a Bun-only API.
-- Every tool comes from a pin in `mise.toml`. The system Chromium is the one exception, by the
-  architect's decision; `mise run measure` records its version.
-- Lit is the only package dependency, and no package manifest has a devDependency.
+- Every tool comes from a pin in `mise.toml`, except the lint tooling, pinned exactly in
+  `package.json`'s devDependencies and run from `node_modules`. The system Chromium is the other
+  exception, by the architect's decision; `mise run measure` records its version.
+- Lit is the only runtime dependency; lint tooling is the only devDependencies.
 - Anything that reads the network runs in `measure`, `currency`, or `install`, never in the check.
 
 ## Code
@@ -43,7 +44,7 @@ The architecture pages that apply, in the architecture repository:
 ## Layers
 
 - The stack's layers are the directories of `layers/`, beside the frozen per-form tree in `src/`;
-  `biome.json`'s `noRestrictedImports` overrides enforce the import direction between them.
+  the layer table in `eslint.config.js` enforces the import direction between them.
 - The foundation holds native platform code only, the code every other layer may build on.
 - Components are the element tier: an element takes properties in and sends events out, and
   holds no services, data, or app state.
