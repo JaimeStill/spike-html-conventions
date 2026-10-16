@@ -118,7 +118,7 @@ Door          two-way: no tag, nothing published.
 
 ## Progress
 
-slices 4/4 committed · standards — · spec — · editor —
+slices 4/4 committed · standards done · spec — · editor —
 
 ## Decisions
 
