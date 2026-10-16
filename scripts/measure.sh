@@ -1821,7 +1821,15 @@ for setup in "${setups[@]}"; do
     fi
     if [[ -n "$want" ]]; then fact+="; recorded as a fact: the expected misses are these files"; fi
     if [[ "$setup" == D ]]; then
-      fact+="; Stylistic has no line-width reflow and max-len no fixer, so a split call stays split and a joined line stays past the width"
+      # The lines past the width, in the result and in the original: a joined line max-len skips
+      # (it ignores a line holding a string, a template literal, a regex, or a URL) stays past the
+      # width with eslint exiting 0, since max-len reports nothing there.
+      past=$(cd "$dir" && cat -- "${disturbed[@]}" | awk 'length > 100' | wc -l)
+      past_original=$(cd "$root" && cat -- "${disturbed[@]}" | awk 'length > 100' | wc -l)
+      fact+="; Stylistic has no line-width reflow and max-len no fixer, so a split call stays split; lines past 100 columns: $past, against $past_original in the original"
+      if ((status == 0 && past > past_original)); then
+        fact+=", so max-len, with its ignore options, reports none of the $((past - past_original)) more"
+      fi
     fi
     if [[ "$diff" != "$want" ]]; then fact+="; recorded: ${want:-none}"; fi
     if ((status != 0)); then fact+="; the formatter failed: $(tail -n3 "$dir.log")"; fi
