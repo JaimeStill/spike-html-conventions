@@ -87,7 +87,7 @@ Amendment (escalation, after slice 10): npm joins as a third column.
  11. npm in the measure task: cold and warm install from a git tag,
      `files` honoured, a subdirectory at a prefixed tag, a git-tag
      package's own git-tag dependency, GitHub install of
-     spike-html-design v0.7.0, footprint (npm inside node); plus
+     spike-html-design v0.7.0, footprint (npm 12.2.1 pinned in mise); plus
      fixtures/consumer-npm installed offline in the check.
      Demo: the check passes with three consumers; measure prints npm rows.
  12. Evidence re-argued across Node + npm, Node + pnpm, and Bun, in the
@@ -157,7 +157,7 @@ slices 10/12 committed · standards — · spec — · editor —
 - toolchain: this task records the toolchain pick after the survey.
 - Supersedes: the earlier result lines "pick Bun, on footprint" and "TS form JSDoc checked by tsc".
 - toolchain: escalation: npm is evaluated beside pnpm, in the measure task and as a third offline consumer fixture in the check.
-- toolchain: escalation: npm is the 12.2.1 bundled with node 26.12.0, tracked by node's pin; no separate mise pin.
+- toolchain: escalation (corrected): npm is pinned in mise as 12.2.1 (node 26.12.0 bundles 11.20.0; npm 12 defaults to allow-git=none); the consumer-npm fixture opts in with `.npmrc` allow-git=root, and the default refusal and root vs all on a nested git tag are measured rows. Rejected: node's bundled npm 11.20.0, which predates npm's change on git dependencies.
 - toolchain: escalation: the pick is re-argued across Node + npm, Node + pnpm, and Bun.
 
 ## Pending edits
