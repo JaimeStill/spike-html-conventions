@@ -1,10 +1,12 @@
 // The layer tree's import direction: eslint.config.js's layer rules (eslint-plugin-boundaries'
 // dependencies rule with import-x's no-unresolved), run by the ESLint package.json pins against
 // scratch trees outside the working tree that mirror layers/. One tree holds one violating import
-// per file, a file per forbidden edge and per import form, and passes only when the files flagged
-// are exactly its files; the other holds only allowed imports and passes only when it draws
-// nothing, so a rule that refuses everything or nothing fails here. Each tree holds the files its
-// imports name, so the rules judge the file an import resolves to, as they do in layers/.
+// per file, a file per forbidden edge and per import form, and passes only when the files the
+// dependencies rule flags are exactly its files; the other holds only allowed imports and passes
+// only when neither rule flags any, so a rule that refuses everything or nothing fails here. Each
+// tree holds the files its imports name, so the rules judge the file an import resolves to, as
+// they do in layers/; the violations are held to the dependencies rule itself, so no case passes
+// on no-unresolved because its target went unwritten. A case that doesn't parse fails both tests.
 
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
@@ -16,13 +18,15 @@ import { allowed, violations, writeTree } from "./layers-tree.js";
 
 const root = join(import.meta.dirname, "..");
 const eslint = join(root, "node_modules", ".bin", "eslint");
-const rules = ["boundaries/dependencies", "import-x/no-unresolved"];
+const dependencies = "boundaries/dependencies";
+const unresolved = "import-x/no-unresolved";
 
 /** Writes `files` to a scratch tree, with lit linked into its node_modules so the resolver finds
- * it, and returns the files ESLint flagged with a layer rule, after checking that it linted every
- * file written under layers/. -c takes the repo's config, whose patterns then match from the
- * working directory, the scratch tree, and whose plugins load from the repo's node_modules. */
-function flagged(files) {
+ * it, and returns the files ESLint flagged with any of `rules`, after checking that it linted every
+ * file written under layers/ and parsed each. -c takes the repo's config, whose patterns then
+ * match from the working directory, the scratch tree, and whose plugins load from the repo's
+ * node_modules. */
+function flagged(files, rules) {
   const scratch = mkdtempSync(join(tmpdir(), "layers-"));
   try {
     const written = writeTree(scratch, files);
@@ -36,6 +40,12 @@ function flagged(files) {
     assert.ok(run.status === 0 || run.status === 1, `eslint exited ${run.status}: ${run.stderr}`);
     const report = JSON.parse(run.stdout);
     assert.equal(report.length, written.filter((path) => path.startsWith("layers/")).length);
+    const fatal = report.filter((file) => file.messages.some((m) => m.fatal));
+    assert.deepEqual(
+      fatal.map((file) => file.filePath),
+      [],
+      "every file parses, so each import is judged",
+    );
     return new Set(
       report
         .filter((file) => file.messages.some((m) => rules.includes(m.ruleId)))
@@ -53,11 +63,14 @@ describe("layer import direction", () => {
     assert.equal(run.stdout.trim(), `v${pin}`);
   });
 
-  test("every forbidden import draws a layer rule's diagnostic at its file", () => {
-    assert.deepEqual([...flagged(violations)].sort(), Object.keys(violations).sort());
+  test("every forbidden import draws the dependencies rule's diagnostic at its file", () => {
+    assert.deepEqual(
+      [...flagged(violations, [dependencies])].sort(),
+      Object.keys(violations).sort(),
+    );
   });
 
   test("a tree of allowed imports draws none", () => {
-    assert.deepEqual([...flagged(allowed)], []);
+    assert.deepEqual([...flagged(allowed, [dependencies, unresolved])], []);
   });
 });
