@@ -29,10 +29,12 @@
 #                   shape is checked after the timing.
 #   watch rebuild   see below.
 #   test            node --test against bun test, over the shared suite.
-#   lint and format three setups over one scratch copy of the code, src/, layers/, and test/ (the
+#   lint and format four setups over one scratch copy of the code, src/, layers/, and test/ (the
 #                   sources and the suite; scripts/ and the fixtures are left out): A, Biome; B,
-#                   ESLint with typescript-eslint and Prettier; C, oxlint and oxfmt. Each lints,
-#                   format-checks, and does both in one bash -c. See "Lint and format" below.
+#                   ESLint with typescript-eslint and eslint-plugin-boundaries, and Prettier; C,
+#                   oxlint and oxfmt; D, B's ESLint with ESLint Stylistic, and eslint-plugin-jsonc
+#                   for JSON. Each lints, format-checks, and does both in one bash -c, D's both in
+#                   one eslint run. See "Lint and format" below.
 #
 # Vite: its config is written into scratch (see vite_config below), never the working tree, and
 # loaded natively (--configLoader native), so Vite writes no bundled config beside it. Vite's
@@ -48,18 +50,21 @@
 # output until it holds `stamp = N`, so hyperfine's time is from the source change to the rebuilt
 # output, plus this script's startup and the poll's granularity of a few milliseconds.
 #
-# Lint and format: each setup's configuration is derived from biome.json by
-# scripts/lint-compare.js and written into scratch, never the working tree: ESLint's flat config
-# (@eslint/js's and typescript-eslint's recommended rules, the globals package's browser globals,
-# and biome.json's layer overrides as no-restricted-imports, each pattern group translated to one
-# regex with Biome's meaning), oxlint's .oxlintrc.json (each override's groups merged into one
-# group with Biome's meaning, since oxlint lets one group's ! pattern re-allow what another group
-# refuses and runs no lookaround regex), and the Prettier options oxfmt also reads, matching
-# Biome's formatter. ESLint and Prettier, oxlint and
-# oxfmt are mise tools; typescript-eslint, @eslint/js, globals, and typescript, the parser's peer,
-# install from the registry into scratch at eslint_packages' versions below, with
-# --legacy-peer-deps so npm installs no second ESLint, and ESLint 10 finds each flat config by
-# looking up from the linted files.
+# Lint and format: each setup's configuration is derived from biome.json, or for the
+# resolved-file direction plugins from the layer table, by scripts/lint-compare.js and written
+# into scratch, never the working tree: ESLint's flat configs (@eslint/js's and typescript-eslint's
+# recommended rules, the globals package's browser globals, and the layer rules: biome.json's
+# overrides as no-restricted-imports, each pattern group translated to one regex with Biome's
+# meaning, or the layer table in eslint-plugin-boundaries or in eslint-plugin-import-x's
+# no-restricted-paths, each with import-x's no-unresolved; and for D, ESLint Stylistic's rules
+# matching Biome's formatter and eslint-plugin-jsonc's matching the tracked JSON), oxlint's
+# .oxlintrc.json (each override's groups merged into one group with Biome's meaning, since oxlint
+# lets one group's ! pattern re-allow what another group refuses and runs no lookaround regex),
+# and the Prettier options oxfmt also reads, matching Biome's formatter. ESLint and Prettier,
+# oxlint and oxfmt are mise tools; eslint_packages, direction_packages, and stylistic_packages,
+# below, install from the registry into scratch at their versions, with --legacy-peer-deps so npm
+# installs no second ESLint, and ESLint 10 finds each flat config by looking up from the linted
+# files, or takes D's by -c.
 #
 # Before the timings, two sections read only the local disk:
 #
@@ -132,24 +137,34 @@
 #                   spike-html-design v0.7.0 from jsDelivr, Lit through an import map to jsDelivr,
 #                   and the JS forms of the element; each page reports the design's registry and
 #                   a token, and the element defined and rendering page 3 of 7.
-#   lint and format per setup: footprint, each tool's installed size, B's scratch packages
-#                   included, passing when every tool and package is at its pin; time, the
-#                   timings' means, passing when the lint and the format check both pass on the
-#                   tree; configurability, each formatter configured to biome.json's options and
-#                   Biome's defaults, written over a copy of the tree, passing when every file
-#                   comes out byte for byte the tree's, from a copy padded as below so a file
-#                   the formatter skips fails it; scope, each formatter over a copy of the
-#                   repository's tracked files, every file padded with three trailing newlines,
-#                   which a formatter strips from any file it formats, so the files that change
-#                   are the files it touched: the default scope recorded, and the row passing
-#                   when the scope its configuration limits it to (Biome's files.includes, a
-#                   .prettierignore that Prettier and oxfmt both read) is the code files exactly;
-#                   rewrites, the same unpadded, recording each file the default run rewrites
-#                   and its changed lines, every Markdown file named, passing when no code file
-#                   changes and the padded default run reached every code file; direction, the
-#                   layer rules over test/layers-tree.js's trees, passing when the flagged files
-#                   are the violation files less the edges the rule can't express and the
-#                   allowed tree draws none.
+#   lint and format per setup: footprint, each tool's installed size, an ESLint setup's scratch
+#                   packages included, passing when every tool and package is at its pin; time,
+#                   the timings' means, passing when the lint, the format check, and both pass on
+#                   the tree; leaves unchanged, each formatter configured to biome.json's options
+#                   and Biome's defaults (D: Stylistic's and jsonc's rules), written over a copy
+#                   of the tree and over a copy of the tracked JSON files, passing when every file
+#                   comes out byte for byte the original, from a copy padded as below so a file
+#                   the formatter skips fails it; restores, the same over copies whose line breaks
+#                   and indentation lint-compare.js disturb rewrote (calls and arrays split and
+#                   joined, some joins past the 100-column width, closing braces raised, every
+#                   line re-indented to 0 or 4 spaces), code and JSON apart; both pass when the
+#                   files that differ are the ones recorded below, a formatter that can't being a
+#                   fact; scope, each formatter over a copy of the repository's tracked files,
+#                   every file padded with three trailing newlines, which a formatter strips from
+#                   any file it formats, so the files that change are the files it touched: the
+#                   default scope recorded, JSON counted, and the row passing when the scope its
+#                   configuration limits it to (Biome's files.includes, a .prettierignore that
+#                   Prettier and oxfmt both read, the files globs of D's config) is the code and
+#                   JSON files exactly; rewrites, the same unpadded, recording each file the
+#                   default run rewrites and its changed lines, every Markdown file named, passing
+#                   when no code file changes and the padded default run reached every code file;
+#                   direction, the layer rules over test/layers-tree.js's trees, which hold the
+#                   files their imports name, passing when the flagged files are the violation
+#                   files less the edges the rule can't express or the misses recorded below, and
+#                   the allowed tree draws none but those recorded: Biome's and oxlint's rules,
+#                   ESLint's no-restricted-imports, and the two resolved-file plugins under ESLint;
+#                   surface, each setup's binaries on PATH, config files, and packages to keep
+#                   current, with the installed packages under them.
 #                   Per tool, whether it runs as a native binary or on Node, as expected below.
 #
 # The GitHub and jsDelivr rows run against spike-html-design v0.7.0 always, and against this
@@ -188,6 +203,14 @@ jsdelivr=https://cdn.jsdelivr.net/gh/$design_slug@$design_tag
 # typescript-eslint caps below TypeScript's latest. scripts/currency.sh reads this line and
 # reports each that trails, typescript against the highest version in that cap.
 eslint_packages=(typescript-eslint@8.71.2 @eslint/js@10.0.1 globals@17.13.0 typescript@6.0.3)
+# The resolved-file direction plugins both ESLint setups take, installed beside eslint_packages:
+# eslint-plugin-boundaries with eslint-import-resolver-typescript, its resolver, and
+# eslint-plugin-import-x, whose no-restricted-paths is the other plugin and whose no-unresolved
+# pairs with each. scripts/currency.sh reads this line too.
+direction_packages=(eslint-plugin-boundaries@7.2.0 eslint-import-resolver-typescript@4.4.5 eslint-plugin-import-x@4.17.1)
+# The fourth setup's formatting packages: ESLint Stylistic for the code and eslint-plugin-jsonc
+# for the JSON. scripts/currency.sh reads this line too.
+stylistic_packages=(@stylistic/eslint-plugin@5.10.0 eslint-plugin-jsonc@3.4.2)
 lit=$(node -p 'require(process.argv[1]).dependencies.lit' "$root/package.json")
 # npm, mise's pin for this project, by its path, so neither node's bundled npm nor a global npm
 # earlier on PATH runs instead.
@@ -243,8 +266,11 @@ version eslint "$(eslint --version)"
 version prettier "$(prettier --version)"
 version oxlint "$(oxlint --version)"
 version oxfmt "$(oxfmt --version)"
-for spec in "${eslint_packages[@]}"; do
-  version "${spec%@*}" "${spec##*@} (installed into scratch for ESLint; eslint_packages in measure.sh)"
+for spec in "${eslint_packages[@]}" "${direction_packages[@]}"; do
+  version "${spec%@*}" "${spec##*@} (installed into scratch for ESLint, B and D; eslint_packages and direction_packages in measure.sh)"
+done
+for spec in "${stylistic_packages[@]}"; do
+  version "${spec%@*}" "${spec##*@} (installed into scratch for ESLint Stylistic, D; stylistic_packages in measure.sh)"
 done
 version shellcheck "$(shellcheck --version | sed -n 's/^version: //p')"
 version chromium "$(chromium --version)"
@@ -267,7 +293,7 @@ footprint_tools=(
   "node|Node" "npm|Node + npm" "pnpm|Node + pnpm" "npm:esbuild|Node, to bundle" "npm:vite|Node, to bundle" "bun|Bun"
   "github:microsoft/typescript-go|both (tsc)" "biome|both"
   "shellcheck|the check only" "aqua:sharkdp/hyperfine|the measure task only"
-  "npm:eslint|lint comparison, B" "npm:prettier|lint comparison, B"
+  "npm:eslint|lint comparison, B and D" "npm:prettier|lint comparison, B"
   "npm:oxlint|lint comparison, C" "npm:oxfmt|lint comparison, C"
 )
 # mb BYTES...: their sum in MB, to one decimal.
@@ -615,27 +641,49 @@ timing "Test" \
   -n "Node: node --test" "node --test $root/test/" \
   -n "Bun: bun test" "bun test $root/test/"
 
-# ---- Lint and format: the three setups' tools, configs, and tree, all under $lint.
+# ---- Lint and format: the four setups' tools, configs, and tree, all under $lint.
 
 echo "measure: lint and format setups" >&2
 lint="$scratch/lint"
-mkdir -p "$lint"
-status=0
-"$npm" install --prefix "$lint" --cache "$lint/npm-cache" "${npm_flags[@]}" --legacy-peer-deps \
-  --save-exact "${eslint_packages[@]}" >"$lint/install.log" 2>&1 || status=$?
-((status == 0)) || fail "npm couldn't install ${eslint_packages[*]} into scratch: $(tail -n1 "$lint/install.log")"
+mkdir -p "$lint/setup-B"
+# Each ESLint setup's scratch packages: B's, eslint_packages and direction_packages, in an install
+# of their own that only the footprint and surface rows read; and D's, those and
+# stylistic_packages, at $lint, where every config under $lint imports them from. --legacy-peer-deps
+# keeps npm from installing a second ESLint; eslint-plugin-import-x imports eslint, its peer, so the
+# mise pin's eslint package is linked in beside D's packages, where a project's devDependencies
+# would hold it.
+b_packages=("${eslint_packages[@]}" "${direction_packages[@]}")
+d_packages=("${b_packages[@]}" "${stylistic_packages[@]}")
+for prefix in "$lint/setup-B" "$lint"; do
+  if [[ "$prefix" == "$lint" ]]; then specs=("${d_packages[@]}"); else specs=("${b_packages[@]}"); fi
+  status=0
+  "$npm" install --prefix "$prefix" --cache "$lint/npm-cache" "${npm_flags[@]}" --legacy-peer-deps \
+    --save-exact "${specs[@]}" >"$prefix/install.log" 2>&1 || status=$?
+  ((status == 0)) || fail "npm couldn't install ${specs[*]} into scratch: $(tail -n1 "$prefix/install.log")"
+done
+eslint_package=$(readlink -f "$(mise --cd "$root" where npm:eslint)/node_modules/eslint")
+ln -s "$eslint_package" "$lint/node_modules/eslint"
 lint_compare() { node "$root/scripts/lint-compare.js" "$@"; }
 # The tree: the code each setup lints and formats, with each linter's config at its root. Every
-# copy and tree sits under $lint, so the ESLint configs import the packages installed there.
+# copy and tree sits under $lint, so the ESLint configs import the packages installed there. Lit is
+# copied into the tree's node_modules, so the resolved-file rules resolve it.
 tree="$lint/tree"
-mkdir -p "$tree"
+mkdir -p "$tree/node_modules"
 cp -r "$root/src" "$root/layers" "$root/test" "$tree/"
+cp -rL "$root/node_modules/lit" "$tree/node_modules/"
 cp "$root/biome.json" "$tree/"
-lint_compare eslint-config "$root/biome.json" "$tree/eslint.config.mjs" regex
+# B's and D's lint config: @eslint/js's and typescript-eslint's recommended rules and the layer
+# table in eslint-plugin-boundaries, the resolved-file direction plugin that draws nothing on the
+# allowed tree (see the direction rows); D's format config, Stylistic's and jsonc's rules alone;
+# and D's lint and format in one config.
+lint_compare eslint-config "$root/biome.json" "$tree/eslint.config.mjs" boundaries
+lint_compare eslint-config "$root/biome.json" "$tree/format-d.config.mjs" stylistic
+lint_compare eslint-config "$root/biome.json" "$tree/lint-format-d.config.mjs" boundaries+stylistic
 lint_compare oxlint-config "$root/biome.json" "$tree/.oxlintrc.json" merged
 # The Prettier options both Prettier and oxfmt read, and the same with embedded formatting at its
 # default, auto, to show what that one option changes.
 format_options=$(lint_compare format-options "$root/biome.json" "$lint/format.json")
+stylistic_options=$(lint_compare stylistic-options "$root/biome.json")
 node -e '
   const fs = require("node:fs");
   const options = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
@@ -643,48 +691,65 @@ node -e '
 ' "$lint/format.json" "$lint/format-embedded.json"
 # Each setup's lint and format check over the tree, as hyperfine runs them, from the tree's root:
 # Biome reads the biome.json there, and refuses one nested below its working directory as a
-# second root; ESLint finds its config by looking up from the linted files; oxlint and the
-# formatters are pointed at theirs. biome.json's VCS integration is off, the tree being no
-# repository.
+# second root; ESLint finds its config by looking up from the linted files, or takes D's by -c;
+# oxlint and the formatters are pointed at theirs. biome.json's VCS integration is off, the tree
+# being no repository. B and D lint with the same config, so D's lint row is B's; D's lint +
+# format is one ESLint run with both configs' rules, as D would run them.
 tree_paths="src layers test"
-declare -A setup_name=([A]="Biome" [B]="ESLint + Prettier" [C]="oxlint + oxfmt")
-declare -A lint_label=([A]="A: biome lint" [B]="B: eslint" [C]="C: oxlint")
-declare -A format_label=([A]="A: biome format" [B]="B: prettier --check" [C]="C: oxfmt --check")
+setups=(A B C D)
+declare -A setup_name=([A]="Biome" [B]="ESLint + Prettier" [C]="oxlint + oxfmt"
+  [D]="ESLint + ESLint Stylistic")
+declare -A lint_label=([A]="A: biome lint" [B]="B: eslint" [C]="C: oxlint" [D]="D: eslint")
+declare -A format_label=([A]="A: biome format" [B]="B: prettier --check" [C]="C: oxfmt --check"
+  [D]="D: eslint, Stylistic and jsonc rules")
 declare -A lint_cmd=(
   [A]="biome lint --vcs-enabled=false $tree_paths"
   [B]="eslint $tree_paths"
   [C]="oxlint -c .oxlintrc.json $tree_paths"
+  [D]="eslint $tree_paths"
 )
 declare -A format_cmd=(
   [A]="biome format --vcs-enabled=false $tree_paths"
   [B]="prettier --check --config $lint/format.json $tree_paths"
   [C]="oxfmt --check -c $lint/format.json $tree_paths"
+  [D]="eslint -c format-d.config.mjs $tree_paths"
+)
+declare -A both_cmd=(
+  [A]="bash -c '${lint_cmd[A]}; ${format_cmd[A]}'"
+  [B]="bash -c '${lint_cmd[B]}; ${format_cmd[B]}'"
+  [C]="bash -c '${lint_cmd[C]}; ${format_cmd[C]}'"
+  [D]="eslint -c lint-format-d.config.mjs $tree_paths"
 )
 # Each command once, its exit status kept for the time rows: a lint or a check that fails on the
 # tree fails its row, where the timings run on regardless (-i).
-declare -A lint_status format_status
+declare -A lint_status format_status both_status
 cd "$tree"
-for setup in A B C; do
+for setup in "${setups[@]}"; do
   status=0
   bash -c "${lint_cmd[$setup]}" >"$lint/lint-$setup.log" 2>&1 || status=$?
   lint_status[$setup]=$status
   status=0
   bash -c "${format_cmd[$setup]}" >"$lint/format-$setup.log" 2>&1 || status=$?
   format_status[$setup]=$status
+  status=0
+  bash -c "${both_cmd[$setup]}" >"$lint/both-$setup.log" 2>&1 || status=$?
+  both_status[$setup]=$status
 done
 
 timing "Lint and format" \
-  "Each setup over one copy of src/, layers/, and test/ ($(find src layers test -type f | wc -l) files): A, Biome with the repository's biome.json; B, ESLint with @eslint/js's and typescript-eslint's recommended rules and the layer rules, and Prettier; C, oxlint's default rules and the layer rules, and oxfmt. The formatters check against biome.json's options. lint + format is both in one bash -c, a bash startup included." \
+  "Each setup over one copy of src/, layers/, and test/ ($(find src layers test -type f | wc -l) files): A, Biome with the repository's biome.json; B, ESLint with @eslint/js's and typescript-eslint's recommended rules and the layer table in eslint-plugin-boundaries, and Prettier; C, oxlint's default rules and the layer rules, and oxfmt; D, B's ESLint config, and ESLint Stylistic's rules. The formatters check against biome.json's options. lint + format is both in one bash -c, a bash startup included, except D's, one eslint run with both configs' rules." \
   --runs 10 --warmup 1 -i \
   -n "${lint_label[A]}" "${lint_cmd[A]}" \
   -n "${format_label[A]}" "${format_cmd[A]}" \
-  -n "A: lint + format" "bash -c '${lint_cmd[A]}; ${format_cmd[A]}'" \
+  -n "A: lint + format" "${both_cmd[A]}" \
   -n "${lint_label[B]}" "${lint_cmd[B]}" \
   -n "${format_label[B]}" "${format_cmd[B]}" \
-  -n "B: lint + format" "bash -c '${lint_cmd[B]}; ${format_cmd[B]}'" \
+  -n "B: lint + format" "${both_cmd[B]}" \
   -n "${lint_label[C]}" "${lint_cmd[C]}" \
   -n "${format_label[C]}" "${format_cmd[C]}" \
-  -n "C: lint + format" "bash -c '${lint_cmd[C]}; ${format_cmd[C]}'"
+  -n "C: lint + format" "${both_cmd[C]}" \
+  -n "${format_label[D]}" "${format_cmd[D]}" \
+  -n "D: lint + format" "${both_cmd[D]}"
 cd "$scratch"
 # Each timing's mean wall time and its standard deviation in ms, by its name.
 declare -A lint_ms
@@ -1504,9 +1569,14 @@ pin() { sed -nE "s/^\"?$1\"? = \"([^\"]+)\"$/\1/p" "$root/mise.toml"; }
 tool_version() { "$1" --version | grep -m1 -oE '[0-9]+\.[0-9]+\.[0-9]+' || true; }
 # mise_tool COMMAND: the mise tool that provides COMMAND.
 mise_tool() { if [[ "$1" == biome ]]; then echo biome; else echo "npm:$1"; fi; }
-declare -A setup_tools=([A]="biome" [B]="eslint prettier" [C]="oxlint oxfmt")
-declare -A setup_formatter=([A]=biome [B]=prettier [C]=oxfmt)
-declare -A setup_linter=([A]=biome [B]=eslint [C]=oxlint)
+declare -A setup_tools=([A]="biome" [B]="eslint prettier" [C]="oxlint oxfmt" [D]="eslint")
+declare -A setup_formatter=([A]=biome [B]=prettier [C]=oxfmt [D]=stylistic)
+declare -A setup_formatter_label=([A]="biome format" [B]=prettier [C]=oxfmt
+  [D]="eslint --fix with Stylistic's and jsonc's rules")
+declare -A setup_linter=([A]=biome [B]=eslint [C]=oxlint [D]=eslint)
+# Each ESLint setup's scratch packages and where they're installed.
+declare -A setup_packages=([A]="" [B]="${b_packages[*]}" [C]="" [D]="${d_packages[*]}")
+declare -A setup_prefix=([B]="$lint/setup-B" [D]="$lint")
 
 # Native or Node: a native binary is an ELF executable; any other is a script, which needs Node
 # when it runs node. The oxc tools' scripts load a native addon (.node) on node, so the expected
@@ -1536,10 +1606,62 @@ for tool in biome eslint prettier oxlint oxfmt; do
   row "Lint and format: $tool runs as ${runs_expected[$tool]}" "$ok" "$fact"
 done
 
-for setup in A B C; do
-  prefix="Lint and format, $setup (${setup_name[$setup]})"
+mapfile -t tracked < <(git -C "$root" ls-files)
+mapfile -t json_files < <(printf '%s\n' "${tracked[@]}" | grep -E '\.json$')
 
-  # Footprint: each tool's install, and B's scratch packages, at their pins.
+# format_with SETUP DIR VARIANT PATH...: SETUP's formatter writing PATH..., relative to DIR, from
+# DIR, with the matched options, or for Prettier and oxfmt with embedded formatting at its
+# default when VARIANT is embedded. D's config is copied into DIR for the run and removed after,
+# ESLint taking the config it finds above the files.
+format_with() {
+  local setup=$1 dir=$2 config="$lint/format.json" status=0
+  if [[ "$3" == embedded ]]; then config="$lint/format-embedded.json"; fi
+  shift 3
+  case ${setup_formatter[$setup]} in
+    biome) (cd "$dir" && biome format --write --vcs-enabled=false --config-path="$tree/biome.json" "$@") ;;
+    prettier) (cd "$dir" && prettier --write --config "$config" "$@") ;;
+    oxfmt) (cd "$dir" && oxfmt --write -c "$config" "$@") ;;
+    stylistic)
+      cp "$tree/format-d.config.mjs" "$dir/eslint.config.mjs"
+      (cd "$dir" && eslint --fix "$@") || status=$?
+      rm "$dir/eslint.config.mjs"
+      return "$status"
+      ;;
+  esac
+}
+# copy_json DIR: the tracked JSON files, copied to DIR at their paths.
+copy_json() {
+  mkdir -p "$1"
+  (cd "$root" && printf '%s\0' "${json_files[@]}" | xargs -0 cp --parents -t "$1")
+}
+# pad DIR: three trailing newlines on every file in DIR, which a formatter strips from any file it
+# formats, so a file it skips differs from the original and fails the row.
+pad() {
+  local path
+  while IFS= read -r path; do printf '\n\n\n' >>"$1/$path"; done < <(files "$1")
+}
+
+# The files each formatter, configured to match, leaves different from the original: over the
+# formatted JSON (leaves unchanged), and after formatting the disturbed copies (restores;
+# lint-compare.js disturb: calls and arrays split and joined, closing braces raised, every line
+# re-indented to 0 or 4 spaces). A formatter that can't is a fact, recorded here once a run showed
+# it; the row passes when the files that differ are these, sorted. oxfmt puts package.json's
+# one-element files array on one line, where Biome and Prettier expand every array in a
+# package.json. ESLint Stylistic and jsonc only adjust whitespace in place, consistently with what
+# they find, so a split call stays split and a joined line stays joined.
+declare -A changed_json=([C]="package.json")
+declare -A unrestored=(
+  [C json]="package.json"
+  [D code]="layers/apps/application/documents/main.ts layers/apps/application/documents/views/list.ts layers/apps/application/prompts/main.ts layers/apps/static/site/main.ts layers/components/status-badge.ts layers/foundation/dom.ts layers/sdk/session.ts src/js/pagination-lit.js src/js/pagination-vanilla.js src/js/router.js src/jsdoc/pagination-lit.js src/jsdoc/pagination-vanilla.js src/jsdoc/router.js src/ts/pagination-lit.ts src/ts/pagination-vanilla.ts src/ts/router.ts test/layers-tree.js test/layers.test.js test/router.test.js"
+  [D json]=".claude/settings.json biome.json fixtures/consumer-bun/tsconfig.json fixtures/consumer-npm/tsconfig.json fixtures/consumer-pnpm/tsconfig.json package.json tsconfig.build.json tsconfig.json"
+)
+
+for setup in "${setups[@]}"; do
+  prefix="Lint and format, $setup (${setup_name[$setup]})"
+  formatter=${setup_formatter[$setup]}
+  label=${setup_formatter_label[$setup]}
+
+  # Footprint: each tool's install, and an ESLint setup's scratch packages, at their pins.
   ok=1 parts=() sizes=()
   for tool in ${setup_tools[$setup]}; do
     want=$(pin "$(mise_tool "$tool")") got=$(tool_version "$tool")
@@ -1547,16 +1669,17 @@ for setup in A B C; do
     parts+=("$tool $got (pin $want) $(mb "${footprint_bytes[$(mise_tool "$tool")]}")")
     sizes+=("${footprint_bytes[$(mise_tool "$tool")]}")
   done
-  if [[ "$setup" == B ]]; then
+  if [[ -n "${setup_packages[$setup]}" ]]; then
     installed=()
-    for spec in "${eslint_packages[@]}"; do
+    modules="${setup_prefix[$setup]}/node_modules"
+    for spec in ${setup_packages[$setup]}; do
       name=${spec%@*} want=${spec##*@}
-      got=$(node -p 'require(process.argv[1]).version' "$lint/node_modules/$name/package.json" 2>/dev/null || echo none)
+      got=$(node -p 'require(process.argv[1]).version' "$modules/$name/package.json" 2>/dev/null || echo none)
       if [[ "$got" != "$want" ]]; then ok=0; fi
       installed+=("$name $got")
     done
-    packages=$(node -p 'Object.keys(require(process.argv[1]).packages).length - 1' "$lint/package-lock.json")
-    plugins=$(du -sb "$lint/node_modules" | cut -f1)
+    packages=$(lint_compare packages "$modules")
+    plugins=$(du -sb "$modules" | cut -f1)
     sizes+=("$plugins")
     printf -v list '%s, ' "${installed[@]}"
     parts+=("scratch node_modules, ${list%, } and their dependencies, $packages packages: $(mb "$plugins")")
@@ -1567,61 +1690,110 @@ for setup in A B C; do
   printf -v list '%s; ' "${parts[@]}"
   row "$prefix: footprint, every tool and package at its pin" "$ok" "${list}total $(mb "${sizes[@]}"), $runtime"
 
-  # Time: the timings' means, with each command's exit status on the tree.
+  # Time: the timings' means, with each command's exit status on the tree. D lints with B's
+  # command and config, so its lint mean is B's.
+  timed=$setup shared=""
+  if [[ "$setup" == D ]]; then timed=B shared=", B's command and config"; fi
   ok=0
-  if ((lint_status[$setup] == 0 && format_status[$setup] == 0)); then ok=1; fi
-  fact="lint ${lint_ms[${lint_label[$setup]}]} (exit ${lint_status[$setup]}); format check ${lint_ms[${format_label[$setup]}]} (exit ${format_status[$setup]}); lint + format ${lint_ms[$setup: lint + format]}"
+  if ((lint_status[$setup] == 0 && format_status[$setup] == 0 && both_status[$setup] == 0)); then ok=1; fi
+  fact="lint ${lint_ms[${lint_label[$timed]}]} (exit ${lint_status[$setup]}$shared);"
+  fact+=" format check ${lint_ms[${format_label[$setup]}]} (exit ${format_status[$setup]});"
+  fact+=" lint + format ${lint_ms[$setup: lint + format]} (exit ${both_status[$setup]})"
   if ((ok == 0)); then
-    fact+="; lint: $(tail -n3 "$lint/lint-$setup.log"); format: $(tail -n3 "$lint/format-$setup.log")"
+    fact+="; lint: $(tail -n3 "$lint/lint-$setup.log"); format: $(tail -n3 "$lint/format-$setup.log"); both: $(tail -n3 "$lint/both-$setup.log")"
   fi
   row "$prefix: lint, format check, and both on the tree, each passing" "$ok" "$fact"
 
-  # Configurability: the formatter, configured to match, writing over a copy of the tree; and, for
-  # Prettier and oxfmt, the same with embedded formatting at its default.
-  formatter=${setup_formatter[$setup]}
+  # Leaves unchanged, code: the formatter, configured to match, writing over a padded copy of the
+  # tree; and, for Prettier and oxfmt, the same with embedded formatting at its default.
   variants=(matched)
-  if [[ "$setup" != A ]]; then variants+=(embedded); fi
+  if [[ "$setup" == B || "$setup" == C ]]; then variants+=(embedded); fi
   declare -A format_diff=() format_exit=()
   for variant in "${variants[@]}"; do
     dir="$lint/format-$setup-$variant"
     mkdir -p "$dir"
     cp -r "$root/src" "$root/layers" "$root/test" "$dir/"
-    # Three trailing newlines on every file, which a formatter strips from any file it formats,
-    # so a file it skips differs from the tree and fails the row.
-    while IFS= read -r path; do printf '\n\n\n' >>"$dir/$path"; done < <(files "$dir")
-    config="$lint/format.json"
-    if [[ "$variant" == embedded ]]; then config="$lint/format-embedded.json"; fi
+    pad "$dir"
     status=0
-    case $formatter in
-      biome) biome format --write --vcs-enabled=false --config-path="$tree/biome.json" "$dir/src" "$dir/layers" "$dir/test" ;;
-      prettier) prettier --write --config "$config" "$dir/src" "$dir/layers" "$dir/test" ;;
-      oxfmt) oxfmt --write -c "$config" "$dir/src" "$dir/layers" "$dir/test" ;;
-    esac >"$dir.log" 2>&1 || status=$?
+    format_with "$setup" "$dir" "$variant" src layers test >"$dir.log" 2>&1 || status=$?
     format_exit[$variant]=$status
     format_diff[$variant]=$(differing "$dir" "$root")
   done
-  if [[ "$setup" == A ]]; then
-    options="biome.json's $(node -p 'Object.entries(require(process.argv[1]).formatter).map((e) => e.join(" ")).join(", ")' "$root/biome.json"), and Biome's defaults for the rest"
-  else
-    options=$format_options
-  fi
-  code_files=$(files "$tree" | grep -cE '\.(js|ts)$')
+  case $setup in
+    A) options="biome.json's $(node -p 'Object.entries(require(process.argv[1]).formatter).map((e) => e.join(" ")).join(", ")' "$root/biome.json"), and Biome's defaults for the rest" ;;
+    D) options="Stylistic's customize with $stylistic_options, and the rules Biome's output needs beside it (format-d.config.mjs); max-len at the width, which reports and never fixes" ;;
+    *) options=$format_options ;;
+  esac
+  code_files=$(files "$tree" | grep -cE '^(src|layers|test)/.*\.(js|ts)$')
   diff=${format_diff[matched]% }
   ok=0
   if ((format_exit[matched] == 0)) && [[ -z "$diff" ]]; then ok=1; fi
   fact="options: $options; exit ${format_exit[matched]}; ${diff:+differ from the tree: $diff}"
   if [[ -z "$diff" ]]; then fact+="all $code_files files of src/, layers/, and test/ come out byte for byte the tree's"; fi
-  if [[ "$setup" != A ]]; then
+  if [[ "$setup" == B || "$setup" == C ]]; then
     diff=${format_diff[embedded]% }
     if [[ -n "$diff" ]]; then diff="differ: $diff"; else diff="none differ"; fi
     fact+="; with embeddedLanguageFormatting auto, its default, exit ${format_exit[embedded]}, $diff"
   fi
-  row "$prefix: $formatter reproduces the tree's formatting, byte for byte" "$ok" "$fact"
+  row "$prefix: $label leaves the formatted code unchanged, byte for byte" "$ok" "$fact"
+
+  # Leaves unchanged, JSON: the same over a padded copy of the tracked JSON files.
+  dir="$lint/json-$setup"
+  copy_json "$dir"
+  pad "$dir"
+  status=0
+  format_with "$setup" "$dir" matched "${json_files[@]}" >"$dir.log" 2>&1 || status=$?
+  diff=$(differing "$dir" "$root")
+  diff=${diff% }
+  want=${changed_json[$setup]:-}
+  ok=0
+  if ((status == 0)) && [[ "$diff" == "$want" ]]; then ok=1; fi
+  fact="exit $status; "
+  if [[ -n "$diff" ]]; then fact+="differ from the repository's: $diff"; else
+    fact+="all ${#json_files[@]} tracked JSON files come out byte for byte the repository's"
+  fi
+  if [[ -n "$want" ]]; then fact+="; recorded as a fact: the expected changes are these files"; fi
+  if [[ "$diff" != "$want" ]]; then fact+="; recorded: ${want:-none}"; fi
+  if [[ "$setup" == D ]]; then fact+="; jsonc's rules: format-d.config.mjs"; fi
+  row "$prefix: $label leaves the JSON unchanged, byte for byte" "$ok" "$fact"
+
+  # Restores: the formatter over a disturbed copy, code and JSON, against the recorded misses.
+  for kind in code json; do
+    dir="$lint/restore-$setup-$kind"
+    if [[ "$kind" == code ]]; then
+      mkdir -p "$dir"
+      cp -r "$root/src" "$root/layers" "$root/test" "$dir/"
+      paths=(src layers test)
+      what="the $code_files code files" kind_label=code
+    else
+      copy_json "$dir"
+      paths=("${json_files[@]}")
+      what="the ${#json_files[@]} JSON files" kind_label=JSON
+    fi
+    mapfile -t disturbed < <(files "$dir")
+    done_=$(lint_compare disturb "$lint" "$dir" "${disturbed[@]}")
+    status=0
+    format_with "$setup" "$dir" matched "${paths[@]}" >"$dir.log" 2>&1 || status=$?
+    diff=$(differing "$dir" "$root")
+    diff=${diff% }
+    want=${unrestored[$setup $kind]:-}
+    ok=0
+    if [[ "$diff" == "$want" ]]; then ok=1; fi
+    fact="$what disturbed ($done_; wide: joined lines past 100 columns, which only a reflow breaks again); exit $status; "
+    if [[ -z "$diff" ]]; then fact+="every file comes out byte for byte the original"; else
+      fact+="$(wc -w <<<"$diff") files differ: $diff"
+    fi
+    if [[ -n "$want" ]]; then fact+="; recorded as a fact: the expected misses are these files"; fi
+    if [[ "$setup" == D ]]; then
+      fact+="; Stylistic has no line-width reflow and max-len no fixer, so a split call stays split and a joined line stays past the width"
+    fi
+    if [[ "$diff" != "$want" ]]; then fact+="; recorded: ${want:-none}"; fi
+    row "$prefix: $label restores the $kind_label from a copy with disturbed line breaks and indentation" "$ok" "$fact"
+  done
 done
 
 # Scope: every tracked file of the repository, copied; the padded copy is the one the scope runs
 # start from and are compared with.
-mapfile -t tracked < <(git -C "$root" ls-files)
 # copy_repo DIR: the repository's tracked files, copied to DIR.
 copy_repo() {
   mkdir -p "$1"
@@ -1642,36 +1814,47 @@ padded="$lint/scope-padded"
 copy_repo "$padded"
 for path in "${tracked[@]}"; do printf '\n\n\n' >>"$padded/$path"; done
 mapfile -t code < <(printf '%s\n' "${tracked[@]}" | grep -E '\.(js|ts)$')
-# Biome's limit: biome.json with files.includes naming the code files.
+# The scope a setup formats: the code and the JSON.
+mapfile -t scoped < <(printf '%s\n' "${tracked[@]}" | grep -E '\.(js|ts|json)$')
+# Biome's limit: biome.json with files.includes naming the code and JSON files.
 mkdir -p "$lint/biome-code"
 node -e '
   const fs = require("node:fs");
   const config = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
-  config.files = { includes: ["**/*.js", "**/*.ts"] };
+  config.files = { includes: ["**/*.js", "**/*.ts", "**/*.json"] };
   fs.writeFileSync(process.argv[2], JSON.stringify(config, null, 2));
 ' "$root/biome.json" "$lint/biome-code/biome.json"
 declare -A limit_how=(
-  [biome]='files.includes ["**/*.js", "**/*.ts"] in biome.json'
-  [prettier]='a .prettierignore of *, !*/, !*.js, !*.ts'
+  [biome]='files.includes ["**/*.js", "**/*.ts", "**/*.json"] in biome.json'
+  [prettier]='a .prettierignore of *, !*/, !*.js, !*.ts, !*.json'
   [oxfmt]='the same .prettierignore, which oxfmt reads too'
+  [stylistic]="its config's own files globs, the code and **/*.json, the same run as its default"
 )
 # format_repo FORMATTER DIR MODE: FORMATTER's default run over DIR, with the matched options;
-# with limited, as its configuration limits it to code.
+# with limited, as its configuration limits it to the code and JSON. ESLint, D's formatter, runs
+# its config over the files the config names in both modes.
 format_repo() {
-  local config=$tree/biome.json
+  local config=$tree/biome.json status=0
   if [[ "$3" == limited ]]; then
     config=$lint/biome-code/biome.json
-    if [[ "$1" != biome ]]; then printf '*\n!*/\n!*.js\n!*.ts\n' >"$2/.prettierignore"; fi
+    if [[ "$1" == prettier || "$1" == oxfmt ]]; then printf '*\n!*/\n!*.js\n!*.ts\n!*.json\n' >"$2/.prettierignore"; fi
   fi
   case $1 in
     biome) (cd "$2" && biome format --write --vcs-enabled=false --config-path="$config" .) ;;
     prettier) (cd "$2" && prettier --write --config "$lint/format.json" .) ;;
     oxfmt) (cd "$2" && oxfmt --write -c "$lint/format.json" .) ;;
+    stylistic)
+      cp "$tree/format-d.config.mjs" "$2/eslint.config.mjs"
+      (cd "$2" && eslint --fix .) || status=$?
+      rm "$2/eslint.config.mjs"
+      return "$status"
+      ;;
   esac
 }
-for setup in A B C; do
+for setup in "${setups[@]}"; do
   prefix="Lint and format, $setup (${setup_name[$setup]})"
   formatter=${setup_formatter[$setup]}
+  label=${setup_formatter_label[$setup]}
   declare -A scope_exit=() scope_files=()
   for mode in default limited; do
     dir="$lint/scope-$formatter-$mode"
@@ -1683,16 +1866,18 @@ for setup in A B C; do
   done
   mapfile -t default_files <<<"${scope_files[default]}"
   mapfile -t limited_files <<<"${scope_files[limited]}"
+  default_json=$(grep -c '\.json$' <<<"${scope_files[default]}" || true)
+  limited_json=$(grep -c '\.json$' <<<"${scope_files[limited]}" || true)
   ok=0
-  if ((scope_exit[limited] == 0)) && [[ "${scope_files[limited]}" == "$(printf '%s\n' "${code[@]}")" ]]; then ok=1; fi
+  if ((scope_exit[limited] == 0)) && [[ "${scope_files[limited]}" == "$(printf '%s\n' "${scoped[@]}")" ]]; then ok=1; fi
   fact="the repository's ${#tracked[@]} tracked files: $(extensions "${tracked[@]}");
-    by default $formatter touches $(extensions "${default_files[@]}") (exit ${scope_exit[default]});
-    limited by ${limit_how[$formatter]}, $(extensions "${limited_files[@]}") (exit ${scope_exit[limited]})"
+    by default $label touches $(extensions "${default_files[@]}") (exit ${scope_exit[default]}), JSON $default_json of ${#json_files[@]};
+    limited by ${limit_how[$formatter]}, $(extensions "${limited_files[@]}") (exit ${scope_exit[limited]}), JSON $limited_json of ${#json_files[@]}"
   if ((ok == 0)); then
-    fact+="; touched beside the code: $(LC_ALL=C comm -23 <(LC_ALL=C sort <<<"${scope_files[limited]}") <(printf '%s\n' "${code[@]}" | LC_ALL=C sort) | paste -s -d ' ' -);
-      code untouched: $(LC_ALL=C comm -13 <(LC_ALL=C sort <<<"${scope_files[limited]}") <(printf '%s\n' "${code[@]}" | LC_ALL=C sort) | paste -s -d ' ' -)"
+    fact+="; touched beside the code and JSON: $(LC_ALL=C comm -23 <(LC_ALL=C sort <<<"${scope_files[limited]}") <(printf '%s\n' "${scoped[@]}" | LC_ALL=C sort) | paste -s -d ' ' -);
+      code or JSON untouched: $(LC_ALL=C comm -13 <(LC_ALL=C sort <<<"${scope_files[limited]}") <(printf '%s\n' "${scoped[@]}" | LC_ALL=C sort) | paste -s -d ' ' -)"
   fi
-  row "$prefix: $formatter's configuration limits it to the code files" "$ok" "$fact"
+  row "$prefix: $label, its configuration limiting it to the code and JSON files" "$ok" "$fact"
 
   # Rewrites: the default run over an unpadded copy, each file it changes with its lines removed
   # and added, every Markdown file named.
@@ -1715,26 +1900,33 @@ for setup in A B C; do
   ok=0
   if ((status == 0 && code_changed == 0)) && [[ -z "$skipped" ]]; then ok=1; fi
   printf -v list '%s; ' "${changes[@]}"
-  row "$prefix: $formatter over the repository by default, with the matched options, rewrites no code file" \
+  row "$prefix: $label over the repository by default, with the matched options, rewrites no code file" \
     "$ok" "exit $status; ${list%; }${skipped:+; code files the default run never reached: $skipped}"
 done
 
-# Direction: the layer rules over the violation and allowed trees. ESLint's and oxlint's copies of
-# biome.json's groups run too, in trees of their own, as a fact beside their translated forms.
+# Direction: the layer rules over the violation and allowed trees, each tree with the files its
+# imports name and a copy of lit in its node_modules, so the resolved-file plugins resolve what
+# the cases name. ESLint's and oxlint's copies of biome.json's groups run too, in trees of their
+# own, as a fact beside their translated forms; so do the two resolved-file plugins.
 for kind in violations allowed; do
-  mkdir -p "$lint/$kind" "$lint/globs/$kind"
-  lint_compare tree "$lint/$kind" "$kind"
-  lint_compare tree "$lint/globs/$kind" "$kind"
+  for base in "$lint" "$lint/globs" "$lint/boundaries" "$lint/import-x"; do
+    mkdir -p "$base/$kind/node_modules"
+    lint_compare tree "$base/$kind" "$kind"
+    cp -rL "$root/node_modules/lit" "$base/$kind/node_modules/"
+  done
   cp "$root/biome.json" "$lint/$kind/"
   lint_compare eslint-config "$root/biome.json" "$lint/$kind/eslint.config.mjs" regex
   lint_compare eslint-config "$root/biome.json" "$lint/globs/$kind/eslint.config.mjs" globs
+  lint_compare eslint-config "$root/biome.json" "$lint/boundaries/$kind/eslint.config.mjs" boundaries
+  lint_compare eslint-config "$root/biome.json" "$lint/import-x/$kind/eslint.config.mjs" import-x
   lint_compare oxlint-config "$root/biome.json" "$lint/$kind/.oxlintrc.json" merged
   lint_compare oxlint-config "$root/biome.json" "$lint/globs/$kind/.oxlintrc.json" globs
 done
-# direction LINTER DIR: the files LINTER flags with its restricted-imports rule in DIR/layers,
-# one per line, after checking that it linted every file there; a short run fails the row.
+# direction LINTER DIR [RULES]: the files LINTER flags with its restricted-imports rule, or for
+# ESLint with any of RULES, in DIR/layers, one per line, after checking that it linted every file
+# there; a short run fails the row.
 direction() {
-  local linter=$1 dir=$2 count
+  local linter=$1 dir=$2 rules=${3:-no-restricted-imports} count
   case $linter in
     biome) (cd "$dir" && biome lint --vcs-enabled=false --reporter=json --max-diagnostics=none layers) ;;
     eslint) (cd "$dir" && eslint -f json layers) ;;
@@ -1742,13 +1934,13 @@ direction() {
   esac >"$dir/$linter-report.json" 2>"$dir/$linter.log" || true
   count=$(lint_compare linted "$linter" "$dir/$linter-report.json" 2>/dev/null || echo 0)
   if [[ "$count" != "$(find "$dir/layers" -type f | wc -l)" ]]; then
-    echo "linted $count files"
+    echo "linted $count files: $(tail -n2 "$dir/$linter.log")"
     return
   fi
-  lint_compare flagged "$linter" "$dir/$linter-report.json" "$dir"
+  lint_compare flagged "$linter" "$dir/$linter-report.json" "$dir" "$rules"
 }
-mapfile -t violation_files < <(cd "$lint/violations" && find layers -type f | LC_ALL=C sort)
-allowed_count=$(find "$lint/allowed/layers" -type f | wc -l)
+mapfile -t violation_files < <(lint_compare cases violations | LC_ALL=C sort)
+allowed_count=$(lint_compare cases allowed | wc -l)
 # ESLint's no-restricted-imports checks import and export declarations, never an import()
 # expression, so the violation files whose import is dynamic are the edges it can't express.
 mapfile -t dynamic < <(lint_compare dynamic | LC_ALL=C sort)
@@ -1756,7 +1948,10 @@ for setup in A B C; do
   prefix="Lint and format, $setup (${setup_name[$setup]})"
   linter=${setup_linter[$setup]}
   missed=()
-  if [[ "$linter" == eslint ]]; then missed=("${dynamic[@]}"); fi
+  if [[ "$linter" == eslint ]]; then
+    missed=("${dynamic[@]}")
+    prefix="Lint and format, B and D (ESLint)"
+  fi
   want=$(LC_ALL=C comm -23 <(printf '%s\n' "${violation_files[@]}") <(printf '%s\n' "${missed[@]}" | sed '/^$/d'))
   flagged=$(direction "$linter" "$lint/violations")
   drawn=$(direction "$linter" "$lint/allowed")
@@ -1785,6 +1980,78 @@ for setup in A B C; do
   fi
   row "$prefix: ${linter}'s restricted-imports rule, configured as biome.json's layer overrides, flags the violation tree and not the allowed one" \
     "$ok" "$fact"
+done
+
+# The resolved-file plugins, each with its no-unresolved rule (import-x's for both), configured as
+# the layer table (lint-compare.js), run under the pinned ESLint over the same trees. Each passes
+# only when the files it flags, by either rule, are the violation files less the misses recorded
+# here once a run showed them, and the allowed files it flags are the ones recorded. Both resolve a
+# specifier to the file it names, so an edge whose specifier isn't normalized but reaches a file
+# its layer may import is no crossing to them: ./x/../../foundation/dom.js from a component is the
+# foundation's dom.ts, and ./views/.. from an app is the app's own index.ts. biome.json's
+# normalization rule refuses both by their text.
+declare -A plugin_rules=(
+  [boundaries]="boundaries/dependencies,import-x/no-unresolved"
+  [import-x]="import-x/no-restricted-paths,import-x/no-unresolved"
+)
+declare -A plugin_label=(
+  [boundaries]="eslint-plugin-boundaries' dependencies rule (eslint-import-resolver-typescript) with import-x's no-unresolved"
+  [import-x]="eslint-plugin-import-x's no-restricted-paths (its built-in resolver, .js to .ts by extensionAlias) with its no-unresolved"
+)
+# import-x's no-restricted-paths reads an import as outside a zone's directory when its path
+# relative to the directory starts with "..", so a directory inside the layer named ..x or ...
+# is outside it: the allowed tree's dotted files draw it.
+unnormalized="layers/apps/application/documents/name-parent.ts layers/components/unnormalized.ts"
+declare -A plugin_missed=([boundaries]=$unnormalized [import-x]=$unnormalized)
+declare -A plugin_drawn=([boundaries]="" [import-x]="layers/apps/static/site/dotted.ts layers/components/dotted.ts")
+for plugin in boundaries import-x; do
+  rules=${plugin_rules[$plugin]}
+  rule=${rules%%,*}
+  plugin_misses=${plugin_missed[$plugin]}
+  want=$(LC_ALL=C comm -23 <(printf '%s\n' "${violation_files[@]}") <(tr ' ' '\n' <<<"$plugin_misses" | sed '/^$/d' | LC_ALL=C sort))
+  flagged=$(direction eslint "$lint/$plugin/violations" "$rules")
+  drawn=$(direction eslint "$lint/$plugin/allowed" "$rules")
+  by_rule=$(lint_compare flagged eslint "$lint/$plugin/violations/eslint-report.json" "$lint/$plugin/violations" "$rule" | grep -c . || true)
+  unresolved=$(LC_ALL=C comm -23 <(lint_compare flagged eslint "$lint/$plugin/violations/eslint-report.json" "$lint/$plugin/violations" import-x/no-unresolved) <(lint_compare flagged eslint "$lint/$plugin/violations/eslint-report.json" "$lint/$plugin/violations" "$rule") | paste -s -d ' ' -)
+  ok=0
+  if [[ "$flagged" == "$want" && "$(paste -s -d ' ' - <<<"$drawn")" == "${plugin_drawn[$plugin]}" ]]; then ok=1; fi
+  fact="under eslint $(tool_version eslint), flags $(grep -c . <<<"$flagged" || true) of ${#violation_files[@]} violation files ($by_rule by ${rule}${unresolved:+, the rest by no-unresolved alone: $unresolved}) and $(grep -c . <<<"$drawn" || true) of $allowed_count allowed files"
+  short=$(LC_ALL=C comm -23 <(printf '%s\n' "${violation_files[@]}") <(echo "$flagged") | paste -s -d ' ' -)
+  extra=$(LC_ALL=C comm -13 <(printf '%s\n' "${violation_files[@]}") <(echo "$flagged") | paste -s -d ' ' -)
+  fact+="${short:+; misses: $short}${extra:+; flags beyond the violations: $extra}${drawn:+; allowed files flagged: $(paste -s -d ' ' - <<<"$drawn")}"
+  if [[ -n "$plugin_misses${plugin_drawn[$plugin]}" ]]; then
+    fact+="; recorded as facts: misses ${plugin_misses:-none}, allowed files flagged ${plugin_drawn[$plugin]:-none}"
+  fi
+  row "Lint and format, B and D (ESLint): ${plugin_label[$plugin]}, configured as the layer table, flags the violation tree and not the allowed one" \
+    "$ok" "$fact"
+done
+
+# Surface: what a repository holding each setup keeps: the binaries it runs from PATH, its config
+# files, and the packages it pins and keeps current, directly, with every package installed under
+# them as a second figure (the mise tools' installs and the scratch packages').
+declare -A surface_binaries=([A]="biome" [B]="eslint prettier node" [C]="oxlint oxfmt node" [D]="eslint node")
+declare -A surface_configs=(
+  [A]="biome.json, the linter's and the formatter's options and the layer rules in one"
+  [B]="eslint.config.js, the lint rules and the layer table; .prettierrc.json, the formatter's options; .prettierignore, to limit Prettier to the code and JSON"
+  [C]=".oxlintrc.json, the lint rules and the layer rules; .oxfmtrc.json, the formatter's options; .prettierignore, which oxfmt reads too, to limit it to the code and JSON"
+  [D]="eslint.config.js, the lint rules, the layer table, and Stylistic's and jsonc's formatting rules in one"
+)
+for setup in "${setups[@]}"; do
+  ok=1 found=() direct=() dirs=()
+  for binary in ${surface_binaries[$setup]}; do
+    if path=$(command -v "$binary"); then found+=("$binary"); else ok=0; found+=("$binary missing"); fi
+  done
+  for tool in ${setup_tools[$setup]}; do
+    direct+=("$tool $(pin "$(mise_tool "$tool")") (mise)")
+    if [[ "$tool" != biome ]]; then dirs+=("$(mise --cd "$root" where "$(mise_tool "$tool")")"); fi
+  done
+  for spec in ${setup_packages[$setup]}; do direct+=("$spec"); done
+  if [[ -n "${setup_packages[$setup]}" ]]; then dirs+=("${setup_prefix[$setup]}/node_modules"); fi
+  if ((${#dirs[@]} > 0)); then transitive=$(lint_compare packages "${dirs[@]}"); else transitive=0; fi
+  printf -v list '%s, ' "${direct[@]}"
+  fact="binaries on PATH: ${found[*]}; config files: ${surface_configs[$setup]}; packages to keep current: ${#direct[@]} (${list%, }); installed packages under them: $transitive"
+  if [[ "$setup" == A ]]; then fact+=", biome being one native binary"; fi
+  row "Lint and format, $setup (${setup_name[$setup]}): surface, binaries, config files, and packages to keep current" "$ok" "$fact"
 done
 
 echo "## Rows"

@@ -3,7 +3,8 @@
 // one violating import per file, a file per forbidden edge and per import form, and passes only
 // when each of its files draws the rule's diagnostic; the other holds only allowed imports and
 // passes only when it draws none, so a rule that refuses everything or nothing fails here.
-// Biome matches specifier text, never resolved files, so the imported files needn't exist.
+// Biome matches specifier text, never resolved files; the trees hold the files their imports
+// name all the same, for measure's resolved-file rules, and Biome lints those too.
 //
 // The text decides how the overrides are written. The foundation, components, and SDK refuse a
 // layer by its directory name, at any depth. An app can't: a sibling app is `../<name>`, which
@@ -31,12 +32,12 @@ const root = join(import.meta.dirname, "..");
 const rule = "lint/style/noRestrictedImports";
 
 /** Writes `files` to a scratch tree with the repo's biome.json and returns the files Biome
- * flagged with the rule, after checking that it linted every one of them. */
+ * flagged with the rule, after checking that it linted every file written under layers/. */
 function flagged(files) {
   const scratch = mkdtempSync(join(tmpdir(), "layers-"));
   try {
     copyFileSync(join(root, "biome.json"), join(scratch, "biome.json"));
-    writeTree(scratch, files);
+    const written = writeTree(scratch, files);
     // The scratch tree isn't a git repository, so the config's VCS integration is off for it.
     const run = spawnSync(
       "biome",
@@ -45,7 +46,10 @@ function flagged(files) {
     );
     assert.equal(run.error, undefined, `biome didn't run: ${run.error}`);
     const report = JSON.parse(run.stdout);
-    assert.equal(report.summary.unchanged + report.summary.changed, Object.keys(files).length);
+    assert.equal(
+      report.summary.unchanged + report.summary.changed,
+      written.filter((path) => path.startsWith("layers/")).length,
+    );
     return new Set(
       report.diagnostics.filter((d) => d.category === rule).map((d) => d.location.path),
     );

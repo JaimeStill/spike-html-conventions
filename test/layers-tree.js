@@ -4,7 +4,10 @@
 // as ESLint's and oxlint's over them, so both read the cases from here. Each maps a path under the
 // repository root to its source, one line or several, without the trailing newline.
 //
-// The linters match specifier text, never resolved files, so the imported files needn't exist.
+// Biome, oxlint, and ESLint's no-restricted-imports match specifier text, but measure's
+// resolved-file rules (eslint-plugin-boundaries, eslint-plugin-import-x) classify the file an
+// import resolves to and skip one that resolves to nothing, so each tree is written with the
+// files its imports name: see targets below.
 
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -138,10 +141,36 @@ export const allowed = {
   ].join("\n"),
 };
 
-/** Writes `files`, one of the trees above, under `dir`, each source with a trailing newline. */
-export function writeTree(dir, files) {
+/** The files the relative and absolute specifiers in `files` name and `files` doesn't hold,
+ * sorted, each a path under the repository root. A specifier resolves as a browser resolves it,
+ * by URL against the importing file, so `%2e%2e` is a `..` segment, an empty segment is one
+ * segment, and a climb past the root stops there; then a `.js` file is its `.ts` source, as
+ * TypeScript maps it, and a specifier with no file extension (`..`, `./`, `../sdk`) names a
+ * directory, whose `index.ts` the resolvers take. A package name (`lit`, this package's own)
+ * names no file in the tree. */
+export function targets(files) {
+  const found = new Set();
   for (const [path, source] of Object.entries(files)) {
+    for (const [, specifier] of source.matchAll(/(?:from |import |import\()"([^"]*)"/g)) {
+      if (!specifier.startsWith(".") && !specifier.startsWith("/")) continue;
+      let target = decodeURI(new URL(specifier, `file:///${path}`).pathname.slice(1));
+      const name = target.slice(target.lastIndexOf("/") + 1);
+      if (!/\.(js|ts)$/.test(name)) target = `${target.replace(/\/$/, "")}/index.ts`;
+      target = target.replace(/^\//, "").replace(/\.js$/, ".ts");
+      if (!(target in files)) found.add(target);
+    }
+  }
+  return [...found].sort();
+}
+
+/** Writes `files`, one of the trees above, under `dir`, each source with a trailing newline, and
+ * each of its targets as an empty module; returns every path written. */
+export function writeTree(dir, files) {
+  const written = { ...files };
+  for (const target of targets(files)) written[target] = "export {};";
+  for (const [path, source] of Object.entries(written)) {
     mkdirSync(dirname(join(dir, path)), { recursive: true });
     writeFileSync(join(dir, path), `${source}\n`);
   }
+  return Object.keys(written);
 }

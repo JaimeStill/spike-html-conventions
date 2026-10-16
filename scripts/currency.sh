@@ -12,11 +12,12 @@
 #                     spike-html-design and spike-html-conventions), against the highest vX.Y.Z
 #                     tag in `git ls-remote --tags`. Neither `pnpm outdated` nor `bun outdated`
 #                     reports these, so the comparison is here.
-#   scratch packages  scripts/measure.sh's eslint_packages, the ESLint setup's packages that
-#                     install into measure's scratch rather than as mise tools, against the
-#                     registry's latest through `pnpm view`; a package another of them names as a
-#                     peer (typescript, under typescript-eslint) against the highest version in
-#                     that peer range instead, the latest the setup can take.
+#   scratch packages  scripts/measure.sh's eslint_packages, direction_packages, and
+#                     stylistic_packages, the ESLint setups' packages that install into measure's
+#                     scratch rather than as mise tools, against the registry's latest through
+#                     `pnpm view`; a package another of them names as a peer (typescript, under
+#                     typescript-eslint) against the highest version in that peer range instead,
+#                     the latest the setups can take.
 #
 # A pin trails only when its latest is strictly higher. A repository with no vX.Y.Z tag, or whose
 # highest tag is below the pin, has an unreleased pin rather than a trailing one: this repository's
@@ -93,11 +94,15 @@ for manifest in package.json fixtures/*/package.json; do
   done <<<"$deps"
 done
 
-# The scratch packages, from measure.sh's one eslint_packages line. Each package's peer ranges,
-# at its pin, are looked up once.
-specs=$(sed -n 's/^eslint_packages=(\(.*\))$/\1/p' scripts/measure.sh)
-if [[ -z "$specs" ]]; then report "scripts/measure.sh: eslint_packages -> not found"; fi
-read -ra specs <<<"$specs"
+# The scratch packages, from measure.sh's eslint_packages, direction_packages, and
+# stylistic_packages lines, one each. Each package's peer ranges, at its pin, are looked up once.
+specs=()
+for list in eslint_packages direction_packages stylistic_packages; do
+  line=$(sed -n "s/^$list=(\(.*\))\$/\1/p" scripts/measure.sh)
+  if [[ -z "$line" ]]; then report "scripts/measure.sh: $list -> not found"; fi
+  read -ra listed <<<"$line"
+  specs+=("${listed[@]}")
+done
 declare -A peers=()
 for spec in "${specs[@]}"; do
   peers[$spec]=$(pnpm view "$spec" peerDependencies --json)
