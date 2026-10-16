@@ -1,6 +1,6 @@
 # goal · experiment.html.spike-html-conventions
 
-- **State:** brief ready
+- **State:** building
 - **Task:** structure
 - **Branch:** structure
 
@@ -114,11 +114,80 @@ Out of scope  App-internal tiers and whether static pages use Lit
               check's lint tool: if Results 6 picks another setup, BUILD
               escalates first.
 Door          two-way: no tag, nothing published.
+Amendment (redirect at BRIEF): the lint/format pick reopens, all four setups in
+contention, and the check switches to the provisional pick in this task.
+
+Behaviors (revised and new)
+  6. (rev) `mise run measure` compares four setups on the same tree: Biome;
+     ESLint + Prettier; oxlint + oxfmt; ESLint + ESLint Stylistic with
+     eslint-plugin-jsonc for JSON. Both ESLint setups use typescript-eslint
+     and a resolved-file direction plugin. Rows per setup:
+     - footprint; lint and format time (hyperfine);
+     - formatting, split in two, for code and for the 11 JSON files:
+       "leaves unchanged" (byte-identical on the formatted tree) and
+       "restores" (byte-identical after formatting a scratch copy whose
+       line breaks and indentation are disturbed);
+     - content scope, JSON included;
+     - direction: core no-restricted-imports (recorded 57 of 62),
+       eslint-plugin-boundaries 7.2.0 with eslint-import-resolver-typescript,
+       and eslint-plugin-import-x's no-restricted-paths, each paired with
+       its no-unresolved rule, run on trees whose imports name real files,
+       so a resolved-file rule is tested fairly; each passes only on an
+       exact match of flagged to violation files;
+     - surface: binaries, config files, and packages to keep current.
+     Measure writes nothing to the working tree; currency covers every new
+     package.
+ 10. (rev) Results 6 picks provisionally among the four, in the toolchain
+     order, with stewardship (organization or foundation, maintainers,
+     funding, each sourced) and surface weighed inside maintainability;
+     footprint second; speed only on an order-of-magnitude gap. Prettier
+     against Stylistic follows the same order. Results 3 and 6 are
+     rewritten as provisional, titled for the outcome; Biome's earlier pick
+     is recorded as superseded in the goal record.
+ 12. (new) The ecosystem survey gains ESLint Stylistic, eslint-plugin-jsonc,
+     the direction plugins, and a sourced stewardship table for every tool.
+ 13. (new) The check runs the provisional pick:
+     - If Biome wins: the check, biome.json's direction rules, and the
+       layer test stay as they are.
+     - If an ESLint setup wins: its packages become devDependencies
+       installed by `mise run install` (pnpm, frozen lockfile), and
+       STANDARDS.md's rule becomes "Lit is the only runtime dependency; lint
+       tooling is the only devDependencies". eslint.config.js holds the
+       layer table in the passing direction plugin, with no-unresolved.
+       biome.json's direction overrides and the normalization convention
+       go; Biome leaves the check and stays a measure-only pin. The layer
+       test runs ESLint on the real-file trees with the same exact-match
+       rule. mise pins that move into the manifest are dropped, and
+       currency gains `pnpm outdated`. STANDARDS.md's Layers section points
+       to the ESLint config. If Stylistic wins, JSON is formatted through
+       jsonc.
+     - If an ESLint setup would win but neither direction plugin passes the
+       trees under ESLint 10, BUILD escalates.
+
+Test seams    `mise run check` (13 and the layer test); `mise run measure`
+              (6); the README's cited sources (10, 12).
+
+Slices
+  5. Four-way measure: ESLint + Stylistic + jsonc, the direction plugins on
+     real-file trees, the split formatting rows for code and JSON, content
+     scope with JSON, surface rows, currency for the new packages.
+     Demo: measure prints all four setups' rows.
+  6. Evidence: the survey additions and stewardship table, then Results 3
+     and 6 rewritten as provisional from one fresh measure run.
+     Demo: Results 6's pick and its argument.
+  7. The check on the provisional pick, per behavior 13.
+     Demo: the check passes on the picked setup; an upward import fails it
+     with the picked tool's diagnostic.
+
+Out of scope  (replaces "Switching the check's lint tool"): nothing beyond
+              behavior 13; dprint and other formatters; CSS or Markdown
+              linting.
+Door          two-way: no tag, nothing published.
 ```
 
 ## Progress
 
-slices 4/4 committed · standards done · spec done · editor done
+slices 4/7 committed · standards — · spec — · editor — (amendment: slices 5–7)
 
 ## Decisions
 
@@ -205,7 +274,7 @@ slices 4/4 committed · standards done · spec done · editor done
 - structure: the application SDK is a sibling of components: both import only the foundation (the SDK may import Lit); applications import both.
 - structure: the static branch may import the foundation, Lit, and components; never the SDK, an application-branch app, or another app. The branches task decides whether static pages use Lit.
 - structure: an app's internal tiers are left to the branches task; this task covers the stack layers and the rule against importing from another app.
-- structure: if Results 6 picks a lint tool other than Biome, BUILD escalates before the check switches.
+- structure (superseded by the redirect): if Results 6 picks a lint tool other than Biome, BUILD escalates before the check switches.
 - structure: the layer tree is `layers/`, a name that says what it holds and stays clear of `src/`'s frozen per-form tree; `layers/` isn't in package.json's `exports`.
 - structure: tsconfig.json includes `layers/`, and tsconfig.build.json pins its own include to `src/ts` and `src/jsdoc`, because it inherits the include and its `rootDir` is `src`; the tsc build emits the same twelve files as before.
 - structure: the foundation refuses every bare specifier, so every package, not only Lit.
@@ -220,8 +289,17 @@ slices 4/4 committed · standards done · spec done · editor done
 - structure: an override for the files at `layers/*`, `layers/apps/*`, and `layers/apps/*/*`, which a bare climb reaches, refuses every relative and absolute specifier and the package's own name, so a file there fails closed.
 - structure: the foundation may import its own index: it re-allows `.`, `./`, `..`, and `../`, which `./**` and `../**` don't match.
 - structure: Biome's direction groups cost about 30 ms per run, lint and format alike, because the cost is in loading the configuration (`biome lint` 62.5 ms against 32.3 ms without them, `biome format` 59.1 ms against 28.8 ms).
-- structure: result, evidence 3: the layers are the directories of `layers/` in one package, with the direction enforced by Biome's `noRestrictedImports`, one override per layer directory; the layer test flags 62 of 62 violation files and 0 of 14 allowed ones. The rule matches import text, never the resolved file. Rejected: ESLint's `no-restricted-imports`, which never checks `import()`.
-- structure: result, evidence 6: Biome stays in the check, argued on the first criterion. ESLint + Prettier is the standard by use, but ESLint's rule can't enforce the direction on `import()`, the setup adds Node and four packages to the check, and Prettier rewrites Markdown and the lockfile by default. oxlint + oxfmt matches Biome on direction but isn't the standard, and oxfmt is 0.x. Footprint (Biome 66.7 MB, ESLint + Prettier 51.8 MB, oxlint + oxfmt 35.6 MB) and speed (121.3, 863.9, and 94.2 ms, all under a second) don't overturn it.
+- structure (superseded by the redirect): result, evidence 3: the layers are the directories of `layers/` in one package, with the direction enforced by Biome's `noRestrictedImports`, one override per layer directory; the layer test flags 62 of 62 violation files and 0 of 14 allowed ones. The rule matches import text, never the resolved file. Rejected: ESLint's `no-restricted-imports`, which never checks `import()`.
+- structure (superseded by the redirect): result, evidence 6: Biome stays in the check, argued on the first criterion. ESLint + Prettier is the standard by use, but ESLint's rule can't enforce the direction on `import()`, the setup adds Node and four packages to the check, and Prettier rewrites Markdown and the lockfile by default. oxlint + oxfmt matches Biome on direction but isn't the standard, and oxfmt is 0.x. Footprint (Biome 66.7 MB, ESLint + Prettier 51.8 MB, oxlint + oxfmt 35.6 MB) and speed (121.3, 863.9, and 94.2 ms, all under a second) don't overturn it.
+- structure: redirect at BRIEF: Biome isn't a decided winner; the architect cites its stewardship (a community fork of the defunct Rome Tools, a small team funded by donations) and is hesitant about Prettier.
+- structure: the comparison measures four setups: Biome, ESLint + Prettier, oxlint + oxfmt, and ESLint + ESLint Stylistic with eslint-plugin-jsonc for JSON; all four stay in contention, and the outcome picks provisionally (architect: Biome may still be optimal for its simplicity and minimal surface friction).
+- structure: both resolved-file direction plugins are measured, eslint-plugin-boundaries (with eslint-import-resolver-typescript) and eslint-plugin-import-x's no-restricted-paths, each with its no-unresolved rule, on trees whose imports name real files; eslint-plugin-import is out (no release accepts ESLint 10).
+- structure: stewardship (organization or foundation, maintainers, funding, sourced) and surface (binaries, configs, packages to keep current) are weighed inside maintainability, in the toolchain order.
+- structure: Prettier against ESLint Stylistic follows the toolchain order.
+- structure: the formatting rows split into "leaves unchanged" and "restores" (from a copy with disturbed line breaks and indentation), for code and for JSON.
+- structure: architect: the check switches to the provisional pick in this task (rejected: a separate task).
+- structure: if an ESLint setup wins, its packages become devDependencies installed by `mise run install`, and STANDARDS.md's rule becomes "Lit is the only runtime dependency; lint tooling is the only devDependencies"; Biome leaves the check for a measure-only pin, the direction lives in the passing plugin alone with no-unresolved, and the normalization convention goes. If neither plugin passes the trees under ESLint 10 while an ESLint setup would win, BUILD escalates.
+- structure: Results 3 and 6 are rewritten as provisional, titled for the outcome.
 
 ## Pending edits
 
