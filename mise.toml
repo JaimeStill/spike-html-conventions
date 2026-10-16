@@ -68,7 +68,7 @@ run = "scripts/demo.sh"
 dir = "{{config_root}}"
 
 [tasks.measure]
-description = "Record each mise tool's installed size and each TypeScript form's lines and brotli bytes, time each toolchain with hyperfine (Node: pnpm installs and npm installs in its hoisted and linked layouts, tsc, esbuild, and Vite; Bun: bun install and bun build), and record every row, the layout rows (phantom dependencies, lockfile determinism, and disk sharing under npm and pnpm) and the GitHub and jsDelivr ones for v0.1.0 once it is released, as a dated markdown report on stdout; reads the network, writes nothing to the working tree"
+description = "Record each mise tool's installed size and each TypeScript form's lines and brotli bytes, time each toolchain with hyperfine (Node: pnpm installs and npm installs in its hoisted and linked layouts, tsc, esbuild, and Vite; Bun: bun install and bun build), and record every row, the layout rows (phantom dependencies, lockfile determinism, and disk sharing under npm, pnpm, and bun) and the GitHub and jsDelivr ones for v0.1.0 once it is released, as a dated markdown report on stdout; reads the network, writes nothing to the working tree"
 run = "scripts/measure.sh"
 dir = "{{config_root}}"
 

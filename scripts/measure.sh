@@ -79,15 +79,17 @@
 #                   Phantom dependency: local packages a, b, and c, each a tarball, a depending
 #                   on b and b on c, and a consumer declaring only a. The consumer imports a,
 #                   then b (its own phantom), then a/reach.js, which imports c (a dependency's
-#                   phantom); a row passes when a resolves and the phantom resolves or doesn't
-#                   as the row's name says. Determinism: a consumer of lit installs, then two fresh copies
-#                   install from its lockfile (npm ci, --frozen-lockfile otherwise); a row
-#                   passes when the three trees, every path, link target, and file's bytes, are
-#                   the same. Disk: two consumers of lit install in turn against one cache or
-#                   store; a row records the bytes the second adds (du -sb over the cache or store
-#                   and both node_modules, which counts each inode once) and how many of its
-#                   package files are hard links, passing on the sharing the name says: none
-#                   under npm, every file under pnpm and bun.
+#                   phantom); a row passes when a gives its own default export and the phantom
+#                   gives the fixture's export, or node's ERR_MODULE_NOT_FOUND naming that very
+#                   package, as the row's name says. Determinism: a consumer of lit installs,
+#                   then two fresh copies install from its lockfile (npm ci, --frozen-lockfile
+#                   otherwise); a row passes when the three trees, every path, link target, and
+#                   file's bytes, are the same and not empty. Disk: two consumers of lit install
+#                   in turn against one cache or store; a row records the bytes the second adds
+#                   (du -sb over the cache or store and both node_modules, which counts each
+#                   inode once) and how many of its package files are hard links to a file in
+#                   the cache or store, passing on the sharing the name says: none under npm,
+#                   every file under pnpm and bun.
 #   prefixed tag    from a local, unpushed fixture/v0.1.0 tag with the package in fixture/,
 #                   pnpm installs the subdirectory with #fixture/v0.1.0&path:/fixture, each file
 #                   the fixture's byte for byte; bun can't, reading the whole fragment as the ref;
@@ -452,6 +454,19 @@ timing "Install from a git tag, warm" \
   -n "Node: npm install --install-strategy=linked" "$(npm_install warm linked)" \
   --prepare "$(clean_project "$scratch/warm/bun")" \
   -n "Bun: bun install" "$(bun_install warm)"
+
+# The npm columns time the layouts they name, or the timings compare something else: linked links
+# each direct dependency from its node_modules/.store, and hoisted has no .store.
+for mode in cold warm; do
+  modules="$scratch/$mode/npm-linked/node_modules"
+  [[ -d "$modules/.store" && -L "$modules/spike-html-conventions" ]] ||
+    fail "npm's linked $mode install didn't link from node_modules/.store: $(find "$modules/" -mindepth 1 -maxdepth 1 -printf "%f ")"
+  modules="$scratch/$mode/npm/node_modules"
+  [[ ! -e "$modules/.store" && -d "$modules/spike-html-conventions" && ! -L "$modules/spike-html-conventions" ]] ||
+    fail "npm's hoisted $mode install isn't hoisted: $(find "$modules/" -mindepth 1 -maxdepth 1 -printf "%f ")"
+done
+echo "Each npm column's layout, checked: linked links each direct dependency from node_modules/.store; hoisted has no .store."
+echo
 
 timing "Type check" \
   "tsc --noEmit over the .ts and JSDoc forms. The native tsc is one tool for both columns." \
@@ -902,41 +917,45 @@ for each in c: b:c a:b; do
   if [[ "$name" == a ]]; then echo 'import c from "c"; export default c;' >"$phantom/a/package/reach.js"; fi
   tar -czf "$phantom/$name.tgz" -C "$phantom/$name" package
 done
-# resolves PROJECT SPECIFIER: "resolves", or node's error code, importing SPECIFIER from PROJECT.
-resolves() {
-  local out
-  if out=$(cd "$1" && node --input-type=module -e "await import(\"$2\")" 2>&1); then
-    echo resolves
+# imported PROJECT SPECIFIER: what importing SPECIFIER from PROJECT gives, its default export
+# quoted, or node's error code with the package it couldn't find.
+imported() {
+  local out missing
+  if out=$(cd "$1" && node --input-type=module -e "console.log((await import(\"$2\")).default)" 2>&1); then
+    echo "\"$out\""
   else
-    grep -m1 -o 'ERR_[A-Z_]*' <<<"$out" || echo "fails: $(tail -n1 <<<"$out")"
+    missing=$(grep -m1 -o "Cannot find package '[^']*'" <<<"$out" | cut -d"'" -f2)
+    if [[ -n "$missing" ]]; then echo "ERR_MODULE_NOT_FOUND for $missing"; else echo "fails: $(tail -n1 <<<"$out")"; fi
   fi
 }
-# Each layout with the outcome it should give the consumer's import of b, then a/reach.js's of c.
+# Each layout with whether the consumer's import of b, then a/reach.js's of c, resolves (yes) or
+# doesn't (no). Resolving is the fixture's own default export, so a package found elsewhere fails
+# the row; not resolving is node naming the very package missing, not merely any missing module.
 # pnpm's and bun's isolated layouts hoist every package into a hidden node_modules inside their
 # store (pnpm's hoistPattern ['*'], bun's install.hoist), which a dependency resolves from and the
 # consumer doesn't; npm's linked layout has none.
-for each in npm-hoisted:resolves:resolves npm-linked:ERR_MODULE_NOT_FOUND:ERR_MODULE_NOT_FOUND \
-  pnpm:ERR_MODULE_NOT_FOUND:resolves pnpm-hoisted:resolves:resolves bun:resolves:resolves \
-  bun-isolated:ERR_MODULE_NOT_FOUND:resolves; do
+for each in npm-hoisted:yes:yes npm-linked:no:no pnpm:no:yes pnpm-hoisted:yes:yes bun:yes:yes \
+  bun-isolated:no:yes; do
   IFS=: read -r name want_b want_c <<<"$each"
   project="$layout/phantom-$name"
   layout_project "$name" "$project" "{ \"a\": \"file:$phantom/a.tgz\" }"
   status=0
   layout_install "$name" "$project" >"$project.log" 2>&1 || status=$?
-  got_a=$(resolves "$project" a)
-  got_b=$(resolves "$project" b)
-  got_c=$(resolves "$project" a/reach.js)
+  got_a=$(imported "$project" a)
   for case in b c; do
     if [[ "$case" == b ]]; then
-      want=$want_b got=$got_b what="a consumer's import of b, undeclared and a's dependency,"
+      specifier=b want=$want_b value='"b, with c"'
+      what="a consumer's import of b, undeclared and a's dependency,"
     else
-      want=$want_c got=$got_c what="a dependency's import of c (a/reach.js), undeclared by a and b's dependency,"
+      specifier=a/reach.js want=$want_c value='"c"'
+      what="a dependency's import of c (a/reach.js), undeclared by a and b's dependency,"
     fi
+    got=$(imported "$project" "$specifier")
+    if [[ "$want" == yes ]]; then expect="resolves"; else expect="doesn't resolve" value="ERR_MODULE_NOT_FOUND for $case"; fi
     ok=0
-    if ((status == 0)) && [[ "$got_a" == resolves && "$got" == "$want" ]]; then ok=1; fi
-    if [[ "$want" == resolves ]]; then expect="resolves"; else expect="doesn't resolve"; fi
+    if ((status == 0)) && [[ "$got_a" == '"a, with b, with c"' && "$got" == "$value" ]]; then ok=1; fi
     row "${layout_label[$name]}: $what $expect" "$ok" \
-      "exit $status; import a: $got_a; import $([[ $case == b ]] && echo b || echo a/reach.js): $got;
+      "exit $status; import a: $got_a; import $specifier: $got;
        node_modules holds $(names "$project/node_modules")"
   done
 done
@@ -952,11 +971,18 @@ tree_digest() {
         printf 'l %s %s\n' "$path" "$target"
       fi
     done) | sha256sum | cut -c1-16 | tr '\n' ' '
-  echo "($count entries)"
+  echo "(${count:-0} entries)"
 }
-# package_files DIR: DIR/node_modules' package files, the managers' own metadata left out.
+# package_files DIR: how many files DIR/node_modules holds, the managers' own metadata left out.
 package_files() {
-  find "$1/node_modules" -type f "${layout_meta[@]}" "${@:2}" | wc -l
+  find "$1/node_modules" -type f "${layout_meta[@]}" | wc -l
+}
+# from_cache DIR CACHE: how many of DIR/node_modules' package files share an inode with a file in
+# CACHE, the hard links into the cache or store.
+from_cache() {
+  awk 'NR == FNR { cached[$1]; next } $1 in cached' \
+    <(find "$2" -type f -printf '%i\n') \
+    <(find "$1/node_modules" -type f "${layout_meta[@]}" -printf '%i\n') | wc -l
 }
 # bytes PATH...: du -sb's total over PATH..., which counts a file hard-linked among them once.
 bytes() { du -sbc "$@" | tail -n1 | cut -f1; }
@@ -971,7 +997,7 @@ for name in npm-hoisted npm-linked pnpm bun; do
   done
   first="$layout/lit-$name-1" second="$layout/lit-$name-2" cache="$layout/$name-cache"
   total=$(package_files "$second")
-  linked=$(package_files "$second" -links +1)
+  linked=$(from_cache "$second" "$cache")
   added=$(($(bytes "$cache" "$first/node_modules" "$second/node_modules") - $(bytes "$cache" "$first/node_modules")))
   ok=0
   case $name in
@@ -985,24 +1011,31 @@ for name in npm-hoisted npm-linked pnpm bun; do
       ;;
   esac
   row "${layout_label[$name]}: a second project of lit $lit $expect" "$ok" \
-    "exit $status; on $fs, $linked of the second project's $total package files are hard links;
+    "exit $status; on $fs, $linked of the second project's $total package files are hard links into the cache or store;
      the second project adds $added bytes (du -sb over the cache or store and both node_modules);
      its node_modules $(du -sb "$second/node_modules" | cut -f1) bytes apparent;
      the cache or store $(du -sb "$cache" | cut -f1) bytes"
 
-  # Determinism: two fresh copies of the first consumer install from its lockfile.
+  # Determinism: two fresh copies of the first consumer install from its lockfile, which the copy
+  # fails without.
+  case $name in
+    npm-*) lockfile=package-lock.json ;;
+    pnpm) lockfile=pnpm-lock.yaml ;;
+    bun) lockfile=bun.lock ;;
+  esac
   digests=("$(tree_digest "$first")")
   status=0
   for copy in a b; do
     project="$layout/lit-$name-$copy"
     mkdir -p "$project"
     cp "$first/package.json" "$project/"
-    cp "$first"/package-lock.json "$first"/pnpm-lock.yaml "$first"/bun.lock "$project/" 2>/dev/null || true
+    cp "$first/$lockfile" "$project/" || status=$?
     layout_install "$name" "$project" frozen >>"$layout/lit-$name.log" 2>&1 || status=$?
     digests+=("$(tree_digest "$project")")
   done
   ok=0
-  if ((status == 0)) && [[ "${digests[0]}" == "${digests[1]}" && "${digests[0]}" == "${digests[2]}" ]]; then
+  if ((status == 0)) && [[ "${digests[0]}" != *"(0 entries)" &&
+    "${digests[0]}" == "${digests[1]}" && "${digests[0]}" == "${digests[2]}" ]]; then
     ok=1
   fi
   case $name in
