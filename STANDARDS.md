@@ -18,6 +18,9 @@ The architecture pages that apply, in the architecture repository:
 
 ## Tools and dependencies
 
+- The toolchain is Node with pnpm, never Bun beside it: tsc emit builds libraries and Vite builds
+  apps. The Bun column and the esbuild pin are the comparison's evidence only; nothing shipped
+  depends on a Bun-only API.
 - Every tool comes from a pin in `mise.toml`. The system Chromium is the one exception, by the
   architect's decision; `mise run measure` records its version.
 - Lit is the only package dependency, and no package manifest has a devDependency.
@@ -25,9 +28,13 @@ The architecture pages that apply, in the architecture repository:
 
 ## Code
 
+- Every layer is written in `.ts`, erasable syntax only, and released through a build that ships
+  `.js` and `.d.ts`; a release never asks a consumer to load `.ts`. The JSDoc and plain JS forms in
+  `src/` are the comparison's evidence only, never the convention for new code.
 - Lit elements declare reactive properties with `static properties`, never decorators.
-- A JSDoc object typedef with quoted keys stays on one line: over several lines, tsc 7.0.2's
-  declaration emit copies each line's leading `*` into the `.d.ts`, which then fails to parse.
+- In the JSDoc form, an object typedef with quoted keys stays on one line: over several lines,
+  tsc 7.0.2's declaration emit copies each line's leading `*` into the `.d.ts`, which then fails
+  to parse.
 
 ## Evidence
 
