@@ -40,8 +40,10 @@
 # After each install the check asserts that every installed file of both packages equals its tag's
 # file byte for byte; that this package installs exactly package.json and src/ under pnpm and npm,
 # which pack a git dependency by its `files`, and its whole tag tree under bun, which doesn't; that
-# every exports target is installed; that tsc type-checks the fixture's elements.ts against the
-# installed elements; and that the column's runtime imports the route matcher by its exports.
+# every exports target is installed; that none of this package's devDependencies, its lint
+# tooling, is installed, since a consumer installs a dependency's dependencies only; that tsc
+# type-checks the fixture's elements.ts against the installed elements; and that the column's
+# runtime imports the route matcher by its exports.
 set -euo pipefail
 
 root=$(cd "$(dirname "$0")/.." && pwd)
@@ -133,6 +135,11 @@ design=$(cd "$design" && pwd)
 
 own="$scratch/spike-html-conventions"
 own_repo "$own"
+# This package's devDependencies, by name, one per line.
+dev_names=$(node -e '
+  for (const name of Object.keys(require(process.argv[1]).devDependencies ?? {})) console.log(name);
+' "$root/package.json")
+[[ -n "$dev_names" ]] || fail "package.json names no devDependencies"
 
 # Each tag's tree, extracted, for the byte-for-byte comparison.
 for pair in "spike-html-design:$design:$design_tag" "spike-html-conventions:$own:$own_tag"; do
@@ -228,6 +235,16 @@ for manager in pnpm npm bun; do
     same "$installed" "$scratch/tags/$name"
     "$runtime" "$root/scripts/consumers.js" exports "$installed"
   done
+
+  # This package's devDependencies stay out of the consumer: none at the top of node_modules, nor
+  # in pnpm's virtual store, where a package's directory is its name, / as +, then @.
+  while read -r dev; do
+    [[ -n "$dev" ]] || continue
+    if [[ -e "$project/node_modules/$dev" ]] ||
+      compgen -G "$project/node_modules/.pnpm/${dev//\//+}@*" >/dev/null; then
+      fail "$manager installed $dev, a devDependency of spike-html-conventions"
+    fi
+  done <<<"$dev_names"
 
   # This package's installed set: package.json and src/ by `files` under pnpm and npm, the whole
   # tree under bun.

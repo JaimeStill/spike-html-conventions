@@ -1,0 +1,653 @@
+{
+  "overrides": [
+    {
+      "includes": ["layers/foundation/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "**",
+                      "!./**",
+                      "!../**",
+                      "!.",
+                      "!./",
+                      "!..",
+                      "!../",
+                      "**/components",
+                      "**/components/**",
+                      "**/sdk",
+                      "**/sdk/**",
+                      "**/apps",
+                      "**/apps/**"
+                    ],
+                    "message": "The foundation is native only: it imports its own files, never another layer or a package such as lit."
+                  },
+                  {
+                    "group": ["spike-html-conventions", "spike-html-conventions/**"],
+                    "message": "The layers name each other by relative path, never by the package's own name, whose subpaths don't show which layer they reach."
+                  },
+                  {
+                    "group": [
+                      "./**/../**",
+                      "**/{a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z,A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,0,1,2,3,4,5,6,7,8,9,_,-,@,$,~,+}*/../**",
+                      "**/.{a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z,A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,0,1,2,3,4,5,6,7,8,9,_,-,@,$,~,+}*/../**",
+                      "**/..{a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z,A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,0,1,2,3,4,5,6,7,8,9,_,-,@,$,~,+,.}*/../**",
+                      "./**/./**",
+                      "../**/./**",
+                      "./**/..",
+                      "**/{a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z,A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,0,1,2,3,4,5,6,7,8,9,_,-,@,$,~,+}*/..",
+                      "**/.{a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z,A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,0,1,2,3,4,5,6,7,8,9,_,-,@,$,~,+}*/..",
+                      "**/..{a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z,A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,0,1,2,3,4,5,6,7,8,9,_,-,@,$,~,+,.}*/..",
+                      "./**/.",
+                      "../**/.",
+                      "./**//**",
+                      "../**//**",
+                      "**/*%*",
+                      "**/*%*/**"
+                    ],
+                    "message": "A relative specifier is written normalized: it starts with ./ or with its ../ segments, no later segment is ., .., or empty, and none is percent-encoded."
+                  },
+                  {
+                    "group": ["/**"],
+                    "message": "A specifier is relative or a package name, never an absolute path, which resolves against the origin and escapes every layer rule."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["layers/components/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["**/sdk", "**/sdk/**", "**/apps", "**/apps/**"],
+                    "message": "Components import the foundation and lit, never the SDK or an app."
+                  },
+                  {
+                    "group": ["spike-html-conventions", "spike-html-conventions/**"],
+                    "message": "The layers name each other by relative path, never by the package's own name, whose subpaths don't show which layer they reach."
+                  },
+                  {
+                    "group": [
+                      "./**/../**",
+                      "**/{a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z,A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,0,1,2,3,4,5,6,7,8,9,_,-,@,$,~,+}*/../**",
+                      "**/.{a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z,A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,0,1,2,3,4,5,6,7,8,9,_,-,@,$,~,+}*/../**",
+                      "**/..{a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z,A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,0,1,2,3,4,5,6,7,8,9,_,-,@,$,~,+,.}*/../**",
+                      "./**/./**",
+                      "../**/./**",
+                      "./**/..",
+                      "**/{a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z,A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,0,1,2,3,4,5,6,7,8,9,_,-,@,$,~,+}*/..",
+                      "**/.{a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z,A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,0,1,2,3,4,5,6,7,8,9,_,-,@,$,~,+}*/..",
+                      "**/..{a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z,A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,0,1,2,3,4,5,6,7,8,9,_,-,@,$,~,+,.}*/..",
+                      "./**/.",
+                      "../**/.",
+                      "./**//**",
+                      "../**//**",
+                      "**/*%*",
+                      "**/*%*/**"
+                    ],
+                    "message": "A relative specifier is written normalized: it starts with ./ or with its ../ segments, no later segment is ., .., or empty, and none is percent-encoded."
+                  },
+                  {
+                    "group": ["/**"],
+                    "message": "A specifier is relative or a package name, never an absolute path, which resolves against the origin and escapes every layer rule."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["layers/sdk/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["**/components", "**/components/**", "**/apps", "**/apps/**"],
+                    "message": "The SDK imports the foundation and lit, never components or an app."
+                  },
+                  {
+                    "group": ["spike-html-conventions", "spike-html-conventions/**"],
+                    "message": "The layers name each other by relative path, never by the package's own name, whose subpaths don't show which layer they reach."
+                  },
+                  {
+                    "group": [
+                      "./**/../**",
+                      "**/{a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z,A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,0,1,2,3,4,5,6,7,8,9,_,-,@,$,~,+}*/../**",
+                      "**/.{a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z,A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,0,1,2,3,4,5,6,7,8,9,_,-,@,$,~,+}*/../**",
+                      "**/..{a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z,A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,0,1,2,3,4,5,6,7,8,9,_,-,@,$,~,+,.}*/../**",
+                      "./**/./**",
+                      "../**/./**",
+                      "./**/..",
+                      "**/{a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z,A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,0,1,2,3,4,5,6,7,8,9,_,-,@,$,~,+}*/..",
+                      "**/.{a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z,A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,0,1,2,3,4,5,6,7,8,9,_,-,@,$,~,+}*/..",
+                      "**/..{a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z,A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,0,1,2,3,4,5,6,7,8,9,_,-,@,$,~,+,.}*/..",
+                      "./**/.",
+                      "../**/.",
+                      "./**//**",
+                      "../**//**",
+                      "**/*%*",
+                      "**/*%*/**"
+                    ],
+                    "message": "A relative specifier is written normalized: it starts with ./ or with its ../ segments, no later segment is ., .., or empty, and none is percent-encoded."
+                  },
+                  {
+                    "group": ["/**"],
+                    "message": "A specifier is relative or a package name, never an absolute path, which resolves against the origin and escapes every layer rule."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["layers/*", "layers/apps/*", "layers/apps/*/*"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [".", "./", "./**", "..", "../", "../**", "/**"],
+                    "message": "Code lives in a layer directory, and an app in its own, layers/apps/<branch>/<app>/: a file directly in layers/, layers/apps/, or a branch directory imports no file, so it can re-export no layer."
+                  },
+                  {
+                    "group": ["spike-html-conventions", "spike-html-conventions/**"],
+                    "message": "The layers name each other by relative path, never by the package's own name, whose subpaths don't show which layer they reach."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["layers/apps/static/*/*"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "../**",
+                      "..",
+                      "../",
+                      "!../../../foundation",
+                      "!../../../foundation/**",
+                      "!../../../components",
+                      "!../../../components/**"
+                    ],
+                    "message": "A static-branch app imports its own files, the foundation, components, and lit, never the SDK or another app."
+                  },
+                  {
+                    "group": ["spike-html-conventions", "spike-html-conventions/**"],
+                    "message": "The layers name each other by relative path, never by the package's own name, whose subpaths don't show which layer they reach."
+                  },
+                  {
+                    "group": [
+                      "./**/../**",
+                      "**/{a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z,A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,0,1,2,3,4,5,6,7,8,9,_,-,@,$,~,+}*/../**",
+                      "**/.{a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z,A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,0,1,2,3,4,5,6,7,8,9,_,-,@,$,~,+}*/../**",
+                      "**/..{a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z,A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,0,1,2,3,4,5,6,7,8,9,_,-,@,$,~,+,.}*/../**",
+                      "./**/./**",
+                      "../**/./**",
+                      "./**/..",
+                      "**/{a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z,A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,0,1,2,3,4,5,6,7,8,9,_,-,@,$,~,+}*/..",
+                      "**/.{a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z,A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,0,1,2,3,4,5,6,7,8,9,_,-,@,$,~,+}*/..",
+                      "**/..{a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z,A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,0,1,2,3,4,5,6,7,8,9,_,-,@,$,~,+,.}*/..",
+                      "./**/.",
+                      "../**/.",
+                      "./**//**",
+                      "../**//**",
+                      "**/*%*",
+                      "**/*%*/**"
+                    ],
+                    "message": "A relative specifier is written normalized: it starts with ./ or with its ../ segments, no later segment is ., .., or empty, and none is percent-encoded."
+                  },
+                  {
+                    "group": ["/**"],
+                    "message": "A specifier is relative or a package name, never an absolute path, which resolves against the origin and escapes every layer rule."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["layers/apps/static/*/*/*"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "../../**",
+                      "../..",
+                      "../../",
+                      "!../../../../foundation",
+                      "!../../../../foundation/**",
+                      "!../../../../components",
+                      "!../../../../components/**"
+                    ],
+                    "message": "A static-branch app imports its own files, the foundation, components, and lit, never the SDK or another app."
+                  },
+                  {
+                    "group": ["spike-html-conventions", "spike-html-conventions/**"],
+                    "message": "The layers name each other by relative path, never by the package's own name, whose subpaths don't show which layer they reach."
+                  },
+                  {
+                    "group": [
+                      "./**/../**",
+                      "**/{a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z,A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,0,1,2,3,4,5,6,7,8,9,_,-,@,$,~,+}*/../**",
+                      "**/.{a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z,A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,0,1,2,3,4,5,6,7,8,9,_,-,@,$,~,+}*/../**",
+                      "**/..{a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z,A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,0,1,2,3,4,5,6,7,8,9,_,-,@,$,~,+,.}*/../**",
+                      "./**/./**",
+                      "../**/./**",
+                      "./**/..",
+                      "**/{a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z,A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,0,1,2,3,4,5,6,7,8,9,_,-,@,$,~,+}*/..",
+                      "**/.{a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z,A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,0,1,2,3,4,5,6,7,8,9,_,-,@,$,~,+}*/..",
+                      "**/..{a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z,A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,0,1,2,3,4,5,6,7,8,9,_,-,@,$,~,+,.}*/..",
+                      "./**/.",
+                      "../**/.",
+                      "./**//**",
+                      "../**//**",
+                      "**/*%*",
+                      "**/*%*/**"
+                    ],
+                    "message": "A relative specifier is written normalized: it starts with ./ or with its ../ segments, no later segment is ., .., or empty, and none is percent-encoded."
+                  },
+                  {
+                    "group": ["/**"],
+                    "message": "A specifier is relative or a package name, never an absolute path, which resolves against the origin and escapes every layer rule."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["layers/apps/static/*/*/*/*"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "../../../**",
+                      "../../..",
+                      "../../../",
+                      "!../../../../../foundation",
+                      "!../../../../../foundation/**",
+                      "!../../../../../components",
+                      "!../../../../../components/**"
+                    ],
+                    "message": "A static-branch app imports its own files, the foundation, components, and lit, never the SDK or another app."
+                  },
+                  {
+                    "group": ["spike-html-conventions", "spike-html-conventions/**"],
+                    "message": "The layers name each other by relative path, never by the package's own name, whose subpaths don't show which layer they reach."
+                  },
+                  {
+                    "group": [
+                      "./**/../**",
+                      "**/{a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z,A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,0,1,2,3,4,5,6,7,8,9,_,-,@,$,~,+}*/../**",
+                      "**/.{a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z,A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,0,1,2,3,4,5,6,7,8,9,_,-,@,$,~,+}*/../**",
+                      "**/..{a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z,A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,0,1,2,3,4,5,6,7,8,9,_,-,@,$,~,+,.}*/../**",
+                      "./**/./**",
+                      "../**/./**",
+                      "./**/..",
+                      "**/{a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z,A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,0,1,2,3,4,5,6,7,8,9,_,-,@,$,~,+}*/..",
+                      "**/.{a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z,A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,0,1,2,3,4,5,6,7,8,9,_,-,@,$,~,+}*/..",
+                      "**/..{a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z,A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,0,1,2,3,4,5,6,7,8,9,_,-,@,$,~,+,.}*/..",
+                      "./**/.",
+                      "../**/.",
+                      "./**//**",
+                      "../**//**",
+                      "**/*%*",
+                      "**/*%*/**"
+                    ],
+                    "message": "A relative specifier is written normalized: it starts with ./ or with its ../ segments, no later segment is ., .., or empty, and none is percent-encoded."
+                  },
+                  {
+                    "group": ["/**"],
+                    "message": "A specifier is relative or a package name, never an absolute path, which resolves against the origin and escapes every layer rule."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["layers/apps/static/*/*/*/*/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "../../../../**",
+                      "../../../..",
+                      "../../../../",
+                      "!../../../../../../foundation",
+                      "!../../../../../../foundation/**",
+                      "!../../../../../../components",
+                      "!../../../../../../components/**"
+                    ],
+                    "message": "A static-branch app imports its own files, the foundation, components, and lit, never the SDK or another app."
+                  },
+                  {
+                    "group": ["spike-html-conventions", "spike-html-conventions/**"],
+                    "message": "The layers name each other by relative path, never by the package's own name, whose subpaths don't show which layer they reach."
+                  },
+                  {
+                    "group": [
+                      "./**/../**",
+                      "**/{a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z,A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,0,1,2,3,4,5,6,7,8,9,_,-,@,$,~,+}*/../**",
+                      "**/.{a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z,A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,0,1,2,3,4,5,6,7,8,9,_,-,@,$,~,+}*/../**",
+                      "**/..{a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z,A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,0,1,2,3,4,5,6,7,8,9,_,-,@,$,~,+,.}*/../**",
+                      "./**/./**",
+                      "../**/./**",
+                      "./**/..",
+                      "**/{a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z,A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,0,1,2,3,4,5,6,7,8,9,_,-,@,$,~,+}*/..",
+                      "**/.{a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z,A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,0,1,2,3,4,5,6,7,8,9,_,-,@,$,~,+}*/..",
+                      "**/..{a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z,A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,0,1,2,3,4,5,6,7,8,9,_,-,@,$,~,+,.}*/..",
+                      "./**/.",
+                      "../**/.",
+                      "./**//**",
+                      "../**//**",
+                      "**/*%*",
+                      "**/*%*/**"
+                    ],
+                    "message": "A relative specifier is written normalized: it starts with ./ or with its ../ segments, no later segment is ., .., or empty, and none is percent-encoded."
+                  },
+                  {
+                    "group": ["/**"],
+                    "message": "A specifier is relative or a package name, never an absolute path, which resolves against the origin and escapes every layer rule."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["layers/apps/application/*/*"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "../**",
+                      "..",
+                      "../",
+                      "!../../../foundation",
+                      "!../../../foundation/**",
+                      "!../../../components",
+                      "!../../../components/**",
+                      "!../../../sdk",
+                      "!../../../sdk/**"
+                    ],
+                    "message": "An application-branch app imports its own files, the foundation, components, the SDK, and lit, never another app."
+                  },
+                  {
+                    "group": ["spike-html-conventions", "spike-html-conventions/**"],
+                    "message": "The layers name each other by relative path, never by the package's own name, whose subpaths don't show which layer they reach."
+                  },
+                  {
+                    "group": [
+                      "./**/../**",
+                      "**/{a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z,A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,0,1,2,3,4,5,6,7,8,9,_,-,@,$,~,+}*/../**",
+                      "**/.{a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z,A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,0,1,2,3,4,5,6,7,8,9,_,-,@,$,~,+}*/../**",
+                      "**/..{a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z,A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,0,1,2,3,4,5,6,7,8,9,_,-,@,$,~,+,.}*/../**",
+                      "./**/./**",
+                      "../**/./**",
+                      "./**/..",
+                      "**/{a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z,A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,0,1,2,3,4,5,6,7,8,9,_,-,@,$,~,+}*/..",
+                      "**/.{a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z,A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,0,1,2,3,4,5,6,7,8,9,_,-,@,$,~,+}*/..",
+                      "**/..{a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z,A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,0,1,2,3,4,5,6,7,8,9,_,-,@,$,~,+,.}*/..",
+                      "./**/.",
+                      "../**/.",
+                      "./**//**",
+                      "../**//**",
+                      "**/*%*",
+                      "**/*%*/**"
+                    ],
+                    "message": "A relative specifier is written normalized: it starts with ./ or with its ../ segments, no later segment is ., .., or empty, and none is percent-encoded."
+                  },
+                  {
+                    "group": ["/**"],
+                    "message": "A specifier is relative or a package name, never an absolute path, which resolves against the origin and escapes every layer rule."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["layers/apps/application/*/*/*"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "../../**",
+                      "../..",
+                      "../../",
+                      "!../../../../foundation",
+                      "!../../../../foundation/**",
+                      "!../../../../components",
+                      "!../../../../components/**",
+                      "!../../../../sdk",
+                      "!../../../../sdk/**"
+                    ],
+                    "message": "An application-branch app imports its own files, the foundation, components, the SDK, and lit, never another app."
+                  },
+                  {
+                    "group": ["spike-html-conventions", "spike-html-conventions/**"],
+                    "message": "The layers name each other by relative path, never by the package's own name, whose subpaths don't show which layer they reach."
+                  },
+                  {
+                    "group": [
+                      "./**/../**",
+                      "**/{a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z,A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,0,1,2,3,4,5,6,7,8,9,_,-,@,$,~,+}*/../**",
+                      "**/.{a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z,A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,0,1,2,3,4,5,6,7,8,9,_,-,@,$,~,+}*/../**",
+                      "**/..{a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z,A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,0,1,2,3,4,5,6,7,8,9,_,-,@,$,~,+,.}*/../**",
+                      "./**/./**",
+                      "../**/./**",
+                      "./**/..",
+                      "**/{a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z,A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,0,1,2,3,4,5,6,7,8,9,_,-,@,$,~,+}*/..",
+                      "**/.{a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z,A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,0,1,2,3,4,5,6,7,8,9,_,-,@,$,~,+}*/..",
+                      "**/..{a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z,A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,0,1,2,3,4,5,6,7,8,9,_,-,@,$,~,+,.}*/..",
+                      "./**/.",
+                      "../**/.",
+                      "./**//**",
+                      "../**//**",
+                      "**/*%*",
+                      "**/*%*/**"
+                    ],
+                    "message": "A relative specifier is written normalized: it starts with ./ or with its ../ segments, no later segment is ., .., or empty, and none is percent-encoded."
+                  },
+                  {
+                    "group": ["/**"],
+                    "message": "A specifier is relative or a package name, never an absolute path, which resolves against the origin and escapes every layer rule."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["layers/apps/application/*/*/*/*"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "../../../**",
+                      "../../..",
+                      "../../../",
+                      "!../../../../../foundation",
+                      "!../../../../../foundation/**",
+                      "!../../../../../components",
+                      "!../../../../../components/**",
+                      "!../../../../../sdk",
+                      "!../../../../../sdk/**"
+                    ],
+                    "message": "An application-branch app imports its own files, the foundation, components, the SDK, and lit, never another app."
+                  },
+                  {
+                    "group": ["spike-html-conventions", "spike-html-conventions/**"],
+                    "message": "The layers name each other by relative path, never by the package's own name, whose subpaths don't show which layer they reach."
+                  },
+                  {
+                    "group": [
+                      "./**/../**",
+                      "**/{a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z,A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,0,1,2,3,4,5,6,7,8,9,_,-,@,$,~,+}*/../**",
+                      "**/.{a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z,A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,0,1,2,3,4,5,6,7,8,9,_,-,@,$,~,+}*/../**",
+                      "**/..{a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z,A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,0,1,2,3,4,5,6,7,8,9,_,-,@,$,~,+,.}*/../**",
+                      "./**/./**",
+                      "../**/./**",
+                      "./**/..",
+                      "**/{a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z,A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,0,1,2,3,4,5,6,7,8,9,_,-,@,$,~,+}*/..",
+                      "**/.{a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z,A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,0,1,2,3,4,5,6,7,8,9,_,-,@,$,~,+}*/..",
+                      "**/..{a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z,A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,0,1,2,3,4,5,6,7,8,9,_,-,@,$,~,+,.}*/..",
+                      "./**/.",
+                      "../**/.",
+                      "./**//**",
+                      "../**//**",
+                      "**/*%*",
+                      "**/*%*/**"
+                    ],
+                    "message": "A relative specifier is written normalized: it starts with ./ or with its ../ segments, no later segment is ., .., or empty, and none is percent-encoded."
+                  },
+                  {
+                    "group": ["/**"],
+                    "message": "A specifier is relative or a package name, never an absolute path, which resolves against the origin and escapes every layer rule."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["layers/apps/application/*/*/*/*/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "../../../../**",
+                      "../../../..",
+                      "../../../../",
+                      "!../../../../../../foundation",
+                      "!../../../../../../foundation/**",
+                      "!../../../../../../components",
+                      "!../../../../../../components/**",
+                      "!../../../../../../sdk",
+                      "!../../../../../../sdk/**"
+                    ],
+                    "message": "An application-branch app imports its own files, the foundation, components, the SDK, and lit, never another app."
+                  },
+                  {
+                    "group": ["spike-html-conventions", "spike-html-conventions/**"],
+                    "message": "The layers name each other by relative path, never by the package's own name, whose subpaths don't show which layer they reach."
+                  },
+                  {
+                    "group": [
+                      "./**/../**",
+                      "**/{a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z,A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,0,1,2,3,4,5,6,7,8,9,_,-,@,$,~,+}*/../**",
+                      "**/.{a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z,A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,0,1,2,3,4,5,6,7,8,9,_,-,@,$,~,+}*/../**",
+                      "**/..{a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z,A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,0,1,2,3,4,5,6,7,8,9,_,-,@,$,~,+,.}*/../**",
+                      "./**/./**",
+                      "../**/./**",
+                      "./**/..",
+                      "**/{a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z,A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,0,1,2,3,4,5,6,7,8,9,_,-,@,$,~,+}*/..",
+                      "**/.{a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z,A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,0,1,2,3,4,5,6,7,8,9,_,-,@,$,~,+}*/..",
+                      "**/..{a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z,A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,0,1,2,3,4,5,6,7,8,9,_,-,@,$,~,+,.}*/..",
+                      "./**/.",
+                      "../**/.",
+                      "./**//**",
+                      "../**//**",
+                      "**/*%*",
+                      "**/*%*/**"
+                    ],
+                    "message": "A relative specifier is written normalized: it starts with ./ or with its ../ segments, no later segment is ., .., or empty, and none is percent-encoded."
+                  },
+                  {
+                    "group": ["/**"],
+                    "message": "A specifier is relative or a package name, never an absolute path, which resolves against the origin and escapes every layer rule."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

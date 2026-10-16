@@ -20,5 +20,16 @@
   },
   "dependencies": {
     "lit": "3.3.3"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "eslint": "10.12.0",
+    "eslint-import-resolver-typescript": "4.4.5",
+    "eslint-plugin-boundaries": "7.2.0",
+    "eslint-plugin-import-x": "4.17.1",
+    "globals": "17.13.0",
+    "prettier": "3.9.10",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.71.2"
   }
 }

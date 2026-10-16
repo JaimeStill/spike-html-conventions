@@ -7,100 +7,182 @@
 ## Tasks
 
 1. [x] toolchain
-2. [ ] structure
+2. [x] structure
 3. [ ] components
 4. [ ] testing
 5. [ ] branches
 
-## Task brief · toolchain (revised after the redirect)
+## Task brief · structure
 
 ```
-Problem       The native web stack has no toolchain, TypeScript form, or
-              tested way to consume tagged releases, and the first pick
-              (Bun, on footprint) didn't weigh the industry standard or the
-              readability of the source. Every later task and
-              spike-html-packages builds on these. Evidence 1, 2, and 7.
+Problem       The native web stack has a toolchain but no layout: nothing
+              says where foundation, component, SDK, and app code live, or
+              which way imports may run between them, and nothing fails
+              when an import runs upward (herald's elements import domain
+              code, unenforced). The lint/format tool, Biome, entered the
+              check by default and was never compared against the industry
+              standard. Components, branches, and spike-html-packages build
+              on this layout. Evidence 3 and 6, plus the fixture's v0.1.0
+              rows deferred from toolchain (evidence 7).
 
 Behaviors
-  1. (rev) Tooling comes only from mise pins, as before, plus Vite 8 via
-     mise's npm: backend for the Node column. Chromium is the system
-     install. No devDependency; lit 3.3.3 is the only package dependency.
-  2–7.  Unchanged (forms, element, type check, fixture package,
-        consumers, offline check).
-  8. (rev) The measure task also times Vite 8 in the Node column (build
-     of the element entries, and its dev-server/watch rebuild where
-     comparable), and adds Vite to the footprint section.
-  9.  Unchanged (currency), covering the Vite pin.
- 10. (rev) The spike README's evidence records:
-     1: the pick, Node with pnpm or Bun, never both, argued in this
-        order: industry standard and maintainability (readable,
-        type-safe source; the survey's consensus) first, footprint
-        second, speed only on an order-of-magnitude gap. Includes the
-        build tool for the picked column (tsc emit, Vite, esbuild, or
-        bun build) and whether esbuild earns its place.
-     2: the TypeScript form: .ts with a release build, for the
-        foundation and every layer above it, with the Lit and vanilla
-        excerpts, JSDoc and plain JS recorded as considered and why
-        they lost, and what a release build must produce for tag and
-        jsDelivr consumers (handed to spike-html-packages).
-     7: consumption results, with the fixture's v0.1.0 rows pending
-        until the structure task runs them after the release.
-     Each measured figure cites its measure date; each survey claim
-     cites its source.
- 11. (new) An ecosystem survey section in the README: how the web
-     ecosystem builds, tests, and releases component libraries and
-     apps — runtime and package manager, TS form, build tool, test
-     runner, and release hosting (git tags + jsDelivr /gh/, GitHub
-     release assets, GitHub Packages, JSR, self-hosted registries such
-     as Verdaccio, npm) — judged on performance, maintainability, and
-     scalability, from sourced evidence (surveys such as State of JS,
-     download and adoption data, and what major web-component
-     libraries use). Hosting is recorded as facts; the decision stays
-     with spike-html-packages, npm ruled out unless no workable
-     alternative exists.
+  1. `mise run measure` records the fixture package's own v0.1.0 rows:
+     its GitHub install under npm, pnpm, and bun; jsDelivr serving each
+     of its nine source files (the three .ts files as unloadable); and
+     the file:// page loading each JS form of the element from jsDelivr
+     at v0.1.0. Each row passes only on its expected value. README
+     Results 7 records them, dated, and its Pending line is gone.
+  2. README Results 1 records the pnpm pin as following what mise
+     resolves natively (12.11.2, aqua:pnpm/pnpm) and why, with the npm
+     registry's latest dist-tag (12.14.0) as a fact. Pin and currency
+     unchanged.
+  3. A stack-layer tree, apart from the frozen per-form tree, holds a
+     small .ts occupant per layer that type-checks: foundation (native
+     only), components (element tier), the application SDK, one
+     static-branch app, and at least two application-branch apps — just
+     enough to show each layer's allowed imports.
+  4. The check enforces the direction with the lint tool's
+     restricted-imports rule, per layer directory:
+       foundation    → no other layer, no Lit
+       components    → foundation, Lit; never SDK or any app
+       SDK           → foundation (and Lit); never components or any app
+       static app    → foundation, Lit, components; never SDK, an
+                       application-branch app, or another app
+       application   → foundation, components, SDK, Lit; never another app
+     The rules cover static imports, `export … from`, type-only imports,
+     and dynamic `import()`, under relative paths, any alias, and the
+     package's own name.
+  5. A test runs the lint tool against a scratch tree outside the working
+     tree, with one violating import per rule; it passes only when each
+     violation draws that rule's own diagnostic. The real tree passes.
+  6. `mise run measure` compares Biome, ESLint + Prettier
+     (typescript-eslint), and oxlint + oxfmt on the same tree, each from
+     a mise npm: pin used only by measure (no devDependency, nothing in
+     the check). Rows per setup: footprint; lint and format-check time
+     (hyperfine); configurability (reproduces this repo's formatter
+     options — space indent, width 2, line width 100, and the defaults
+     its output relies on — passing only on byte-identical code);
+     content scope (file types its formatter touches by default here,
+     Markdown included, and whether it can be limited to code); and
+     direction (its restricted-imports rule fails the item 5 tree on
+     every rule). Measure writes nothing to the working tree.
+  7. The currency command covers the new pins and stays silent while
+     they are at their latest.
+  8. The README's survey gains a lint/format section, each claim cited:
+     SoJS 2025 usage, the npm counts for the survey week, what the 13
+     web-component libraries use, oxlint/oxfmt as facts.
+  9. README Results 3 records the layout, the direction table, the
+     mechanism and what it can't see (import text, not resolved files),
+     dependency-cruiser and tsc project references as rejected with
+     reasons, and hands spike-html-packages the package-boundary facts
+     and herald's elements importing domain code.
+ 10. README Results 6 argues the lint/format pick in the toolchain
+     order: industry standard and maintainability first (configurability
+     and content scope count here), footprint second, speed only on an
+     order-of-magnitude gap; each figure cites its dated measure run.
+ 11. STANDARDS.md gains the judgement calls the check can't enforce:
+     what belongs in each layer, promotion of an element once a second
+     app needs it, and the static branch's use of Lit as undecided. It
+     doesn't restate the enforced rules.
 
-Test seams    `mise run check` (offline: 2–7); `mise run measure`
-              (network: 8); the README's cited sources (11)
+Test seams    `mise run check`: layer tree lint and type check, the
+              violation-tree test (3–5, 7). `mise run measure` (1, 6).
+              The README's cited sources (2, 8–10).
 
-Slices (1–7 committed)
-  8. Vite in the Node column: the pin, its build and watch timings,
-     and its footprint in `mise run measure`.
-     Demo: measure prints the Vite rows.
-  9. Ecosystem survey: the README section with sources.
-     Demo: the section, each claim cited.
- 10. Evidence rewrite: Results 1 and 2 re-argued under the new order
-     and the .ts decision, figures re-cited from one fresh measure run;
-     hypotheses and STANDARDS.md updated for .ts and the pick.
-     Demo: the README's Results.
+Slices
+  1. v0.1.0 rows: one measure run records the released rows in Results
+     7; the pnpm pin's reason goes in Results 1.
+     Demo: measure prints the v0.1.0 GitHub, jsDelivr, and file:// rows
+     passing; Results 7 has no pending line.
+  2. Layer tree and direction: occupants, per-layer restricted-imports
+     rules in Biome, the violation-tree test, STANDARDS.md's layout calls.
+     Demo: the check passes; an upward import fails it with the rule's
+     diagnostic.
+  3. Lint/format comparison: the three setups' pins and measure rows.
+     Demo: measure prints all three setups' rows.
+  4. Evidence: the survey section, then Results 3 and 6 argued from one
+     fresh measure run.
+     Demo: the survey section and Results 3 and 6.
 
-Out of scope  As before: layout and lint tool (structure); vanilla
-              against Lit (components); browser test tier (testing);
-              decorators; a dev server as a deliverable; release builds,
-              per-package tags, tag naming, package splitting, and the
-              hosting decision (spike-html-packages); the SDK spec
-              (branches). Rewriting the committed forms: the JSDoc and
-              plain JS forms stay as the comparison's evidence.
-Door          two-way, except the v0.1.0 tag (pushed, immutable on
-              jsDelivr, never re-cut).
-Release       v0.1.0
-Amendment (escalation, after slice 10): npm joins as a third column.
- 11. npm in the measure task: cold and warm install from a git tag,
-     `files` honoured, a subdirectory at a prefixed tag, a git-tag
-     package's own git-tag dependency, GitHub install of
-     spike-html-design v0.7.0, footprint (npm 12.2.1 pinned in mise); plus
-     fixtures/consumer-npm installed offline in the check.
-     Demo: the check passes with three consumers; measure prints npm rows.
- 12. Evidence re-argued across Node + npm, Node + pnpm, and Bun, in the
-     same order, figures re-cited from one fresh measure run.
-     Demo: the README's Results.
-Amendment (redirect at BRIEF): npm against pnpm, today.
- 13. The README evaluates npm and pnpm as they stand today, and whether
-     npm has mitigated the concerns that drove pnpm's creation (nested
-     then hoisted node_modules, phantom dependencies, nondeterminism,
-     disk duplication, speed, monorepo support): measured where the
-     measure task can show it (phantom dependency, npm's linked install
-     strategy, disk use), sourced otherwise; Results 1 re-weighed.
-     Architect's addition: Bun as a third column for every concern.
+Out of scope  App-internal tiers and whether static pages use Lit
+              (branches). Import cycles and private-export visibility.
+              Vanilla against Lit (components). Packages, release builds,
+              and package boundaries (spike-html-packages). Moving or
+              rewriting the per-form tree, its exports, or its rows.
+              Linting CSS or Markdown beyond the content-scope rows.
+              Changing the pnpm pin or currency's sources. Switching the
+              check's lint tool: if Results 6 picks another setup, BUILD
+              escalates first.
+Door          two-way: no tag, nothing published.
+Amendment (redirect at BRIEF): the lint/format pick reopens, all four setups in
+contention, and the check switches to the provisional pick in this task.
+
+Behaviors (revised and new)
+  6. (rev) `mise run measure` compares four setups on the same tree: Biome;
+     ESLint + Prettier; oxlint + oxfmt; ESLint + ESLint Stylistic with
+     eslint-plugin-jsonc for JSON. Both ESLint setups use typescript-eslint
+     and a resolved-file direction plugin. Rows per setup:
+     - footprint; lint and format time (hyperfine);
+     - formatting, split in two, for code and for the 11 JSON files:
+       "leaves unchanged" (byte-identical on the formatted tree) and
+       "restores" (byte-identical after formatting a scratch copy whose
+       line breaks and indentation are disturbed);
+     - content scope, JSON included;
+     - direction: core no-restricted-imports (recorded 57 of 62),
+       eslint-plugin-boundaries 7.2.0 with eslint-import-resolver-typescript,
+       and eslint-plugin-import-x's no-restricted-paths, each paired with
+       its no-unresolved rule, run on trees whose imports name real files,
+       so a resolved-file rule is tested fairly; each passes only on an
+       exact match of flagged to violation files;
+     - surface: binaries, config files, and packages to keep current.
+     Measure writes nothing to the working tree; currency covers every new
+     package.
+ 10. (rev) Results 6 picks provisionally among the four, in the toolchain
+     order, with stewardship (organization or foundation, maintainers,
+     funding, each sourced) and surface weighed inside maintainability;
+     footprint second; speed only on an order-of-magnitude gap. Prettier
+     against Stylistic follows the same order. Results 3 and 6 are
+     rewritten as provisional, titled for the outcome; Biome's earlier pick
+     is recorded as superseded in the goal record.
+ 12. (new) The ecosystem survey gains ESLint Stylistic, eslint-plugin-jsonc,
+     the direction plugins, and a sourced stewardship table for every tool.
+ 13. (new) The check runs the provisional pick:
+     - If Biome wins: the check, biome.json's direction rules, and the
+       layer test stay as they are.
+     - If an ESLint setup wins: its packages become devDependencies
+       installed by `mise run install` (pnpm, frozen lockfile), and
+       STANDARDS.md's rule becomes "Lit is the only runtime dependency; lint
+       tooling is the only devDependencies". eslint.config.js holds the
+       layer table in the passing direction plugin, with no-unresolved.
+       biome.json's direction overrides and the normalization convention
+       go; Biome leaves the check and stays a measure-only pin. The layer
+       test runs ESLint on the real-file trees with the same exact-match
+       rule. mise pins that move into the manifest are dropped, and
+       currency gains `pnpm outdated`. STANDARDS.md's Layers section points
+       to the ESLint config. If Stylistic wins, JSON is formatted through
+       jsonc.
+     - If an ESLint setup would win but neither direction plugin passes the
+       trees under ESLint 10, BUILD escalates.
+
+Test seams    `mise run check` (13 and the layer test); `mise run measure`
+              (6); the README's cited sources (10, 12).
+
+Slices
+  5. Four-way measure: ESLint + Stylistic + jsonc, the direction plugins on
+     real-file trees, the split formatting rows for code and JSON, content
+     scope with JSON, surface rows, currency for the new packages.
+     Demo: measure prints all four setups' rows.
+  6. Evidence: the survey additions and stewardship table, then Results 3
+     and 6 rewritten as provisional from one fresh measure run.
+     Demo: Results 6's pick and its argument.
+  7. The check on the provisional pick, per behavior 13.
+     Demo: the check passes on the picked setup; an upward import fails it
+     with the picked tool's diagnostic.
+
+Out of scope  (replaces "Switching the check's lint tool"): nothing beyond
+              behavior 13; dprint and other formatters; CSS or Markdown
+              linting.
+Door          two-way: no tag, nothing published.
 ```
 
 ## Decisions
@@ -178,10 +260,63 @@ Amendment (redirect at BRIEF): npm against pnpm, today.
 - toolchain: result, amendment 13: Bun's isolated linker refuses phantom dependencies as pnpm does, but its default for a project without workspaces is hoisted, which resolves them.
 - toolchain: result, amendment 13: cold installs are too loose to compare (a re-run moved every manager's mean, with σ up to 416.3 ms), so no cold ratio is drawn; the warm figures carry the speed comparison.
 - toolchain: the pnpm pin, 12.11.2, follows the release pnpm marks latest on GitHub, which mise resolves through `aqua:pnpm/pnpm`; the npm registry's `latest` dist-tag is 12.14.0. The next task's currency and upgrade step decides whether to follow the dist-tag.
+- structure: the pnpm pin follows what mise resolves natively (`mise latest pnpm`: 12.11.2 through aqua:pnpm/pnpm); the npm registry's latest dist-tag (12.14.0 on 2026-10-16) is recorded as a fact; the pin and currency are unchanged. Rejected: following the dist-tag.
+- structure: architect: the static app branch may come to use Lit for its own internal reusable components; undecided, never a hard condition.
+- structure (superseded by the redirect): the lint/format comparison is three-way, Biome against ESLint + Prettier (typescript-eslint) against oxlint + oxfmt, measured on the same tree from mise npm: pins used only by measure, argued in the toolchain order.
+- structure: the comparison adds configurability (reproducing this repo's formatter options, byte-identical) and content scope (file types each formatter touches by default, Markdown included, and whether it can be limited to code); the architect finds Prettier inflexible and heavy-handed on content, Markdown included, but open to its result.
+- structure (superseded by the redirect): import direction is enforced by the lint tool's restricted-imports rule per layer directory, listing aliases and the package's own name; rejected: dependency-cruiser (an extra pin) and tsc project references (`tsc -b` writes files even on failure).
+- structure: the layers are directories in one package; packaging stays with spike-html-packages, which gets the package-boundary facts.
+- structure: the toolchain's per-form tree stays frozen as evidence; the layers get their own tree.
+- structure: the application SDK is a sibling of components: both import only the foundation (the SDK may import Lit); applications import both.
+- structure: the static branch may import the foundation, Lit, and components; never the SDK, an application-branch app, or another app. The branches task decides whether static pages use Lit.
+- structure: an app's internal tiers are left to the branches task; this task covers the stack layers and the rule against importing from another app.
+- structure (superseded by the redirect): if Results 6 picks a lint tool other than Biome, BUILD escalates before the check switches.
+- structure: the layer tree is `layers/`, a name that says what it holds and stays clear of `src/`'s frozen per-form tree; `layers/` isn't in package.json's `exports`.
+- structure: tsconfig.json includes `layers/`, and tsconfig.build.json pins its own include to `src/ts` and `src/jsdoc`, because it inherits the include and its `rootDir` is `src`; the tsc build emits the same twelve files as before.
+- structure: the foundation refuses every bare specifier, so every package, not only Lit.
+- structure: the occupants import `.js` paths, which bundler resolution maps to `.ts` with no compiler option; the release's import extension stays with spike-html-packages.
+- structure: the direction trees live in `test/layers-tree.js`, which `test/layers.test.js` and measure both import.
+- structure: ESLint's config translates each of `biome.json`'s pattern groups into one regex with Biome's meaning, because ESLint reads a group as gitignore lines, where a `!` line can't re-include a `./` or `../` path; copied as written, the groups flag all 14 allowed files.
+- structure: oxlint's config merges each override's groups into one, the `!` group first, because oxlint lets one group's `!` pattern re-allow what another group refuses and runs no lookaround regex; copied as written, the groups flag 54 of the 62 violations.
+- structure (superseded by the redirect): typescript-eslint, @eslint/js, globals, and typescript install into measure's scratch at the versions in measure.sh's `eslint_packages`, and `mise run currency` reports each one that trails.
+- structure: held typescript at 6.0.3, the highest typescript-eslint 8.71.2's peer range accepts; currency compares it against that range, not TypeScript's latest, 7.0.2.
+- structure (superseded by the redirect): measure installs the ESLint setup's packages with `--legacy-peer-deps`, so npm installs no second ESLint beside the mise pin.
+- structure (superseded by the redirect): every layer's override holds a normalization convention: a relative specifier starts with `./` or its run of `../`, and no later segment is `.`, `..`, empty, or percent-encoded; absolute specifiers are refused, and each app override also refuses the bare climb out of the app (`..`, `../`, `../..`, and so on). A segment starting with a non-ASCII character stays uncovered.
+- structure (superseded by the redirect): an override for the files at `layers/*`, `layers/apps/*`, and `layers/apps/*/*`, which a bare climb reaches, refuses every relative and absolute specifier and the package's own name, so a file there fails closed.
+- structure (superseded by the redirect): the foundation may import its own index: it re-allows `.`, `./`, `..`, and `../`, which `./**` and `../**` don't match.
+- structure: Biome's direction groups cost about 30 ms per run, lint and format alike, because the cost is in loading the configuration (`biome lint` 62.5 ms against 32.3 ms without them, `biome format` 59.1 ms against 28.8 ms).
+- structure (superseded by the redirect): result, evidence 3: the layers are the directories of `layers/` in one package, with the direction enforced by Biome's `noRestrictedImports`, one override per layer directory; the layer test flags 62 of 62 violation files and 0 of 14 allowed ones. The rule matches import text, never the resolved file. Rejected: ESLint's `no-restricted-imports`, which never checks `import()`.
+- structure (superseded by the redirect): result, evidence 6: Biome stays in the check, argued on the first criterion. ESLint + Prettier is the standard by use, but ESLint's rule can't enforce the direction on `import()`, the setup adds Node and four packages to the check, and Prettier rewrites Markdown and the lockfile by default. oxlint + oxfmt matches Biome on direction but isn't the standard, and oxfmt is 0.x. Footprint (Biome 66.7 MB, ESLint + Prettier 51.8 MB, oxlint + oxfmt 35.6 MB) and speed (121.3, 863.9, and 94.2 ms, all under a second) don't overturn it.
+- structure: redirect at BRIEF: Biome isn't a decided winner; the architect cites its stewardship (a community fork of the defunct Rome Tools, a small team funded by donations) and is hesitant about Prettier.
+- structure: the comparison measures four setups: Biome, ESLint + Prettier, oxlint + oxfmt, and ESLint + ESLint Stylistic with eslint-plugin-jsonc for JSON; all four stay in contention, and the outcome picks provisionally (architect: Biome may still be optimal for its simplicity and minimal surface friction).
+- structure: both resolved-file direction plugins are measured, eslint-plugin-boundaries (with eslint-import-resolver-typescript) and eslint-plugin-import-x's no-restricted-paths, each with its no-unresolved rule, on trees whose imports name real files; eslint-plugin-import is out (no release accepts ESLint 10).
+- structure: stewardship (organization or foundation, maintainers, funding, sourced) and surface (binaries, configs, packages to keep current) are weighed inside maintainability, in the toolchain order.
+- structure: Prettier against ESLint Stylistic follows the toolchain order.
+- structure: the formatting rows split into "leaves unchanged" and "restores" (from a copy with disturbed line breaks and indentation), for code and for JSON.
+- structure: architect: the check switches to the provisional pick in this task (rejected: a separate task).
+- structure: if an ESLint setup wins, its packages become devDependencies installed by `mise run install`, and STANDARDS.md's rule becomes "Lit is the only runtime dependency; lint tooling is the only devDependencies"; Biome leaves the check for a measure-only pin, the direction lives in the passing plugin alone with no-unresolved, and the normalization convention goes. If neither plugin passes the trees under ESLint 10 while an ESLint setup would win, BUILD escalates.
+- structure: Results 3 and 6 are rewritten as provisional, titled for the outcome.
+- structure: escalation: architect: eslint's devDependency pin is 10.12.0, keeping pnpm's one-day minimumReleaseAge gate intact; rejected: 10.13.0 (published 2026-10-16T14:24Z) with a minimumReleaseAgeExclude entry. currency raises 10.13.0 once the gate passes.
+- structure: eslint-plugin-boundaries' `dependencies` rule runs beside eslint-plugin-import-x's `no-unresolved`, so a specifier that resolves to no file, such as the package's own name or an absolute path, fails instead of passing unjudged.
+- structure: the direction trees in `test/layers-tree.js` write a real file for every relative or absolute specifier they import, resolved as a browser resolves it, by URL against the importing file, then a `.js` file to its `.ts` source and a directory to its `index.ts`.
+- structure: the layer test passes only when `boundaries/dependencies` itself flags each violation file; a file flagged by `no-unresolved` alone doesn't count.
+- structure: the two non-normalized paths that reach a file their layer may import (`layers/components/unnormalized.ts`, `layers/apps/application/documents/name-parent.ts`) moved from the violation tree to the allowed tree, since they cross no layer once the direction is judged by resolved file.
+- structure: `biome.json` keeps only the formatter settings; its layer overrides moved to `scripts/biome-layers.json`, which only measure reads, as the text rules' baseline for Biome, oxlint, and core `no-restricted-imports`.
+- structure: the check runs ESLint and Prettier through `pnpm exec`. Measure links `eslint` and `prettier` into a scratch bin directory on PATH instead of putting `node_modules/.bin` there, because that directory also holds typescript 6.0.3's tsc, which would shadow the pinned tsc 7.0.2.
+- structure: `pnpm-workspace.yaml` sets `allowBuilds: unrs-resolver: false`, since pnpm installs the optional dependency holding unrs-resolver's native binding and its postinstall needn't run.
+- structure: `scripts/consumers.sh` fails if any consumer, under pnpm, npm, or bun, installs one of this package's devDependencies.
+- structure: `eslint.config.js` exports the layer table, and `scripts/lint-compare.js` imports it to build import-x's zones, so measure and the check read one table.
+- structure: currency reports devDependencies through `pnpm outdated --dev`, which honors pnpm's one-day minimumReleaseAge, so a release younger than a day isn't reported as trailing until it passes the gate.
+- structure: each "restores" row passes only when the formatter exits 0, so a crash that leaves the recorded misses unchanged fails the row.
+- structure: result, evidence 3: the layers are the directories of `layers/` in one package, with the direction enforced, provisionally, on the file each import resolves to, by eslint-plugin-boundaries' `dependencies` rule over the layer table in `eslint.config.js`, beside import-x's `no-unresolved`. The layer test flags 60 of 60 violation files, all by `boundaries/dependencies`, and 0 of 16 allowed ones (m 2026-10-16T21:11:09Z). Rejected: Biome's `noRestrictedImports`, which matches import text and flags the two non-normalized allowed paths; import-x's `no-restricted-paths`, which flags 2 allowed files in directories whose names start with dots; ESLint's core `no-restricted-imports`, which never checks `import()` (55 of 60); dependency-cruiser and tsc project references, as before.
+- structure: result, evidence 6: ESLint + Prettier is the lint and format setup, provisionally, argued in the toolchain order. On the first criterion it is the standard by a wide margin (9,697 and 9,295 SoJS 2025 respondents against Biome's 1,762; ESLint in 10 and Prettier in 11 of the 13 web-component libraries), its two tools are better stewarded (ESLint under the OpenJS Foundation), and its direction rule judges the resolved file; that outweighs Biome's smaller surface, one binary and one config file against B's 9 pins, four config files, and 140 installed packages. ESLint Stylistic loses to Prettier because it can't restore a disturbed tree (19 of 21 code files and 8 of 13 JSON files differ); oxlint + oxfmt isn't the standard, moves a key in `package.json`, and judges direction by text. Footprint (A 66.7 MB, B 62.1 MB, C 35.6 MB, D 55.2 MB) doesn't overturn it, nor do speed's two order-of-magnitude gaps (B's lint and format at 950.0 ms, 10.3 times C's 92.5 ms; ESLint's lint 11.0 times `biome lint`'s) (m 2026-10-16T21:11:09Z). It reopens if spike-html-packages makes the layers packages, whose declared dependencies would enforce the direction at install and shrink the plugin's role, or if ESLint's or Prettier's foundation or funding changes.
 
 ## Pending edits
 
 - coordinator · `context/html-artifacts.md`, "Experiment: spike-html-conventions": record the toolchain task's interim results, pending the intake's decision. The hypothesis's split by role (Node + pnpm for packages, Bun for bundling) is ruled out. Across Node + npm, Node + pnpm, and Bun, argued industry standard and maintainability first, footprint second, and speed only on an order-of-magnitude gap, the runtime is Node, settled, and the manager is pnpm provisionally. If spike-html-packages releases the layers through a registry, the choice between npm and pnpm reopens: spike-html-packages weighs npm's standard by use and stewardship against pnpm's multi-package practice and npm's monorepo gaps, with its hosting and repository-layout decisions. Every layer is written in `.ts` and released through a build that ships `.js` and `.d.ts`. tsc emit builds libraries and Vite builds apps; esbuild doesn't earn its place.
 - coordinator · roadmap, spike-html-packages: decide the hosting and repository layout, on which spike-html-conventions' manager pick depends (a repository release keeps pnpm; a registry release reopens the choice between npm and pnpm, which this task weighs with those decisions: npm's standard by use and stewardship against pnpm's multi-package practice and npm's monorepo gaps), weighing registry-based options (npm registry publish, release-asset tarballs installed by URL, plain URL imports through an import map) and spike-html-conventions' evidence (Results 1, 2, and 7, and the Ecosystem survey's Release hosting). Prefixed tags: pnpm installs a subdirectory with `#fixture/v0.1.0&path:/fixture`; bun can't resolve the spec; npm ignores `&path:` as an unknown key, and its own `::path:` resolves the tag to its commit, then fails with ENOENT on the clone's package.json. Git-tag dependencies: npm 12 defaults to allow-git=none and refuses any; allow-git=root admits a consumer's own but refuses a git-tag package's own git-tag dependency, which allow-git=all installs; pnpm 12's `blockExoticSubdeps` default refuses only that nested one; bun has no guard. A git dependency's `prepare`: npm runs it at pack time while warning that it was blocked, and only `--ignore-scripts` skips it; pnpm refuses the install until `allowBuilds` names the resolved spec with its commit; bun installs without running it and reports it until `trustedDependencies` names it. The release build: each `.ts` module ships as an unbundled, unminified `.js` ES module with its `.d.ts` (`tsc -p tsconfig.build.json` emits that); the built files sit in the tag or a release asset; `exports` points at the built `.js` with its types; `files` names the built output (bun ignores `files`). Hosting facts: jsDelivr `/gh/` caches an exact tag for good, serves `.ts` as `text/plain` with `nosniff`, and returns 404 for `/+esm`; GitHub Packages needs a token for every install, public packages included, and takes only scoped packages; JSR emits JS and `.d.ts` from `.ts` and installs natively in pnpm 10.9+ and Yarn 4.9+, while npm needs `.npmrc` setup and Bun's support isn't documented; Verdaccio is a server you run; all 13 surveyed web-component libraries publish to the npm registry, which stays ruled out unless no workable alternative exists, so a registry release means GitHub Packages, JSR, or a self-hosted registry. npm's monorepo gaps: workspace runs follow the `workspaces` array's order, not the dependency graph (npm/rfcs#707); npm has no `workspace:` protocol (npm/cli#8845) and no catalogs (npm/rfcs#872); five linked-layout bugs are open, two on workspaces (npm/cli#10082, #9982). npm's linked install strategy (`--install-strategy=linked`) refuses phantom dependencies, the strictest layout measured, but it is opt-in, stable only since 11.18.0 and 12.0.0, and still copies each package into a per-project `node_modules/.store`.
-- coordinator · roadmap, this spike's `structure` task: its first step runs and records the fixture package's v0.1.0 GitHub and jsDelivr rows; its currency step decides whether the pnpm pin follows pnpm's GitHub-marked latest (12.11.2) or npm's `latest` dist-tag (12.14.0 on 2026-10-16).
 - coordinator · roadmap, spike-html-apps: the real router fixes two herald quirks this spike's port kept (a second `?` in the query is dropped; a `#fragment` reaches the route path) and strips the base path only at a segment boundary.
+- coordinator · `context/html-artifacts.md`, "Experiment: spike-html-conventions": record the structure task's interim results, pending the intake's decision. The layers are directories of `layers/` in one package: the foundation (native only, no package), components (the element tier) and the application SDK as siblings on the foundation, a static branch that may import the foundation, components, and Lit, and an application branch that may import all three plus the SDK; no app imports another. eslint-plugin-boundaries' `dependencies` rule, over the layer table in `eslint.config.js` with import-x's `no-unresolved` beside it, enforces that direction in the check by the file each import resolves to, so relative specifiers need no normalization convention. The lint and format setup is ESLint + Prettier, provisionally, argued industry standard and maintainability first: the standard by a wide margin, the better-stewarded tools, and a direction rule by resolved file outweigh Biome's smaller surface (one binary and one config file against nine pins and four config files); ESLint Stylistic can't restore a disturbed tree, and oxlint + oxfmt isn't the standard and judges direction by text. Footprint and speed don't overturn it. The pick reopens if spike-html-packages makes the layers packages, or if ESLint's or Prettier's foundation or funding changes.
+- coordinator · roadmap, spike-html-packages: decide whether the layers become packages, and the import extension the releases use (this spike's occupants import `.js` paths, which bundler resolution maps to `.ts`). The package-boundary facts (spike-html-conventions' Results 3): pnpm refuses an import of an undeclared package by default, and a lint rule can refuse one too (import-x's `no-extraneous-dependencies`, not measured), so as packages each layer's declared dependencies would enforce the direction at install as well as in the lint. Making the layers packages reopens the provisional ESLint + Prettier pick (Results 6): the direction plugin's role shrinks to the files inside a package, so direction weighs less against Biome's smaller surface. The lint tooling is the root package's devDependencies, under STANDARDS.md's rule "Lit is the only runtime dependency; lint tooling is the only devDependencies".
+- coordinator · roadmap, spike-html-apps: four of herald's element files in `app/client/ui/elements` import from `@domains` (herald 6fc22b3): `classify-progress.ts` the `WORKFLOW_STAGES` constant and the `WorkflowStage` type, `document-card.ts` the `WorkflowStage` and `Document` types, `prompt-card.ts` the `Prompt` type, and `blob-viewer.ts` the `findFormat` lookup. Under spike-html-conventions' layout a component may not import domain code: the types become the element's own properties, and the constant and lookup move up to the app or down into the element.
+- coordinator · roadmap, this spike's `branches` task: add the app-internal tiers (modules and views) and whether static pages use Lit, both handed on by Results 3; STANDARDS.md records the second as undecided.
