@@ -16,9 +16,9 @@ export class StatusBadge extends LitElement {
     }
   `;
 
-  static properties: PropertyDeclarations = {
+  static properties = {
     label: { type: String },
-  };
+  } satisfies PropertyDeclarations;
 
   declare label: string;
 

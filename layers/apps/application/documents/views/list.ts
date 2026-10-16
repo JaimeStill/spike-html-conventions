@@ -1,7 +1,7 @@
 // The documents app's list view: one directory into the app, so it reaches its own model with
 // `../` and the layers with four.
 
-import { html, LitElement } from "lit";
+import { html, LitElement, type PropertyDeclarations } from "lit";
 
 import "../../../../components/status-badge.js";
 import { define } from "../../../../foundation/dom.js";
@@ -10,8 +10,19 @@ import type { DocumentSummary } from "../model.js";
 
 /** Lists documents, each with a status badge. */
 export class DocumentsList extends LitElement {
+  static properties = {
+    documents: { attribute: false },
+  } satisfies PropertyDeclarations;
+
+  /** The documents listed. */
+  declare documents: DocumentSummary[];
+
   session = new SessionController(this);
-  documents: DocumentSummary[] = [];
+
+  constructor() {
+    super();
+    this.documents = [];
+  }
 
   render() {
     return html`<ul>
