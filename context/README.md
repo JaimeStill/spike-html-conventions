@@ -173,7 +173,7 @@ Conflict of interest: this survey was drafted by an Anthropic model, and Anthrop
   `oxc-project/oxc`; oxlint is at 1.88.0 and oxfmt at 0.73.0, still 0.x ([s65][oxc-npm]). Each npm
   package is a bin script with 19 per-platform binding packages, and each runs as a Node script
   that loads a native addon (`oxlint.linux-x64-gnu.node`, 15.2 MB; `oxfmt.linux-x64-gnu.node`,
-  8.9 MB; *m 2026-10-16T17:45:53Z*, Results). Biome is one native binary.
+  8.9 MB; *m 2026-10-16T18:08:08Z*, Results). Biome is one native binary.
 
 ### What the web-component libraries use
 
@@ -319,11 +319,12 @@ Every measured figure below is from a dated run of `mise run measure`. Results 1
 the run of **2026-10-16T14:03:02Z (UTC)** as *(m 2026-10-16)*, unless a citation names another
 run. That covers the timings and rows, each mise tool's installed size (its Footprint section,
 `mise where` and `du -sb`), and the lines and brotli bytes of `src/` (its Forms section), with
-every tool's version as pinned in `mise.toml`. Results 3 and 6 cite the run of
-**2026-10-16T17:45:53Z (UTC)** as *(m 2026-10-16T17:45:53Z)*, for the layer rules and the lint
-and format rows. File counts from the offline installs are from `mise run check` the same day.
-Survey figures cite the Ecosystem survey's sources, and other facts from outside the spike carry
-their own source and date.
+every tool's version as pinned in `mise.toml`. Results 3 and 6, and the Lint and format survey
+where it cites a run, cite the run of **2026-10-16T18:08:08Z (UTC)** as
+*(m 2026-10-16T18:08:08Z)*, for the layer rules and the lint and format rows; it ran after the
+layer rules gained Results 3's normalization groups. File counts from the offline installs are
+from `mise run check` the same day. Survey figures cite the Ecosystem survey's sources, and other
+facts from outside the spike carry their own source and date.
 
 Conflict of interest: this evidence was drafted by an Anthropic model, and Anthropic owns Bun.
 The pick rests on the measured rows and the cited facts; weigh it with that in mind.
@@ -665,31 +666,49 @@ its directory name, at any depth, and the foundation refuses every bare specifie
 refuse a sibling by name, since a sibling is `../<name>`, so each app override refuses every
 specifier that climbs out of the app and re-allows the permitted layers named from `layers/`.
 That takes one override per file depth, 0 to 3 directories into an app; the deepest also covers
-everything below it and fails closed. `test/layers.test.js` runs the pinned Biome over two scratch
-trees built from `test/layers-tree.js` in the check. The violation tree is 40 files, one import
-each, covering every forbidden edge, the four import forms (`import`, `export … from`,
-`import type`, and `import()`), and the package's own name: 6 in the foundation, 7 in
-components, 5 in the SDK, 12 in the static app, and 10 in the application app. The allowed tree
-is 11 files of permitted imports in the same forms. The test passes only when the rule flags
-exactly the 40 and none of the 11, so a rule that refuses everything or nothing fails it.
-Measured: 40 of 40 and 0 of 11 *(m 2026-10-16T17:45:53Z)*.
+everything below it and fails closed.
 
-**What it can't see.** The rule matches the import's text, never the resolved file. A path that
-descends and climbs back inside an app, `./views/../../prompts/x.js`, or one that starts `./../`,
-gets past the per-depth patterns, and Biome 2.5.15's globs have no character classes to refuse
-such paths in general. In the foundation, components, and SDK, a path naming a refused layer
-directory is still caught (`./x/../../sdk/session.js` in components draws the rule). Inside an app
-it isn't: the app overrides refuse by climbing, not by name, so `./../../../sdk/session.js` from
-the static app and `./x/../../../../apps/static/site/main.js` from an application app both pass
-(reproduced 2026-10-16 against this `biome.json`). And an app needs a pattern per file depth:
-a file more than three directories into an app fails closed, its outward imports refused,
-permitted ones included.
+A re-allowed prefix would let a path climb back out of it, `../../../foundation/../sdk/session.js`
+from the static app, so every override, in every layer, also holds the normalization convention:
+a relative specifier starts with `./` or with its run of `../`, and no later segment is `.`,
+`..`, or empty. Biome 2.5.15's globs have no character classes but do take brace alternation
+(`{a,b}`), so the group names a segment that isn't `.` or `..` by its first characters: an
+enumerated ASCII character (`a`–`z`, `A`–`Z`, `0`–`9`, `_ - @ $ ~ +`), `.` followed by one, or
+`..` followed by one or by `.`. Each such segment followed by `/../` is refused, as are `./`
+followed by `../`, a `.` segment after the leading run, and an empty segment. A second group
+refuses an absolute specifier, `/layers/sdk/session.js`, which resolves against the origin and so
+escapes every layer rule. Normalized names that hold dots stay allowed: `./..x/y.js`,
+`./.well-known/a.js`, `x..y`, `...`.
+
+`test/layers.test.js` runs the pinned Biome over two scratch trees built from
+`test/layers-tree.js` in the check. The violation tree is 52 files, one import each, covering
+every forbidden edge, the four import forms (`import`, `export … from`, `import type`, and
+`import()`), the package's own name, an absolute path, and eleven paths that aren't normalized:
+6 in the foundation, 8 in components, 5 in the SDK, 19 in the static app, and 14 in the
+application app. The non-normalized ones are `./../`, a descend-then-climb path, and a
+layer-name-then-`..` path in each app branch, a `.`, an empty, and a `...` segment, and one in
+components; each passed `biome.json` before the convention. The allowed tree is 13 files of
+permitted imports in the same forms, with the dotted names above. The test passes only when the
+rule flags exactly the 52 and none of the 13, so a rule that refuses everything or nothing fails
+it. Measured: 52 of 52 and 0 of 13 *(m 2026-10-16T18:08:08Z)*.
+
+**What it can't see.** The rule matches the import's text, never the resolved file, so a
+symlink or a server mapping the text doesn't show is outside it. The app overrides go one per
+file depth, and a file more than three directories into an app fails closed, its outward imports
+refused, permitted ones included. And the normalization groups know a name segment only by its
+first characters, so a segment that starts with a character outside the enumerated set,
+non-ASCII or `%`, followed by `..`, isn't refused: `../../../foundation/%7Ex/../../sdk/session.js`
+from the static app passes (reproduced 2026-10-16 against this `biome.json`).
+
+The groups cost Biome time: `biome lint` over the 21-file tree took 49.5 ms with them against
+32.3 ms without (hyperfine, 30 runs, 2026-10-16), and Results 6's timings include them.
 
 **Rejected:**
 
 - **dependency-cruiser** ([repo][depcruise]): it checks the resolved module graph, so it would
-  close the gap above, which text matching can't. It is an extra pin, a Node package beside the
-  linter the check already runs, for one rule the linter covers on every normalized path.
+  close the remaining text-against-file gap above, which text matching can't. It is an extra pin,
+  a Node package beside the linter the check already runs, for one rule the linter covers on
+  every specifier the normalization convention admits.
 - **tsc project references** ([handbook][ts-refs]): one project per layer, each referencing only
   what it may import. `tsc -b` writes output even when the build fails, and the check writes
   nothing. Reproduced with tsc 7.0.2, 2026-10-16: two projects, the second with a type error,
@@ -697,10 +716,10 @@ permitted ones included.
   refused (TS6310, a referenced project may not disable emit) and still writes both
   `.tsbuildinfo` files.
 - **ESLint's `no-restricted-imports`** ([rule][eslint-nri]): it never checks an `import()`
-  expression, so it flags 35 of the 40 violation files, missing the five dynamic edges, and it
+  expression, so it flags 47 of the 52 violation files, missing the five dynamic edges, and it
   needs `biome.json`'s groups translated to regular expressions: ESLint reads a group as
   gitignore lines, where a `!` line can't re-include a `./` or `../` path, so the groups copied
-  as written also flag 9 of the 11 allowed files *(m 2026-10-16T17:45:53Z)*. Results 6 weighs it
+  as written also flag all 13 allowed files *(m 2026-10-16T18:08:08Z)*. Results 6 weighs it
   as a setup.
 
 **Handed on.**
@@ -725,7 +744,7 @@ permitted ones included.
 ### 6. Lint and format: Biome
 
 Three setups over one copy of `src/`, `layers/`, and `test/` (21 files), each from mise pins that
-only the measure task uses, plus Biome, the check's tool *(m 2026-10-16T17:45:53Z)*:
+only the measure task uses, plus Biome, the check's tool *(m 2026-10-16T18:08:08Z)*:
 
 | fact | A: Biome 2.5.15 | B: ESLint 10.13.0 + Prettier 3.9.10 | C: oxlint 1.88.0 + oxfmt 0.73.0 |
 | --- | --- | --- | --- |
@@ -735,11 +754,11 @@ only the measure task uses, plus Biome, the check's tool *(m 2026-10-16T17:45:53
 | Lit's templates, at the default | left as written | reformatted in the three `pagination-lit` files | the same as Prettier |
 | file types its default run touches, of the repository's 54 tracked files in 9 types | js, json, ts | js, json, md, ts, yaml | js, json, md, toml, ts |
 | limited to code | `files.includes` | a `.prettierignore` | the same `.prettierignore` |
-| what its default run rewrites, beside code | nothing | `context/README.md`, 111 of 723 lines; `pnpm-lock.yaml`, 23 of 59 lines into 38 | `context/README.md`, 110 of 723 lines; `package.json`, one key moved |
-| direction rule, violation tree | 40 of 40 | 35 of 40: no `import()` | 40 of 40 |
-| direction rule, allowed tree | 0 of 11 | 0 of 11, as regular expressions; 9 of 11 with the groups as written | 0 of 11 |
-| the groups from `biome.json` | as written | translated to regular expressions | as written |
-| lint + format, hyperfine mean | 61.6 ms | 872.3 ms | 89.7 ms |
+| what its default run rewrites, beside code | nothing | `context/README.md`, 144 of 948 lines; `pnpm-lock.yaml`, 23 of 59 lines into 38 | `context/README.md`, 143 of 948 lines; `package.json`, one key moved |
+| direction rule, violation tree | 52 of 52 | 47 of 52: no `import()` | 52 of 52, merged; 46 of 52 with the groups as written |
+| direction rule, allowed tree | 0 of 13 | 0 of 13, as regular expressions; 13 of 13 with the groups as written | 0 of 13 |
+| the groups from `biome.json` | as written | translated to regular expressions | merged into one group per override: a `!` pattern matching in one group re-allows what another refuses, and a lookaround regex flags nothing |
+| lint + format, hyperfine mean | 95.5 ms | 872.8 ms | 92.9 ms |
 
 Prettier rewrites the README by padding every table's cells to the column's width, rewriting
 `*emphasis*` as `_emphasis_`, and adding a blank line before a table in a list; oxfmt does about
@@ -754,10 +773,11 @@ and format). Oxc's tools have neither the use nor the libraries, and oxfmt is st
 the standard, B's measured gaps:
 
 - **Direction.** ESLint's rule can't enforce the layer direction on `import()`, the form an app
-  uses to load a view lazily: 5 of the 40 edges have no expression in it at all. The evidence 3
-  check needs every edge, and Biome and oxlint flag all 40. Closing it in ESLint takes another
-  plugin, a fifth package, which wasn't measured. Its working config is also a regex translation
-  of glob groups, where Biome and oxlint read the groups as written.
+  uses to load a view lazily: 5 of the 52 violation files have no expression in it at all. The
+  evidence 3 check needs every edge, and Biome and oxlint flag all 52. Closing it in ESLint takes
+  another plugin, a fifth package, which wasn't measured. Its working config is also a regex
+  translation of glob groups, where Biome reads the groups as written; oxlint reads them too, but
+  only with each override's groups merged into one.
 - **What it adds to the check.** Two tools on Node, plus four packages installed for ESLint,
   where the check today runs one binary with no package install; six versions to keep current
   against one.
@@ -766,37 +786,38 @@ the standard, B's measured gaps:
   the configurability concern didn't hold here. Both need `embeddedLanguageFormatting` off,
   though, or they reformat Lit's templates, which Biome leaves alone by default.
 - **Content scope.** The architect's view is that Prettier is heavy-handed on content, Markdown
-  included, and that held. By default Prettier formats Markdown and YAML, rewrites 111 of the
-  README's 723 lines and the pnpm lockfile, and oxfmt does about the same and reorders
-  package.json. Biome's default touches only js, json, and ts. Each can be limited to code, Biome
-  by `files.includes` and the other two by a `.prettierignore`, so the cost is a default to undo,
-  not a limit.
+  included, and that held. By default Prettier formats Markdown and YAML, rewrites 144 of the
+  README's 948 lines (the README as it stood at that run) and the pnpm lockfile, and oxfmt does
+  about the same and reorders package.json. Biome's default touches only js, json, and ts. Each
+  can be limited to code, Biome by `files.includes` and the other two by a `.prettierignore`, so
+  the cost is a default to undo, not a limit.
 
 The standard is B's; maintainability is A's, and the gap that decides it isn't taste: ESLint can't
 express the check this task adds. A tool that leaves the lazy `import()` edges unenforced doesn't
 carry the standard's weight for this check, so the first criterion picks Biome, against the
-standard by use, as Results 1 picked pnpm against npm's. oxlint matches Biome on direction, but
-it is not the standard either, and it brings Node, an addon, and a 0.x formatter that reorders
-package.json.
+standard by use, as Results 1 picked pnpm against npm's. oxlint matches Biome on direction once
+its groups are merged, but it is not the standard either, and it brings Node, an addon, and a 0.x
+formatter that reorders package.json.
 
 **Second: footprint.** Node is already the toolchain's runtime (Results 1), so the setups add
-their own installs: B 51.8 MB and C 35.6 MB against Biome's 66.7 MB *(m 2026-10-16T17:45:53Z)*.
+their own installs: B 51.8 MB and C 35.6 MB against Biome's 66.7 MB *(m 2026-10-16T18:08:08Z)*.
 Biome is the largest by 14.9 MB over B and 31.1 MB over C, 1.3 and 1.9 times the size, not an
 order of magnitude, so it doesn't overturn the first. B's 30.6 MB of packages is also an install
 the check doesn't have today.
 
-**Third: speed**, only on an order-of-magnitude gap. Lint and format together take 61.6 ms under
-Biome, 89.7 ms under oxlint + oxfmt, and 872.3 ms under ESLint + Prettier
-*(m 2026-10-16T17:45:53Z)*: ESLint + Prettier is 14.2 times slower, an order of magnitude, and
-ESLint alone 18.7 times (617.4 ms against 33.1 ms), but all of it is under a second at this size.
-Speed agrees with the first criterion and doesn't decide it.
+**Third: speed**, only on an order-of-magnitude gap. Lint and format together take 92.9 ms under
+oxlint + oxfmt, 95.5 ms under Biome, and 872.8 ms under ESLint + Prettier
+*(m 2026-10-16T18:08:08Z)*: ESLint + Prettier is 9.1 times slower, just under an order of
+magnitude, and ESLint alone 12.6 times (608.3 ms against 48.2 ms), but all of it is under a second
+at this size. Biome and oxlint + oxfmt are level; Biome's lint carries the normalization groups'
+cost (Results 3). Speed doesn't decide it.
 
 **The pick: Biome stays in the check**, for lint, format, and the layer direction, with
 `biome.json` as it is. ESLint + Prettier is the clear standard, and the evidence weighs against it
 on maintainability: it can't enforce the direction on `import()`, it needs Node and four packages
 in the check, and its formatter rewrites Markdown and the lockfile unless limited. Its
 configurability matched Biome's on this tree. Footprint slightly favours the other two, and speed
-favours Biome by an order of magnitude under a second.
+favours Biome over ESLint + Prettier by about an order of magnitude, under a second.
 
 **What would reverse it.** Toward ESLint + Prettier: ESLint's rule checking `import()`, or a
 measured plugin closing the gap at one more pin; or spike-html-packages making the layers
