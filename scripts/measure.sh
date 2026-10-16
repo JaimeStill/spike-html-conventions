@@ -152,25 +152,24 @@
 #                   indentation lint-compare.js disturb rewrote (calls and arrays split and joined,
 #                   some joins past the 100-column width, closing braces raised, every line
 #                   re-indented to 0 or 4 spaces), code and JSON apart; both pass when the formatter
-#                   ran (exit 0, or on a restore ESLint's 1, the problems its fixes leave) and the
-#                   files that differ are the ones recorded below, a formatter that can't being a
-#                   fact; scope, each formatter over a copy of the repository's tracked files, every
-#                   file padded with three trailing newlines, which a formatter strips from any file
-#                   it formats, so the files that change are the files it touched: the default scope
-#                   recorded, JSON counted, and the row passing when the scope its configuration
-#                   limits it to (Biome's files.includes, a .prettierignore that Prettier and oxfmt
-#                   both read, the files globs of D's config) is the code and JSON files exactly;
-#                   rewrites, the same unpadded, recording each file the default run rewrites and
-#                   its changed lines, every Markdown file named, passing when no code file changes
-#                   and the padded default run reached every code file; direction, the layer rules
-#                   over test/layers-tree.js's trees, which hold the files their imports name,
-#                   passing when the flagged files are the violation files less the edges the rule
-#                   can't express or the misses recorded below, and the allowed tree draws none but
-#                   those recorded: Biome's and oxlint's rules, ESLint's no-restricted-imports, and
-#                   the two resolved-file plugins under ESLint; surface, each setup's binaries on
-#                   PATH, config files, and packages to keep current, with the installed packages
-#                   under them. B's .prettierrc.json holds the options the formatters are matched
-#                   with.
+#                   exits 0 and the files that differ are the ones recorded below, a formatter that
+#                   can't being a fact; scope, each formatter over a copy of the repository's
+#                   tracked files, every file padded with three trailing newlines, which a formatter
+#                   strips from any file it formats, so the files that change are the files it
+#                   touched: the default scope recorded, JSON counted, and the row passing when the
+#                   scope its configuration limits it to (Biome's files.includes, a .prettierignore
+#                   that Prettier and oxfmt both read, the files globs of D's config) is the code
+#                   and JSON files exactly; rewrites, the same unpadded, recording each file the
+#                   default run rewrites and its changed lines, every Markdown file named, passing
+#                   when no code file changes and the padded default run reached every code file;
+#                   direction, the layer rules over test/layers-tree.js's trees, which hold the
+#                   files their imports name, passing when the flagged files are the violation files
+#                   less the edges the rule can't express or the misses recorded below, and the
+#                   allowed tree draws none but those recorded: Biome's and oxlint's rules, ESLint's
+#                   no-restricted-imports, and the two resolved-file plugins under ESLint; surface,
+#                   each setup's binaries on PATH, config files, and packages to keep current, with
+#                   the installed packages under them. B's .prettierrc.json holds the options the
+#                   formatters are matched with.
 #                   Per tool, whether it runs as a native binary or on Node, as expected below.
 #
 # The GitHub and jsDelivr rows run against spike-html-design v0.7.0 always, and against this
@@ -1812,12 +1811,10 @@ for setup in "${setups[@]}"; do
     diff=$(differing "$dir" "$root")
     diff=${diff% }
     want=${unrestored[$setup $kind]:-}
-    # The formatter must have run: exit 0, or for ESLint 1, the problems its fixes leave (max-len
-    # has no fixer), where 2 is a crash or a bad config.
-    formatter_ran=0
-    if ((status == 0)) || { [[ "$setup" == D ]] && ((status == 1)); }; then formatter_ran=1; fi
+    # The formatter must have run and exited 0, so a crash that leaves the recorded misses as they
+    # were disturbed fails the row.
     ok=0
-    if ((formatter_ran == 1)) && [[ "$diff" == "$want" ]]; then ok=1; fi
+    if ((status == 0)) && [[ "$diff" == "$want" ]]; then ok=1; fi
     fact="$what disturbed ($done_; wide: joined lines past 100 columns, which only a reflow breaks again); exit $status; "
     if [[ -z "$diff" ]]; then fact+="every file comes out byte for byte the original"; else
       fact+="$(wc -w <<<"$diff") files differ: $diff"
@@ -1827,7 +1824,7 @@ for setup in "${setups[@]}"; do
       fact+="; Stylistic has no line-width reflow and max-len no fixer, so a split call stays split and a joined line stays past the width"
     fi
     if [[ "$diff" != "$want" ]]; then fact+="; recorded: ${want:-none}"; fi
-    if ((formatter_ran == 0)); then fact+="; the formatter failed: $(tail -n3 "$dir.log")"; fi
+    if ((status != 0)); then fact+="; the formatter failed: $(tail -n3 "$dir.log")"; fi
     row "$prefix: $label restores the $kind_label from a copy with disturbed line breaks and indentation" "$ok" "$fact"
   done
 done
