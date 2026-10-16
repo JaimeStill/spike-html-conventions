@@ -45,6 +45,12 @@ for (const [form, router] of Object.entries(forms)) {
         ["/app/", ""],
         ["/prompts", "prompts"],
         ["", ""],
+        // The base is stripped only at a segment boundary, never as a bare string prefix.
+        ["/application", "application"],
+        ["/application/x", "application/x"],
+        ["/apps/x", "apps/x"],
+        ["/app?q=1", "?q=1"],
+        ["/app#top", "#top"],
       ];
       for (const [path, want] of cases) {
         test(`"${path}" under "/app" is "${want}"`, () => {

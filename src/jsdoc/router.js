@@ -40,7 +40,9 @@ export function parseQuery(queryString) {
 
 /**
  * Strips the leading slash and the base path from a path, giving the form the route table's
- * patterns use. `basePath` carries no trailing slash, as in `"/app"`.
+ * patterns use. `basePath` carries no trailing slash, as in `"/app"`, and is stripped only as
+ * whole segments: under `"/app"`, `"/app/x"` gives `"x"` but `"/application"` gives
+ * `"application"`.
  * @param {string} path
  * @param {string} basePath
  * @returns {string}
@@ -49,8 +51,13 @@ export function normalizePath(path, basePath) {
   let normalized = path.replace(/^\//, "");
   const baseWithoutSlash = basePath.replace(/^\//, "");
 
-  if (normalized.startsWith(baseWithoutSlash))
-    normalized = normalized.slice(baseWithoutSlash.length).replace(/^\//, "");
+  // Strip the base only at a segment boundary, so base "/app" leaves "/application" alone.
+  // The end of the path, "/", "?", and "#" each end a segment: resolveRoute cuts the query
+  // before calling, but a direct caller may pass either. Herald strips on any prefix; this
+  // boundary is a deliberate fix of that behavior.
+  const rest = normalized.slice(baseWithoutSlash.length);
+  if (normalized.startsWith(baseWithoutSlash) && (rest === "" || /^[/?#]/.test(rest)))
+    normalized = rest.replace(/^\//, "");
 
   return normalized;
 }
