@@ -2,10 +2,11 @@
 # Installs each consumer fixture offline and checks what it installed, or warms the caches those
 # installs read.
 #
-#   scripts/consumers.sh         the check's step: installs fixtures/consumer-pnpm with pnpm and
-#                                fixtures/consumer-bun with bun, offline, and checks each
-#   scripts/consumers.sh warm    mise run install's step: installs lit with pnpm and with bun,
-#                                from the network, into their global store and cache
+#   scripts/consumers.sh         the check's step: installs fixtures/consumer-pnpm with pnpm,
+#                                fixtures/consumer-npm with npm, and fixtures/consumer-bun with
+#                                bun, offline, and checks each
+#   scripts/consumers.sh warm    mise run install's step: installs lit with pnpm, npm, and bun,
+#                                from the network, into their global store and caches
 #   scripts/consumers.sh repo D  scripts/measure.sh's step: makes D the scratch repository
 #                                below, tagged v0.1.0, and nothing else
 #
@@ -22,15 +23,23 @@
 #                            never tagged here; v0.1.0 is cut at release.
 #
 # Lit, the package's one dependency, comes from each manager's warm cache: pnpm installs with
-# --offline from its store and metadata cache; bun installs with --prefer-offline, reading the
-# global cache through a scratch cache of symlinks to it, so the git sources bun clones land in
-# scratch rather than in the global cache. Both run behind proxies pointed at a closed port, so a
-# cold cache fails the check with a message instead of reaching the network. pnpm adds the
-# package's files to its content-addressed store, outside the working tree.
+# --offline from its store and metadata cache; npm installs with --offline from a scratch cache
+# seeded from its global one, the index copied and the content a tree of symlinks, so the
+# packages npm packs from git and the index entries it writes land in scratch; bun installs with
+# --prefer-offline, reading the global cache through a scratch cache of symlinks to it, so the git
+# sources bun clones land in scratch rather than in the global cache. All three run behind proxies
+# pointed at a closed port, so a cold cache fails the check with a message instead of reaching the
+# network. pnpm adds the package's files to its content-addressed store, outside the working tree.
+#
+# npm is mise's npm pin, resolved through mise so neither node's bundled npm (11.20.0 in node
+# 26.12.0) nor a global npm earlier on PATH runs instead; the check prints its version. npm 12
+# refuses git dependencies by default (allow-git=none), so consumer-npm's .npmrc opts in with
+# allow-git=root. npm packs a git dependency after cloning it, running its prepare script if it
+# has one; neither package here has one.
 #
 # After each install the check asserts that every installed file of both packages equals its tag's
-# file byte for byte; that this package installs exactly package.json and src/ under pnpm, which
-# packs a git dependency by its `files`, and its whole tag tree under bun, which doesn't; that
+# file byte for byte; that this package installs exactly package.json and src/ under pnpm and npm,
+# which pack a git dependency by its `files`, and its whole tag tree under bun, which doesn't; that
 # every exports target is installed; that tsc type-checks the fixture's elements.ts against the
 # installed elements; and that the column's runtime imports the route matcher by its exports.
 set -euo pipefail
@@ -91,16 +100,21 @@ fi
 store=$(dirname "$(pnpm store path)")
 pnpm_flags=(--store-dir "$store" --package-import-method copy --reporter append-only)
 
+# npm, mise's pin for this project, by its path.
+npm=$(mise --cd "$root" which npm)
+npm_flags=(--no-audit --no-fund --no-update-notifier)
+
 if [[ "$mode" == warm ]]; then
   lit=$(node -p 'require(process.argv[1]).dependencies.lit' "$root/package.json")
-  for manager in pnpm bun; do
+  for manager in pnpm npm bun; do
     mkdir -p "$scratch/$manager"
     printf '{ "name": "warm", "private": true, "dependencies": { "lit": "%s" } }\n' "$lit" \
       >"$scratch/$manager/package.json"
   done
   pnpm --dir "$scratch/pnpm" install "${pnpm_flags[@]}"
+  "$npm" install --prefix "$scratch/npm" "${npm_flags[@]}"
   bun install --cwd "$scratch/bun"
-  echo "consumers: pnpm's store and bun's cache hold lit $lit"
+  echo "consumers: pnpm's store, npm's cache, and bun's cache hold lit $lit"
   exit 0
 fi
 [[ "$mode" == check ]] || fail "unknown mode $mode; expected check, warm, or repo"
@@ -143,10 +157,22 @@ if [[ -d "$global_cache" ]]; then
   find "$global_cache" -mindepth 1 -maxdepth 1 ! -name .tmp -exec ln -s -t "$bun_cache" {} +
 fi
 
-for manager in pnpm bun; do
+# npm's scratch cache: the global cache's index copied, so the entries npm writes stay in scratch,
+# and its content as a tree of symlinks, real directories with a link for each file, so the
+# content npm adds lands in scratch too. A cold global cache leaves it empty.
+npm_cache="$scratch/npm-cache"
+mkdir -p "$npm_cache/_cacache"
+npm_global="$("$npm" config get cache --no-update-notifier --logs-max=0)/_cacache"
+if [[ -d "$npm_global/content-v2" && -d "$npm_global/index-v5" ]]; then
+  cp -as "$npm_global/content-v2" "$npm_cache/_cacache/"
+  cp -r "$npm_global/index-v5" "$npm_cache/_cacache/"
+fi
+echo "consumers: npm $("$npm" --version --no-update-notifier), mise's pin, at $npm"
+
+for manager in pnpm npm bun; do
   project="$scratch/consumer-$manager"
   cp -r "$root/fixtures/consumer-$manager" "$project"
-  if [[ "$manager" == pnpm ]]; then runtime=node; else runtime=bun; fi
+  if [[ "$manager" == bun ]]; then runtime=bun; else runtime=node; fi
 
   # The rewrite: each github: source to its local repository, the tag kept.
   "$runtime" "$root/scripts/consumers.js" rewrite "$project/package.json" \
@@ -161,6 +187,15 @@ for manager in pnpm bun; do
     if ((status != 0)) && grep -q ERR_PNPM_NO_OFFLINE "$log"; then
       cat "$log" >&2
       fail "pnpm's store or metadata cache lacks lit; run mise run install to warm it"
+    fi
+  elif [[ "$manager" == npm ]]; then
+    status=0
+    # The fixture's .npmrc, read from --prefix, opts in to its git dependencies.
+    "$npm" install --prefix "$project" --offline --cache "$npm_cache" "${npm_flags[@]}" \
+      >"$log" 2>&1 || status=$?
+    if ((status != 0)) && grep -q ENOTCACHED "$log"; then
+      cat "$log" >&2
+      fail "npm's cache lacks lit; run mise run install to warm it"
     fi
   else
     status=0
@@ -186,9 +221,9 @@ for manager in pnpm bun; do
     "$runtime" "$root/scripts/consumers.js" exports "$installed"
   done
 
-  # This package's installed set: package.json and src/ by `files` under pnpm, the whole tree
-  # under bun.
-  if [[ "$manager" == pnpm ]]; then
+  # This package's installed set: package.json and src/ by `files` under pnpm and npm, the whole
+  # tree under bun.
+  if [[ "$manager" != bun ]]; then
     expected=$(files "$scratch/tags/spike-html-conventions" | grep -E '^(package\.json|src/)')
   else
     expected=$(files "$scratch/tags/spike-html-conventions")

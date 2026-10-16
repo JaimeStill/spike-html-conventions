@@ -9,13 +9,15 @@
 #   scripts/measure.sh rebuild SRC OUT COUNT   one watch-rebuild sample, the command hyperfine
 #                                              times (see "Watch rebuild" below)
 #
-# Timings, each hyperfine's mean of several runs, Node (node 26 + pnpm) against Bun:
+# Timings, each hyperfine's mean of several runs, Node (node 26 with pnpm, and with npm) against
+# Bun:
 #
 #   install, cold   a consumer fixture installs spike-html-design v0.7.0 and this package by git
 #                   tag, each source pointed at a local repository (git+file://, tag kept) so
 #                   the git half isn't network-bound: spike-html-design's checkout and the
 #                   scratch repository scripts/consumers.sh makes, tagged v0.1.0. Lit comes from
-#                   the registry into an empty store or cache, emptied before every run.
+#                   the registry into an empty store or cache, emptied before every run. npm
+#                   reads the fixture's .npmrc, allow-git=root, its opt-in to git dependencies.
 #   install, warm   the same with the store or cache kept, and node_modules and the lockfile
 #                   removed before every run.
 #   type check      tsc --noEmit over the .ts and JSDoc forms: one tool, the same in both columns.
@@ -43,8 +45,9 @@
 # Before the timings, two sections read only the local disk:
 #
 #   footprint       each mise tool's installed size, from mise where and du -sb, with the column
-#                   it belongs to and each column's total: the Node column alone, and with each of
-#                   its bundlers, esbuild or Vite.
+#                   it belongs to and each column's total: Node with npm and Node with pnpm, each
+#                   alone and with each of its bundlers, esbuild or Vite; and Bun. npm is its own
+#                   pin; the npm node bundles is counted in node's size and recorded beside it.
 #   forms           lines and brotli bytes (quality 11, through bun's node:zlib; no brotli CLI is
 #                   pinned) of each file in src/{ts,jsdoc,js}, and each form's totals.
 #
@@ -55,11 +58,21 @@
 #                   that carries a git-tag dependency (ERR_PNPM_EXOTIC_SUBDEP), and bun installs it;
 #                   pnpm installs it too with blockExoticSubdeps: false in the consumer's
 #                   pnpm-workspace.yaml, so the refusal is a default one setting lifts.
+#   npm             npm 12 refuses any git dependency with no allow-git opt-in (EALLOWGIT);
+#                   with allow-git=root it refuses the git-tag package's own git-tag dependency,
+#                   and with allow-git=all it installs both; it runs a git dependency's prepare
+#                   script when it packs the clone, though it reports the script blocked by
+#                   allowScripts, and --ignore-scripts skips it.
 #   prefixed tag    from a local, unpushed fixture/v0.1.0 tag with the package in fixture/,
 #                   pnpm installs the subdirectory with #fixture/v0.1.0&path:/fixture, each file
-#                   the fixture's byte for byte; bun can't, reading the whole fragment as the ref.
+#                   the fixture's byte for byte; bun can't, reading the whole fragment as the ref;
+#                   npm can't either, ignoring "fixture/v0.1.0&path" as an unknown key and
+#                   reading package.json at the repository's root. npm's own subdirectory syntax,
+#                   #fixture/v0.1.0::path:fixture, resolves the subdirectory's manifest but fails
+#                   to install it: the resolved spec, a bare commit, drops the path.
 #   GitHub          a scratch consumer installs the package from github:<owner>/<repo>#<tag> under
-#                   pnpm and under bun, each with a store or cache of its own in scratch; it
+#                   pnpm, npm (allow-git=root), and bun, each with a store or cache of its own in
+#                   scratch; it
 #                   passes when every installed file equals the tag's byte for byte and every
 #                   exports target is installed. The tag's tree comes from a fresh shallow fetch
 #                   from GitHub, archived as GitHub's tarball is. The row records the file count
@@ -106,6 +119,12 @@ design_slug=JaimeStill/spike-html-design
 own_slug=JaimeStill/spike-html-conventions
 jsdelivr=https://cdn.jsdelivr.net/gh/$design_slug@$design_tag
 lit=$(node -p 'require(process.argv[1]).dependencies.lit' "$root/package.json")
+# npm, mise's pin for this project, by its path, so neither node's bundled npm nor a global npm
+# earlier on PATH runs instead.
+npm=$(mise --cd "$root" which npm)
+npm_flags=(--no-audit --no-fund --no-update-notifier)
+# The npm node bundles, in node's install, which this script never runs.
+node_npm="$(mise --cd "$root" where node)/lib/node_modules/npm"
 
 fail() {
   echo "measure: $*" >&2
@@ -143,6 +162,7 @@ echo "| --- | --- |"
 version() { printf '| %s | %s |\n' "$1" "$2"; }
 version node "$(node --version)"
 version pnpm "$(pnpm --version)"
+version npm "$("$npm" --version --no-update-notifier) (mise pin, $npm; node bundles $(node -p 'require(process.argv[1]).version' "$node_npm/package.json"), unused)"
 version bun "$(bun --version)"
 version tsc "$(tsc --version)"
 version esbuild "$(esbuild --version)"
@@ -167,7 +187,7 @@ echo "| tool | column | installed size |"
 echo "| --- | --- | ---: |"
 # tool|column, every pin in mise.toml.
 footprint_tools=(
-  "node|Node" "pnpm|Node" "npm:esbuild|Node, to bundle" "npm:vite|Node, to bundle" "bun|Bun"
+  "node|Node" "npm|Node + npm" "pnpm|Node + pnpm" "npm:esbuild|Node, to bundle" "npm:vite|Node, to bundle" "bun|Bun"
   "github:microsoft/typescript-go|both (tsc)" "biome|both"
   "shellcheck|the check only" "aqua:sharkdp/hyperfine|the measure task only"
 )
@@ -182,11 +202,12 @@ for entry in "${footprint_tools[@]}"; do
   printf '| %s | %s | %s |\n' "$tool" "${entry#*|}" "$(mb "$bytes")"
 done
 echo
-node_column=$(mb "${footprint_bytes[node]}" "${footprint_bytes[pnpm]}")
-node_bundler=$(mb "${footprint_bytes[node]}" "${footprint_bytes[pnpm]}" "${footprint_bytes[npm:esbuild]}")
-node_vite=$(mb "${footprint_bytes[node]}" "${footprint_bytes[pnpm]}" "${footprint_bytes[npm:vite]}")
-bun_column=$(mb "${footprint_bytes[bun]}")
-echo "Tools each column adds: Node, node + pnpm = $node_column, $node_bundler with esbuild, $node_vite with Vite (Vite runs on node); Bun, bun = $bun_column. tsc and biome are in both."
+# column MANAGER: the Node column with MANAGER, alone, with esbuild, and with Vite.
+column() {
+  local node=${footprint_bytes[node]} manager=${footprint_bytes[$1]}
+  echo "node + $1 = $(mb "$node" "$manager"), $(mb "$node" "$manager" "${footprint_bytes[npm:esbuild]}") with esbuild, $(mb "$node" "$manager" "${footprint_bytes[npm:vite]}") with Vite"
+}
+echo "Tools each column adds: Node + npm, $(column npm); Node + pnpm, $(column pnpm); Bun, bun = $(mb "${footprint_bytes[bun]}"). Vite runs on node; tsc and biome are in both. node's size includes the npm $(node -p 'require(process.argv[1]).version' "$node_npm/package.json") it bundles, $(mb "$(du -sb "$node_npm" | cut -f1)"), which the npm column doesn't run: npm 12 is its own pin."
 echo
 
 # ---- Forms: lines and brotli bytes per file and per form of src/. Brotli is quality 11 with
@@ -249,18 +270,25 @@ consumer() {
 for mode in cold warm; do
   mkdir -p "$scratch/$mode"
   consumer "$scratch/$mode/pnpm" pnpm
+  consumer "$scratch/$mode/npm" npm
   consumer "$scratch/$mode/bun" bun
 done
 
 # Each manager's store or cache and its metadata cache are scratch, per mode: pnpm's store by
-# --store-dir, its metadata cache and state under XDG_CACHE_HOME and XDG_STATE_HOME; bun's
-# cache, git clones included, by BUN_INSTALL_CACHE_DIR.
-# pnpm_install MODE and bun_install MODE print the command hyperfine times; pnpm_warm and
-# bun_warm PROJECT run the same install of another project against the warm store or cache.
+# --store-dir, its metadata cache and state under XDG_CACHE_HOME and XDG_STATE_HOME; npm's cache,
+# the packages it packs from git included, by --cache; bun's cache, git clones included, by
+# BUN_INSTALL_CACHE_DIR.
+# pnpm_install, npm_install, and bun_install MODE print the command hyperfine times; pnpm_warm,
+# npm_warm, and bun_warm PROJECT run the same install of another project against the warm store
+# or cache.
 pnpm_install() {
   local mode=$1
   echo "env XDG_CACHE_HOME=$scratch/$mode/pnpm-xdg/cache XDG_STATE_HOME=$scratch/$mode/pnpm-xdg/state" \
     "pnpm --dir $scratch/$mode/pnpm install --store-dir $scratch/$mode/pnpm-store"
+}
+npm_install() {
+  local mode=$1
+  echo "$npm install --prefix $scratch/$mode/npm --cache $scratch/$mode/npm-cache ${npm_flags[*]}"
 }
 bun_install() {
   local mode=$1
@@ -272,11 +300,16 @@ pnpm_warm() {
   XDG_CACHE_HOME=$scratch/warm/pnpm-xdg/cache XDG_STATE_HOME=$scratch/warm/pnpm-xdg/state \
     pnpm --dir "$project" install --store-dir "$scratch/warm/pnpm-store" "$@"
 }
+npm_warm() {
+  local project=$1
+  shift
+  "$npm" install --prefix "$project" --cache "$scratch/warm/npm-cache" "${npm_flags[@]}" "$@"
+}
 bun_warm() {
   BUN_INSTALL_CACHE_DIR=$scratch/warm/bun-cache bun install --cwd "$1"
 }
 clean_project() {
-  echo "rm -rf $1/node_modules $1/pnpm-lock.yaml $1/bun.lock $1/bun.lockb"
+  echo "rm -rf $1/node_modules $1/pnpm-lock.yaml $1/package-lock.json $1/bun.lock $1/bun.lockb"
 }
 
 # The watchers' scratch copy of the sources, with Lit through a link to the installed one. It
@@ -369,6 +402,8 @@ timing "Install from a git tag, cold" \
   --runs 5 \
   --prepare "$(clean_project "$scratch/cold/pnpm") $scratch/cold/pnpm-store $scratch/cold/pnpm-xdg" \
   -n "Node: pnpm install" "$(pnpm_install cold)" \
+  --prepare "$(clean_project "$scratch/cold/npm") $scratch/cold/npm-cache" \
+  -n "Node: npm install" "$(npm_install cold)" \
   --prepare "$(clean_project "$scratch/cold/bun") $scratch/cold/bun-cache" \
   -n "Bun: bun install" "$(bun_install cold)"
 
@@ -377,6 +412,8 @@ timing "Install from a git tag, warm" \
   --runs 10 --warmup 1 \
   --prepare "$(clean_project "$scratch/warm/pnpm")" \
   -n "Node: pnpm install" "$(pnpm_install warm)" \
+  --prepare "$(clean_project "$scratch/warm/npm")" \
+  -n "Node: npm install" "$(npm_install warm)" \
   --prepare "$(clean_project "$scratch/warm/bun")" \
   -n "Bun: bun install" "$(bun_install warm)"
 
@@ -585,6 +622,93 @@ fi
 row "Bun installs the same package and its git-tag dependency" "$ok" \
   "exit $status; node_modules holds $(names "$scratch/exotic-bun/node_modules")"
 
+# npm_project DIR ALLOW NAME SPEC: a consumer with the one dependency NAME at SPEC, and
+# allow-git=ALLOW in its .npmrc, or no .npmrc when ALLOW is empty.
+npm_project() {
+  mkdir -p "$1"
+  printf '{ "name": "%s", "private": true, "dependencies": { "%s": "%s" } }\n' "${1##*/}" "$3" "$4" \
+    >"$1/package.json"
+  if [[ -n "$2" ]]; then echo "allow-git=$2" >"$1/.npmrc"; fi
+}
+# npm_lines LEVEL LOG: npm's LEVEL (error or warn) lines in LOG, but the debug log's path, joined.
+npm_lines() {
+  sed -n "s/^npm $1 //p" "$2" | grep -v 'complete log of this run' | paste -s -d ';' - |
+    sed 's/;/; /g' || true
+}
+
+echo "measure: npm rows" >&2
+# npm 12 with no opt-in: a consumer of spike-html-design by git tag, and no .npmrc.
+npm_project "$scratch/npm-default" "" spike-html-design "git+file://$design#$design_tag"
+status=0
+npm_warm "$scratch/npm-default" >"$scratch/npm-default.log" 2>&1 || status=$?
+ok=0
+if ((status != 0)) && grep -qx 'npm error code EALLOWGIT' "$scratch/npm-default.log" &&
+  [[ ! -e "$scratch/npm-default/node_modules/spike-html-design" ]]; then
+  ok=1
+fi
+row "npm refuses a git-tag dependency with no allow-git opt-in (npm 12's default, allow-git=none)" \
+  "$ok" "exit $status; $(npm_lines error "$scratch/npm-default.log")"
+
+# The throwaway git-tag package above, with its own git-tag dependency, under each opt-in.
+for allow in root all; do
+  npm_project "$scratch/exotic-npm-$allow" "$allow" exotic "git+file://$exotic#v0.0.1"
+  status=0
+  npm_warm "$scratch/exotic-npm-$allow" >"$scratch/exotic-npm-$allow.log" 2>&1 || status=$?
+  nested="$scratch/exotic-npm-$allow/node_modules/spike-html-design/package.json"
+  ok=0
+  if [[ "$allow" == root ]]; then
+    # root admits the consumer's own git dependency and refuses exotic's.
+    if ((status != 0)) && grep -qx 'npm error code EALLOWGIT' "$scratch/exotic-npm-$allow.log" &&
+      [[ ! -f "$nested" ]]; then
+      ok=1
+    fi
+    row "npm with allow-git=root refuses a git-tag package's own git-tag dependency" "$ok" \
+      "exit $status; $(npm_lines error "$scratch/exotic-npm-$allow.log")"
+  else
+    if ((status == 0)) && [[ -f "$nested" ]]; then ok=1; fi
+    row "npm with allow-git=all installs the same package and its git-tag dependency" "$ok" \
+      "exit $status; node_modules holds $(names "$scratch/exotic-npm-$allow/node_modules")"
+  fi
+done
+
+# A throwaway git-tag package whose prepare script writes prepared.txt, installed with
+# allow-git=root and no allowScripts entry, then again with --ignore-scripts.
+prep="$scratch/prep"
+mkdir -p "$prep"
+cat >"$prep/package.json" <<'EOF'
+{ "name": "prep", "version": "0.0.1", "scripts": { "prepare": "node -e \"require('fs').writeFileSync('prepared.txt', 'yes')\"" } }
+EOF
+(cd "$prep" && git init -q -b main && git add -A && git commit -q -m v0.0.1 && git tag -a v0.0.1 -m v0.0.1)
+observed=()
+ran=()
+for variant in default ignore-scripts; do
+  npm_project "$scratch/prep-$variant" root prep "git+file://$prep#v0.0.1"
+  status=0
+  if [[ "$variant" == default ]]; then
+    npm_warm "$scratch/prep-$variant" >"$scratch/prep-$variant.log" 2>&1 || status=$?
+  else
+    npm_warm "$scratch/prep-$variant" --ignore-scripts >"$scratch/prep-$variant.log" 2>&1 ||
+      status=$?
+  fi
+  if ((status == 0)) && [[ -f "$scratch/prep-$variant/node_modules/prep/prepared.txt" ]]; then
+    ran+=(yes)
+    result="prepare ran (prepared.txt installed)"
+  else
+    ran+=(no)
+    result="no prepared.txt installed"
+  fi
+  warned=$(grep -m1 '^npm warn install-scripts .*blocked' "$scratch/prep-$variant.log" |
+    sed -e 's/^npm warn install-scripts //' -e 's/:$//' || true)
+  observed+=("$variant: exit $status, $result${warned:+, npm warned: $warned}")
+done
+# The default installs prepare's output while warning the script was blocked; --ignore-scripts
+# installs none.
+ok=0
+if [[ "${ran[*]}" == "yes no" ]] && grep -q 'blocked' "$scratch/prep-default.log"; then ok=1; fi
+printf -v result '%s; ' "${observed[@]}"
+row "npm runs a git dependency's prepare when it packs the clone, though allowScripts reports it blocked; --ignore-scripts skips it" \
+  "$ok" "${result%; }"
+
 echo "measure: prefixed-tag rows" >&2
 # A throwaway repository with this package's tag tree in fixture/, tagged fixture/v0.1.0, never
 # pushed.
@@ -599,6 +723,10 @@ for manager in pnpm bun; do
   printf '{ "name": "prefixed-%s", "private": true, "dependencies": { "spike-html-conventions": "%s" } }\n' \
     "$manager" "$spec" >"$scratch/prefixed-$manager/package.json"
 done
+npm_project "$scratch/prefixed-npm" root spike-html-conventions "$spec"
+# npm's own subdirectory syntax: ::-separated keys in the fragment, path: among them.
+npm_spec="git+file://$prefixed#fixture/$own_tag::path:fixture"
+npm_project "$scratch/prefixed-npm-path" root spike-html-conventions "$npm_spec"
 status=0
 pnpm_warm "$scratch/prefixed-pnpm" --reporter append-only >"$scratch/prefixed-pnpm.log" 2>&1 || status=$?
 installed="$scratch/prefixed-pnpm/node_modules/spike-html-conventions"
@@ -624,6 +752,39 @@ if ((status != 0)) && grep -qF "no commit matching \"fixture/$own_tag&path:/fixt
 fi
 row "Bun can't install a subdirectory from a prefixed tag (the same spec)" "$ok" \
   "exit $status; ${reason:-$(tail -n1 "$scratch/prefixed-bun.log")}"
+
+# npm_enoent LOG: npm's error code and its Could not read line, of the many it prints for ENOENT.
+npm_enoent() {
+  echo "$(grep -m1 '^npm error code' "$1" | sed 's/^npm error //');" \
+    "$(grep -m1 '^npm error enoent Could not read' "$1" | sed 's/^npm error enoent //')"
+}
+
+status=0
+npm_warm "$scratch/prefixed-npm" >"$scratch/prefixed-npm.log" 2>&1 || status=$?
+# npm splits the fragment on ::, reads each part with a colon as key:value, and ignores the
+# unknown key "fixture/v0.1.0&path", so it clones the default branch and finds no package.json at
+# its root; any other outcome fails the row.
+ok=0
+if ((status != 0)) && grep -qF "ignoring unknown key \"fixture/$own_tag&path\"" "$scratch/prefixed-npm.log" &&
+  [[ ! -e "$scratch/prefixed-npm/node_modules/spike-html-conventions" ]]; then
+  ok=1
+fi
+row "npm can't install a subdirectory from a prefixed tag (the same spec)" "$ok" \
+  "exit $status; warn: $(grep -m1 'ignoring unknown key' "$scratch/prefixed-npm.log" | sed 's/^npm warn //');
+   $(npm_enoent "$scratch/prefixed-npm.log")"
+
+status=0
+npm_warm "$scratch/prefixed-npm-path" >"$scratch/prefixed-npm-path.log" 2>&1 || status=$?
+# npm resolves the subdirectory's manifest, then reifies from the resolved spec, a bare commit
+# with the path dropped, and finds no package.json at the clone's root. An install fails the row,
+# as a change to record.
+ok=0
+if ((status != 0)) && grep -q 'Could not read package.json' "$scratch/prefixed-npm-path.log"; then
+  ok=1
+fi
+row "npm can't install a subdirectory from a prefixed tag with its own syntax (#fixture/$own_tag::path:fixture)" \
+  "$ok" "exit $status; warn: $(grep -m1 '^npm warn tarball' "$scratch/prefixed-npm-path.log" | sed 's/^npm warn tarball //');
+   $(npm_enoent "$scratch/prefixed-npm-path.log")"
 
 echo "measure: GitHub and jsDelivr rows" >&2
 # released SLUG TAG: whether TAG is on github.com/SLUG. Any git failure but a missing ref ends the
@@ -658,7 +819,7 @@ github_rows() {
   local name=$1 slug=$2 tag=$3 manager project installed status ok bad count local_install left_out
   local tree="$scratch/tag-${2##*/}" commit
   commit=$(git -C "$scratch/fetch-${2##*/}" rev-parse --short "$tag^{commit}")
-  for manager in pnpm bun; do
+  for manager in pnpm npm bun; do
     project="$scratch/github-$name-$manager"
     mkdir -p "$project"
     printf '{ "name": "github-%s", "private": true, "dependencies": { "%s": "github:%s#%s" } }\n' \
@@ -667,6 +828,11 @@ github_rows() {
     if [[ "$manager" == pnpm ]]; then
       XDG_CACHE_HOME=$project-xdg/cache XDG_STATE_HOME=$project-xdg/state \
         pnpm --dir "$project" install --store-dir "$project-store" --reporter append-only \
+        >"$project.log" 2>&1 || status=$?
+    elif [[ "$manager" == npm ]]; then
+      # The consumer's opt-in, as consumer-npm's .npmrc.
+      echo "allow-git=root" >"$project/.npmrc"
+      "$npm" install --prefix "$project" --cache "$project-cache" "${npm_flags[@]}" \
         >"$project.log" 2>&1 || status=$?
     else
       BUN_INSTALL_CACHE_DIR=$project-cache bun install --cwd "$project" >"$project.log" 2>&1 ||
@@ -764,7 +930,7 @@ if ((own_released)); then
     jsdelivr_row "$own_slug" "$own_tag" "$path" "$kind"
   done
 else
-  for manager in pnpm bun; do
+  for manager in pnpm npm bun; do
     unreleased "$manager installs spike-html-conventions from github:$own_slug#$own_tag"
   done
   for path in "${own_modules[@]}"; do

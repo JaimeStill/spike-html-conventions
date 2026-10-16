@@ -38,7 +38,9 @@ behind() {
 }
 
 # mise tools pinned below their latest version. JSON is read with node, a mise pin, not jq.
-outdated=$(mise outdated --bump --local --json)
+# Errors only: mise warns on every run that npm's GitHub release has no assets as it falls back to
+# another source for npm's latest, which would break the silence of a current tree.
+outdated=$(MISE_LOG_LEVEL=error mise outdated --bump --local --json)
 lines=$(node -e '
   const out = JSON.parse(process.argv[1]);
   for (const [tool, v] of Object.entries(out)) console.log(tool + " " + v.requested + " -> " + v.bump);

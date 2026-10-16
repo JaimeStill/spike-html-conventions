@@ -2,6 +2,8 @@
 biome = "2.5.15"
 bun = "1.4.3"
 node = "26.12.0"
+# npm 12, its own pin: node 26.12.0 bundles npm 11.20.0, from before npm 12 refused git dependencies by default.
+npm = "12.2.1"
 pnpm = "12.11.2"
 shellcheck = "0.11.0"
 "github:microsoft/typescript-go" = { version = "7.0.2", version_prefix = "typescript/v", bin_path = "package/lib" }
@@ -11,7 +13,7 @@ shellcheck = "0.11.0"
 "aqua:sharkdp/hyperfine" = "2.0.0"
 
 [tasks.check]
-description = "Lint, format-check, type-check, and test the sources, and install both consumer fixtures offline; reads no network, writes nothing"
+description = "Lint, format-check, type-check, and test the sources, and install the three consumer fixtures offline; reads no network, writes nothing"
 run = '''
 set -eu
 cd "$MISE_PROJECT_ROOT"
@@ -30,12 +32,13 @@ tsc --noEmit -p .
 node --test test/
 bun test ./test/
 # Each consumer fixture installs this package and spike-html-design by git tag, offline, from
-# local repositories, with lit from the managers' caches (mise run install warms them).
+# local repositories, with lit from the managers' caches (mise run install warms them): pnpm,
+# npm, and bun.
 scripts/consumers.sh
 '''
 
 [tasks.install]
-description = "Install lit from the lockfile with pnpm, and warm pnpm's and bun's caches with lit for the check's offline fixture installs; reads the network"
+description = "Install lit from the lockfile with pnpm, and warm pnpm's, npm's, and bun's caches with lit for the check's offline fixture installs; reads the network"
 run = ["pnpm install --frozen-lockfile", "scripts/consumers.sh warm"]
 dir = "{{config_root}}"
 
@@ -65,7 +68,7 @@ run = "scripts/demo.sh"
 dir = "{{config_root}}"
 
 [tasks.measure]
-description = "Record each mise tool's installed size and each TypeScript form's lines and brotli bytes, time each toolchain with hyperfine (Node: tsc, esbuild, and Vite; Bun: bun build), and record every row, the GitHub and jsDelivr ones for v0.1.0 once it is released, as a dated markdown report on stdout; reads the network, writes nothing to the working tree"
+description = "Record each mise tool's installed size and each TypeScript form's lines and brotli bytes, time each toolchain with hyperfine (Node: pnpm and npm installs, tsc, esbuild, and Vite; Bun: bun install and bun build), and record every row, the GitHub and jsDelivr ones for v0.1.0 once it is released, as a dated markdown report on stdout; reads the network, writes nothing to the working tree"
 run = "scripts/measure.sh"
 dir = "{{config_root}}"
 
