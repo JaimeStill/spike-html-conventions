@@ -143,6 +143,38 @@ Conflict of interest: this survey was drafted by an Anthropic model, and Anthrop
 - The web-component libraries below: Web Test Runner in 8 of 13 rows, Playwright alone in FAST and
   Fluent, Jest in Stencil and Ionic, and Vitest in Spectrum's gen2.
 
+### Lint and format
+
+| measure | ESLint | Prettier | Biome | oxlint | oxfmt |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| SoJS 2025 utilities, respondents ([s1][sj25-other]) | 9,697 | 9,295 | 1,762 | 123 (write-in) | |
+| npm downloads ([s57][npm-lint], [s58][npm-biome]) | 158.7M | 139.1M | 17.9M | 26.8M | 17.1M |
+| the 13 web-component rows below | 10 | 11 | 1 | 0 | 0 |
+
+- SoJS 2025's utilities question lists ESLint, Prettier, and Biome as answers. oxlint's 123 are
+  write-ins, and oxfmt draws none. The figures are respondents, not shares, and the section opens
+  "Every self-respecting JavaScript developer these days seems to be using ESLint and Prettier"
+  ([s1][sj25-other]).
+- npm counts `@biomejs/biome` on its own, since the downloads API takes no scoped package in a
+  bulk query ([s58][npm-biome]). Like the build tools', the counts include installs by other
+  packages.
+- The web-component libraries, read from each root manifest at the commit in the table below
+  (for Ionic, `core/package.json`, since its root manifest declares only Lerna and semver):
+  ESLint in 10 and Prettier in 11. Catalyst and relative-time-element take Prettier through `@github/prettier-config` and
+  `eslint-plugin-github`, which runs it as an ESLint rule and depends on `prettier`
+  ([s59][eslint-gh]). Web Awesome runs Prettier alone ([s60][m-wa]), FAST runs Biome alone
+  (`@biomejs/biome` 2.4.8, [s61][m-fast]), and Material Web names neither, in its manifest or a
+  root config file ([s27][r-mwc]). Shoelace and Spectrum add `eslint-plugin-lit` and
+  `eslint-plugin-wc` ([s62][m-shoelace], [s28][r-swc]). Lit's root ESLint config uses neither,
+  though Lit keeps an unpublished `eslint-plugin-lit` of its own in `packages/labs`
+  ([s63][lit-eslint]). None uses oxlint or oxfmt.
+- oxlint and oxfmt are the linter and formatter of Oxc, which VoidZero calls "the foundation of our
+  unified toolchain", beside Vite, Vitest, and Rolldown ([s64][voidzero]). Both are MIT, from
+  `oxc-project/oxc`; oxlint is at 1.88.0 and oxfmt at 0.73.0, still 0.x ([s65][oxc-npm]). Each npm
+  package is a bin script with 19 per-platform binding packages, and each runs as a Node script
+  that loads a native addon (`oxlint.linux-x64-gnu.node`, 15.2 MB; `oxfmt.linux-x64-gnu.node`,
+  8.9 MB; *m 2026-10-16T17:45:53Z*, Results). Biome is one native binary.
+
 ### What the web-component libraries use
 
 Read from each repository's default branch: the root manifest, the lockfile, the build and test
@@ -203,6 +235,7 @@ npm's adoption among the libraries doesn't decide it.
 | library build | tsc emit to unbundled ESM, with an optional CDN bundle | esbuild and Vite for libraries | broad: unbundled ESM with `.d.ts` (Lit's guidance), not one tool |
 | app build | webpack by use, Vite close behind | Vite (98% retention), now on Rolldown | trend: Vite |
 | test runner | Jest overall; Web Test Runner for web-component libraries | Vitest, with browser mode stable | none for web-component libraries: Web Test Runner incumbent, Vitest rising |
+| lint and format | ESLint and Prettier, by SoJS, npm, and 10 and 11 of 13 web-component rows | Biome (FAST) and Oxc's tools, a minority in SoJS; no year-on-year figure read | yes: ESLint + Prettier |
 | release hosting | public npm, scoped, increasingly with provenance; relative-time-element also on GitHub Packages, Shoelace and Web Awesome also as CDN builds | trusted publishing (OIDC) | yes among the libraries: npm; none releases through an alternative alone. The decision is spike-html-packages', with npm ruled out unless no workable alternative exists |
 
 Not established: Stack Overflow 2026's runtime and package-manager figures; whether Bun installs
@@ -270,14 +303,25 @@ SoJS lists neither Web Test Runner nor a 2025 package-manager question.
 [npm-pw]: https://api.npmjs.org/downloads/point/2026-10-06:2026-10-12/@playwright/test
 [npm-yoy-build]: https://api.npmjs.org/downloads/point/2025-10-06:2025-10-12/webpack,esbuild,vite,rolldown
 [npm-readme]: https://github.com/npm/cli/blob/latest/README.md
+[npm-lint]: https://api.npmjs.org/downloads/point/2026-10-06:2026-10-12/eslint,prettier,oxlint,oxfmt
+[npm-biome]: https://api.npmjs.org/downloads/point/2026-10-06:2026-10-12/@biomejs/biome
+[voidzero]: https://voidzero.dev/
+[oxc-npm]: https://registry.npmjs.org/oxlint/1.88.0
+[m-wa]: https://github.com/shoelace-style/webawesome/blob/fbe82ff0dd9c/package.json
+[m-fast]: https://github.com/microsoft/fast/blob/8f42cb3a66e5/package.json
+[m-shoelace]: https://github.com/shoelace-style/shoelace/blob/25bd8ec77660/package.json
+[lit-eslint]: https://github.com/lit/lit/blob/01dbc6673cdc/packages/labs/eslint-plugin/package.json
+[eslint-gh]: https://registry.npmjs.org/eslint-plugin-github/4.7.0
 
 ## Results
 
-Every measured figure below is from one run of `mise run measure`, dated
-**2026-10-16T14:03:02Z (UTC)**, cited as *(m 2026-10-16)*. That covers the timings and rows,
-each mise tool's installed size (its Footprint section, `mise where` and `du -sb`), and the lines
-and brotli bytes of `src/` (its Forms section), with every tool's version as pinned in
-`mise.toml`. File counts from the offline installs are from `mise run check` the same day.
+Every measured figure below is from a dated run of `mise run measure`. Results 1, 2, and 7 cite
+the run of **2026-10-16T14:03:02Z (UTC)** as *(m 2026-10-16)*, unless a citation names another
+run. That covers the timings and rows, each mise tool's installed size (its Footprint section,
+`mise where` and `du -sb`), and the lines and brotli bytes of `src/` (its Forms section), with
+every tool's version as pinned in `mise.toml`. Results 3 and 6 cite the run of
+**2026-10-16T17:45:53Z (UTC)** as *(m 2026-10-16T17:45:53Z)*, for the layer rules and the lint
+and format rows. File counts from the offline installs are from `mise run check` the same day.
 Survey figures cite the Ecosystem survey's sources, and other facts from outside the spike carry
 their own source and date.
 
@@ -585,6 +629,181 @@ as written unless `rewriteRelativeImportExtensions` rewrites `./x.ts` to `./x.js
 
 The JSDoc and plain JS forms stay in `src/` as this comparison's evidence, not as conventions.
 
+### 3. Layout and direction: `layers/`, enforced by Biome
+
+**The layout.** The layers are directories in one package, in `layers/`, beside `src/`, whose
+per-form tree stays frozen as Results 2's evidence. `layers/` isn't in package.json's `exports`.
+It holds five kinds of occupant, each a small `.ts` module:
+
+```
+layers/
+  foundation/dom.ts                 the platform alone: define, emit, required
+  components/status-badge.ts        a minimal Lit element on the foundation
+  sdk/session.ts                    a Lit reactive controller, standing in for the auth hook
+  apps/static/site/main.ts          a static-branch app
+  apps/application/documents/       an application-branch app: main.ts, model.ts, views/list.ts
+  apps/application/prompts/main.ts  a second application-branch app, the sibling the rules refuse
+```
+
+**The direction.** Every layer imports its own files, and none imports the package by its own
+name, bare or with a subpath:
+
+| layer | may import | never |
+| --- | --- | --- |
+| foundation | nothing else: no package, Lit included | any other layer |
+| components | the foundation, Lit | the SDK, any app |
+| SDK, a sibling of components | the foundation, Lit | components, any app |
+| static-branch app | the foundation, components, Lit | the SDK, any other app |
+| application-branch app | the foundation, components, the SDK, Lit | any other app |
+
+STANDARDS.md holds the calls the check can't make: what belongs in each layer, and promoting an
+app's element once a second app needs it.
+
+**The mechanism.** Biome's `noRestrictedImports` ([rule][biome-nri]), at error level, in one
+`biome.json` override per layer directory. The foundation, components, and SDK refuse a layer by
+its directory name, at any depth, and the foundation refuses every bare specifier. An app can't
+refuse a sibling by name, since a sibling is `../<name>`, so each app override refuses every
+specifier that climbs out of the app and re-allows the permitted layers named from `layers/`.
+That takes one override per file depth, 0 to 3 directories into an app; the deepest also covers
+everything below it and fails closed. `test/layers.test.js` runs the pinned Biome over two scratch
+trees built from `test/layers-tree.js` in the check. The violation tree is 40 files, one import
+each, covering every forbidden edge, the four import forms (`import`, `export … from`,
+`import type`, and `import()`), and the package's own name: 6 in the foundation, 7 in
+components, 5 in the SDK, 12 in the static app, and 10 in the application app. The allowed tree
+is 11 files of permitted imports in the same forms. The test passes only when the rule flags
+exactly the 40 and none of the 11, so a rule that refuses everything or nothing fails it.
+Measured: 40 of 40 and 0 of 11 *(m 2026-10-16T17:45:53Z)*.
+
+**What it can't see.** The rule matches the import's text, never the resolved file. A path that
+descends and climbs back inside an app, `./views/../../prompts/x.js`, or one that starts `./../`,
+gets past the per-depth patterns, and Biome 2.5.15's globs have no character classes to refuse
+such paths in general. In the foundation, components, and SDK, a path naming a refused layer
+directory is still caught (`./x/../../sdk/session.js` in components draws the rule). Inside an app
+it isn't: the app overrides refuse by climbing, not by name, so `./../../../sdk/session.js` from
+the static app and `./x/../../../../apps/static/site/main.js` from an application app both pass
+(reproduced 2026-10-16 against this `biome.json`). And an app needs a pattern per file depth:
+a file more than three directories into an app fails closed, its outward imports refused,
+permitted ones included.
+
+**Rejected:**
+
+- **dependency-cruiser** ([repo][depcruise]): it checks the resolved module graph, so it would
+  close the gap above, which text matching can't. It is an extra pin, a Node package beside the
+  linter the check already runs, for one rule the linter covers on every normalized path.
+- **tsc project references** ([handbook][ts-refs]): one project per layer, each referencing only
+  what it may import. `tsc -b` writes output even when the build fails, and the check writes
+  nothing. Reproduced with tsc 7.0.2, 2026-10-16: two projects, the second with a type error,
+  exited 2 and wrote both projects' `.js`, `.d.ts`, and `.tsbuildinfo`; `tsc -b --noEmit` is
+  refused (TS6310, a referenced project may not disable emit) and still writes both
+  `.tsbuildinfo` files.
+- **ESLint's `no-restricted-imports`** ([rule][eslint-nri]): it never checks an `import()`
+  expression, so it flags 35 of the 40 violation files, missing the five dynamic edges, and it
+  needs `biome.json`'s groups translated to regular expressions: ESLint reads a group as
+  gitignore lines, where a `!` line can't re-include a `./` or `../` path, so the groups copied
+  as written also flag 9 of the 11 allowed files *(m 2026-10-16T17:45:53Z)*. Results 6 weighs it
+  as a setup.
+
+**Handed on.**
+
+- To spike-html-packages: the package-boundary facts. pnpm refuses an import of an undeclared
+  package, a phantom dependency, by default (Results 1, amendment 13), and Biome's
+  `noUndeclaredDependencies` ([rule][biome-nud]) refuses one in the lint. So if the layers become
+  packages, each package's declared dependencies enforce the direction between them, by resolved
+  file rather than by text; whether they do is spike-html-packages' call. So is the import
+  extension the releases use: the occupants import `.js` paths, which bundler resolution maps to
+  `.ts` with no compiler option.
+- To components or spike-html-apps: herald's elements import domain code. Four files in
+  `app/client/ui/elements` import from `@domains` ([herald][herald-elements], 6fc22b3, read
+  2026-10-16): `classify-progress.ts` the `WORKFLOW_STAGES` constant and the `WorkflowStage`
+  type, `document-card.ts` the `WorkflowStage` and `Document` types, `prompt-card.ts` the `Prompt`
+  type, and `blob-viewer.ts` the `findFormat` lookup. Under this layout a component may not: the
+  types become the element's own props, and the constant and lookup move up to the app or down
+  into the element.
+- To branches: the app-internal tiers (modules and views), and whether static pages use Lit.
+  STANDARDS.md records the second as undecided.
+
+### 6. Lint and format: Biome
+
+Three setups over one copy of `src/`, `layers/`, and `test/` (21 files), each from mise pins that
+only the measure task uses, plus Biome, the check's tool *(m 2026-10-16T17:45:53Z)*:
+
+| fact | A: Biome 2.5.15 | B: ESLint 10.13.0 + Prettier 3.9.10 | C: oxlint 1.88.0 + oxfmt 0.73.0 |
+| --- | --- | --- | --- |
+| runs as | one native binary | Node scripts; ESLint also needs typescript-eslint 8.71.2, @eslint/js 10.0.1, globals 17.13.0, and typescript 6.0.3 installed beside it | Node scripts, each loading a native addon |
+| footprint | 66.7 MB, no runtime | 51.8 MB (ESLint 11.2 MB, Prettier 10.0 MB, the four packages and their dependencies, 30 in all, 30.6 MB), plus node | 35.6 MB, plus node |
+| reproduces the tree's formatting, byte for byte | yes, from `biome.json`'s three options | yes, with 15 options set, `embeddedLanguageFormatting` off among them | yes, with Prettier's options |
+| Lit's templates, at the default | left as written | reformatted in the three `pagination-lit` files | the same as Prettier |
+| file types its default run touches, of the repository's 54 tracked files in 9 types | js, json, ts | js, json, md, ts, yaml | js, json, md, toml, ts |
+| limited to code | `files.includes` | a `.prettierignore` | the same `.prettierignore` |
+| what its default run rewrites, beside code | nothing | `context/README.md`, 111 of 723 lines; `pnpm-lock.yaml`, 23 of 59 lines into 38 | `context/README.md`, 110 of 723 lines; `package.json`, one key moved |
+| direction rule, violation tree | 40 of 40 | 35 of 40: no `import()` | 40 of 40 |
+| direction rule, allowed tree | 0 of 11 | 0 of 11, as regular expressions; 9 of 11 with the groups as written | 0 of 11 |
+| the groups from `biome.json` | as written | translated to regular expressions | as written |
+| lint + format, hyperfine mean | 61.6 ms | 872.3 ms | 89.7 ms |
+
+Prettier rewrites the README by padding every table's cells to the column's width, rewriting
+`*emphasis*` as `_emphasis_`, and adding a blank line before a table in a list; oxfmt does about
+the same, and moves package.json's `"type"` key (reproduced 2026-10-16 on copies).
+
+**First: industry standard and maintainability.** ESLint + Prettier is the industry standard,
+clearly: 9,697 and 9,295 SoJS 2025 respondents against Biome's 1,762 and oxlint's 123 write-ins
+([s1][sj25-other]); 158.7M and 139.1M npm downloads against Biome's 17.9M and oxlint's and oxfmt's
+26.8M and 17.1M ([s57][npm-lint], [s58][npm-biome]); and ESLint in 10 and Prettier in 11 of the
+13 web-component libraries, where Biome is in one (FAST) and Oxc in none (Ecosystem survey, Lint
+and format). Oxc's tools have neither the use nor the libraries, and oxfmt is still 0.x. Against
+the standard, B's measured gaps:
+
+- **Direction.** ESLint's rule can't enforce the layer direction on `import()`, the form an app
+  uses to load a view lazily: 5 of the 40 edges have no expression in it at all. The evidence 3
+  check needs every edge, and Biome and oxlint flag all 40. Closing it in ESLint takes another
+  plugin, a fifth package, which wasn't measured. Its working config is also a regex translation
+  of glob groups, where Biome and oxlint read the groups as written.
+- **What it adds to the check.** Two tools on Node, plus four packages installed for ESLint,
+  where the check today runs one binary with no package install; six versions to keep current
+  against one.
+- **Configurability.** The architect's view is that Prettier is inflexible. On this tree it
+  matched every option: with 15 set it reproduces all 21 files byte for byte, as oxfmt does. So
+  the configurability concern didn't hold here. Both need `embeddedLanguageFormatting` off,
+  though, or they reformat Lit's templates, which Biome leaves alone by default.
+- **Content scope.** The architect's view is that Prettier is heavy-handed on content, Markdown
+  included, and that held. By default Prettier formats Markdown and YAML, rewrites 111 of the
+  README's 723 lines and the pnpm lockfile, and oxfmt does about the same and reorders
+  package.json. Biome's default touches only js, json, and ts. Each can be limited to code, Biome
+  by `files.includes` and the other two by a `.prettierignore`, so the cost is a default to undo,
+  not a limit.
+
+The standard is B's; maintainability is A's, and the gap that decides it isn't taste: ESLint can't
+express the check this task adds. A tool that leaves the lazy `import()` edges unenforced doesn't
+carry the standard's weight for this check, so the first criterion picks Biome, against the
+standard by use, as Results 1 picked pnpm against npm's. oxlint matches Biome on direction, but
+it is not the standard either, and it brings Node, an addon, and a 0.x formatter that reorders
+package.json.
+
+**Second: footprint.** Node is already the toolchain's runtime (Results 1), so the setups add
+their own installs: B 51.8 MB and C 35.6 MB against Biome's 66.7 MB *(m 2026-10-16T17:45:53Z)*.
+Biome is the largest by 14.9 MB over B and 31.1 MB over C, 1.3 and 1.9 times the size, not an
+order of magnitude, so it doesn't overturn the first. B's 30.6 MB of packages is also an install
+the check doesn't have today.
+
+**Third: speed**, only on an order-of-magnitude gap. Lint and format together take 61.6 ms under
+Biome, 89.7 ms under oxlint + oxfmt, and 872.3 ms under ESLint + Prettier
+*(m 2026-10-16T17:45:53Z)*: ESLint + Prettier is 14.2 times slower, an order of magnitude, and
+ESLint alone 18.7 times (617.4 ms against 33.1 ms), but all of it is under a second at this size.
+Speed agrees with the first criterion and doesn't decide it.
+
+**The pick: Biome stays in the check**, for lint, format, and the layer direction, with
+`biome.json` as it is. ESLint + Prettier is the clear standard, and the evidence weighs against it
+on maintainability: it can't enforce the direction on `import()`, it needs Node and four packages
+in the check, and its formatter rewrites Markdown and the lockfile unless limited. Its
+configurability matched Biome's on this tree. Footprint slightly favours the other two, and speed
+favours Biome by an order of magnitude under a second.
+
+**What would reverse it.** Toward ESLint + Prettier: ESLint's rule checking `import()`, or a
+measured plugin closing the gap at one more pin; or spike-html-packages making the layers
+packages, where declared dependencies enforce the direction (Results 3) and the lint rule's gap
+stops deciding, leaving the standard. Toward oxlint + oxfmt: oxfmt reaching 1.0 and the libraries
+or SoJS taking up Oxc's tools.
+
 ### 7. Consumption
 
 - **Installed by git tag, offline** (the check, 2026-10-16): npm and pnpm install this package's
@@ -681,6 +900,12 @@ The JSDoc and plain JS forms stay in `src/` as this comparison's evidence, not a
 [corepack-pr]: https://github.com/nodejs/node/pull/59835
 [corepack-26]: https://nodejs.org/docs/latest-v26.x/api/corepack.html
 [pnpm-install]: https://pnpm.io/installation
+[biome-nri]: https://biomejs.dev/linter/rules/no-restricted-imports/
+[biome-nud]: https://biomejs.dev/linter/rules/no-undeclared-dependencies/
+[depcruise]: https://github.com/sverweij/dependency-cruiser
+[ts-refs]: https://www.typescriptlang.org/docs/handbook/project-references.html
+[eslint-nri]: https://eslint.org/docs/latest/rules/no-restricted-imports
+[herald-elements]: https://github.com/JaimeStill/herald/tree/6fc22b3cb492/app/client/ui/elements
 
 ## Capabilities
 
