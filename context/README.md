@@ -22,7 +22,7 @@ components, and apps) be built on, over the spike-html-design v0.7.0 baseline?
 - **Toolchain:** Node 26 LTS + pnpm for packages; Bun 1.4 only for bundling, the dev server, and
   CSS. Results 1 rules out the split by role and, across Node + npm, Node + pnpm, and Bun, picks
   Node, never Bun beside it, with one manager: pnpm provisionally, until spike-html-packages
-  decides how the layers release (a registry release makes it npm). Libraries build with tsc
+  decides how the layers release (a registry release reopens npm against pnpm). Libraries build with tsc
   emit and apps with Vite; esbuild doesn't earn its place.
 - **Components:** vanilla for the foundation and the static branch; Lit from components up.
 - **Stack:** foundation (native only, no framework: the design system plus `.ts` modules shipped
@@ -322,9 +322,15 @@ ships JS, so bun's `.ts` support under node_modules buys a consumer nothing. The
   major is LTS ([release schedule][node-blog]). pnpm is MIT and independent, funded through
   [Open Collective][pnpm-oc] ($308,861 received in all, a $87,654 yearly budget, 136 backers)
   and 43 GitHub sponsors, with OpenAI, Notion, Discord, and Vite among the sponsors its README
-  names ([README][pnpm-readme]). It keeps three lines, with 54 releases on 12, 24 on 11, and 2 on
-  10 since 2026-07-16; the newest is 12.14.0, 2026-10-15 ([releases][pnpm-rel]), ahead of this
-  repository's 12.11.2 pin. Its lead maintainer wrote 65 of its 100 most recent commits
+  names ([README][pnpm-readme]). It keeps three lines, with 122 stable releases in the 12 months
+  to 2026-10-16 (30 on 12, 55 on 11, 37 on 10), and 56 prereleases beside them, counted as npm's
+  are below ([releases][pnpm-rel], `gh api --paginate`, read 2026-10-16). This repository's
+  12.11.2 pin is the release pnpm marks latest on GitHub (v12.11.2, 2026-10-09;
+  [latest release][pnpm-gh-latest]), which mise follows, since it resolves pnpm through
+  `aqua:pnpm/pnpm` (`mise registry pnpm`), so `mise run currency` reports the pin current.
+  The registry is ahead: pnpm hasn't marked any 12.12 or later release latest on GitHub, while
+  npm's `latest` dist-tag is 12.14.0, released 2026-10-15 ([dist-tags][pnpm-tags], read
+  2026-10-16). Its lead maintainer wrote 65 of its 100 most recent commits
   ([commits][pnpm-commits]), and 2,716 of the 4,201 on its main branch in the year to 2026-10-16
   (`gh api`). vuejs/core, vitejs/vite, and nuxt/nuxt each declare `pnpm@12.11.2` in their
   `packageManager` field, vercel/next.js `pnpm@12.9.1`, withastro/astro `pnpm@11.28.4`, and
@@ -390,7 +396,7 @@ declares only a. bun is bun install 1.4.3, run under node.
 | phantom dependency: a dependency, a, imports c | linked refuses it too: the strictest layout measured | resolves by default: every package is hoisted into a hidden `node_modules/.pnpm/node_modules` (`hoist: true`, `hoistPattern: ['*']`) on purpose, for packages that have phantoms ([settings][pnpm-hoist]) | resolves under `--linker isolated` too, through `node_modules/.bun/node_modules`, unless `install.hoist = false` ([bun isolated installs][bun-isolated]) | rows *(m)* |
 | nondeterminism and order-dependent trees | mitigated: npm 3's tree depended on install order ([npm3 non-determinism][npm3-nondet], "install order matters"). package-lock.json came in npm 5 (2017) and `npm ci` in 5.7.0 (2018); hoisted and linked each give the same tree from one lockfile | mitigated: the same tree from `pnpm-lock.yaml` | mitigated: the same tree from the text `bun.lock` (the default since 1.2, 2025-01-22) with `--frozen-lockfile`, which bun doesn't turn on in CI by itself ([bun install][bun-install]) | rows *(m)*; [package-lock.json][npm-lock] |
 | per-project disk duplication | not mitigated: each project extracts its own copy from npm's cacache cache of compressed tarballs ([npm cache][npm-cache]). A second project of lit 3.3.3 adds 2,955,179 bytes hoisted and 2,958,801 linked, with 0 of its 1,004 files hard-linked; linked's `.store` is per project | mitigated: a content-addressable store, hard-linked (cloned first on macOS and Windows; [motivation][pnpm-motivation], [packageImportMethod][pnpm-hoist]). The second project adds 4,212 bytes, with 1,004 of 1,004 files hard links | mitigated: its global cache, hard-linked on Linux and Windows and `clonefile`d on macOS ([global cache][bun-cache]). The second project adds 0 bytes, with 1,004 of 1,004 files hard links | rows *(m)*, du -sb over the cache or store and both projects |
-| install speed | not mitigated: 1.5x slower than pnpm cold and 3.9x warm, with linked within 4% of hoisted | the baseline | the fastest: 2.1x faster than pnpm cold, 12.0x warm | the timings above *(m)* |
+| install speed | not mitigated: 3.9x slower than pnpm warm, with linked within 2% of hoisted; cold timings too loose to rank | the baseline | the fastest warm: 12.0x faster than pnpm; cold timings too loose to rank | the timings above *(m)* |
 | monorepo support | partly: workspaces, selected with `-w` and `--workspaces` and run in the `workspaces` array's order, not the dependency graph ([npm/rfcs#707][npm-topo] open). No `workspace:` protocol (`EUNSUPPORTEDPROTOCOL`, [npm/cli#8845][npm-ws-proto] open). No catalogs ([npm/rfcs#872][npm-catalog] open since 2026-05-27). Five open linked-layout bugs, two on workspaces ([npm/cli#10082][npm-10082], [#9982][npm-9982]) | full: `--filter` selects dependencies, dependents, and changes since a commit ([filtering][pnpm-filter]); recursive runs go in topological order; `workspace:` refuses anything but a local package ([workspaces][pnpm-ws]); catalogs since 9.5.0, 2024-07-07 ([catalogs][pnpm-catalogs]) | mostly: `--filter` with `foo...` and `...foo`, run in dependency order ([filter][bun-filter]); `workspace:` ([workspaces][bun-ws]); catalogs in package.json since 1.2.14, 2025-05-21 ([catalogs][bun-catalogs]); no changed-since selector | sources, read 2026-10-16 |
 | obtaining the manager | node bundles npm (11.20.0 in 26.12.0); this repository pins 12 in mise | Corepack left Node in v25.0.0 ([TSC vote][corepack-vote], 2025-03-19; [nodejs/node#59835][corepack-pr]), and v26 has no Corepack page ([v26 docs][corepack-26], 404). pnpm installs by script, `npx get-pnpm`, or `pnpm self-update`. pnpm 12 is a native executable that needs no Node ([installation][pnpm-install]); here it is a mise pin | one binary, a mise pin here | sources, read 2026-10-16 |
 
@@ -401,7 +407,7 @@ support: no graph-aware runs, no `workspace:` protocol, and no catalogs. It hasn
 duplication or speed. So npm hasn't mitigated enough to change the provisional pick. pnpm leads on
 the multi-package practice this stack is, and that is where npm's gaps remain. bun's isolated linker
 matches pnpm's on phantoms, though its default for a project with no workspaces is hoisted and
-doesn't. Its workspaces lack only a changed-since selector, and it is the fastest of the three
+doesn't. Its workspaces lack only a changed-since selector, and it is the fastest of the three warm
 and shares the disk as pnpm does. Those are a manager's concerns, though, and the first
 criterion's runtime question doesn't turn on them, so they don't reopen the pick of Node. No npm
 document says that npm copies rather than links. That reading comes from its code (pacote
@@ -414,12 +420,14 @@ is, the multi-package tooling npm still lacks (`workspace:`, graph-aware runs, c
 concerns table above), and the repository-release facts: it is the only manager measured that installs a
 subdirectory at a prefixed tag; of the two that guard git dependencies, it takes a consumer's own
 without a setting; and it never runs a git dependency's `prepare` while saying it didn't. Those
-facts decide it only if spike-html-packages releases the layers from their repositories, the path
+facts count only if spike-html-packages releases the layers from their repositories, the path
 where npm is weakest. If it releases through a registry (GitHub Packages, JSR, or a self-hosted
-one), npm's standard and stewardship carry the first criterion, and the pick changes to npm. The
-gaps npm still has in multi-package tooling count against it on that path too, but they don't
-outweigh the standard and the stewardship. spike-html-packages weighs them if the layers share one
-repository.
+one), they drop out and the call between the managers reopens: npm's standard and stewardship
+against pnpm's multi-package practice and npm's monorepo gaps (no `workspace:`, no graph-ordered
+runs, no catalogs, and open linked-layout bugs on workspaces). This stack is several layers
+released from one repository, so those gaps still weigh on that path, and nothing here shows the
+standard and stewardship outweigh them. spike-html-packages weighs that call with its hosting and
+repository-layout decisions.
 
 **Second: footprint.** Bun is smallest: 89.0 MB for one binary, against Node + npm's 236.8 MB
 (271.1 MB with Vite for an app) and Node + pnpm's 283.3 MB (317.6 MB with Vite)
@@ -432,7 +440,7 @@ don't overturn the first.
 
 | step | Node + npm | Node + pnpm | Bun | ratio, npm; pnpm |
 | --- | ---: | ---: | ---: | ---: |
-| install, cold | 931.8 ms (linked 964.2 ms) | 612.9 ms (± 356.9 ms) | 297.3 ms | 3.1x; 2.1x |
+| install, cold (loose) | 931.8 ms (linked 964.2 ms); re-run 1185.7 ± 60.0 ms (linked 1135.9 ± 180.8 ms) | 612.9 ± 356.9 ms; re-run 719.2 ± 373.7 ms | 297.3 ms; re-run 599.2 ± 416.3 ms | none: too loose |
 | install, warm | 675.3 ms (linked 663.8 ms) | 173.5 ms | 14.5 ms | 46.6x; 12.0x |
 | type check (shared tsc) | 73.7 ms | 73.7 ms | 73.7 ms | 1x |
 | library build | tsc emit 77.9 ms | the same | bun build 6.1 ms | not like for like |
@@ -440,12 +448,15 @@ don't overturn the first.
 | watch rebuild | vite 19.7 ms; tsc 67.7 ms; esbuild 107.9 ms | the same | 15.6 ms | 1.3x; 4.3x; 6.9x |
 | test | node --test 123.7 ms | the same | bun test 18.6 ms | 6.7x |
 
-Only the installs differ between the Node columns: pnpm installs 1.5 times faster than npm cold and
-3.9 times warm, under an order of magnitude; npm's linked layout is within 4% of its hoisted one
-either way. pnpm's cold mean varied widely across its five runs (± 356.9 ms), so its cold ratio is
-the loosest figure here. tsc emit transpiles each file and bundles nothing, so
-it isn't compared with `bun build`. The same run checked each bundle's shape: Vite wrote six
-entries and one shared Lit chunk (20,567 bytes) that each Lit entry imports, esbuild and `bun
+Only the installs differ between the Node columns: pnpm installs 3.9 times faster than npm warm,
+under an order of magnitude, and npm's linked layout is within 2% of its hoisted one warm. The
+cold figures are loose for all three managers: a re-run *(m 2026-10-16T14:11:31Z, hyperfine mean
+± σ)* moved every cold mean, npm's by +254 ms and bun's to double, with σ up to 416.3 ms against
+means of 599.2 to 1185.7 ms, and it put npm's linked layout ahead of its hoisted one. So no cold
+ratio is drawn, and the cold row ranks nothing; the warm figures hold and carry the speed rows.
+tsc emit transpiles each file and bundles nothing, so it isn't compared with `bun build`. The
+table's measure run checked each bundle's shape: Vite wrote six entries and one shared Lit
+chunk (20,567 bytes) that each Lit entry imports, esbuild and `bun
 build` each wrote six self-contained entries with Lit inlined, and none holds Lit's development
 build. Vite's 130.6 ms includes starting node and loading its config. Three gaps clear 10x: a
 warm install against npm (46.6x) and against pnpm (12.0x), and a one-shot Vite bundle (21.4x). All
@@ -457,7 +468,7 @@ don't overturn the first either.
 standard and maintainability decide it: Node over Bun clearly, and pnpm over npm narrowly, on the
 multi-package practice and the repository-release facts, against npm's standard by use and its
 stronger stewardship. The runtime is settled; pnpm holds until spike-html-packages decides how
-the layers release, and a registry release makes it npm. Footprint is Bun's real advantage at
+the layers release, and a registry release reopens npm against pnpm. Footprint is Bun's real advantage at
 about a third the size, and npm's at 46.5 MB; speed gaps of an order of magnitude exist only where the absolute times are
 under a second.
 
@@ -478,12 +489,14 @@ lists esbuild only as optional ([migration guide][vite8]), so an app doesn't nee
 wrote 93 of its 100 most recent commits ([commits][esb-commits], read 2026-10-16). Its pin stays
 in `mise.toml` only for the measure task's comparison.
 
-**What would reverse it.** Toward npm: spike-html-packages releasing through a registry rather
-than git tags, which leaves no prefixed tags or git-tag dependencies to weigh, so npm's majority
-among the libraries and its stronger stewardship would carry the first criterion, with its smaller
-footprint behind them; npm installing a subdirectory with `::path:`; or npm closing its
-multi-package gaps, with the `workspace:` protocol, graph-ordered workspace runs, and catalogs
-(npm/rfcs#765, #707, and #872, all open). Toward Bun: the survey's consensus moving, Bun's runtime use nearing Node's or the
+**What would reverse it.** Toward npm: npm installing a subdirectory with `::path:`, or npm
+closing its multi-package gaps, with the `workspace:` protocol, graph-ordered workspace runs, and
+catalogs ([npm/rfcs#765][npm-ws-rfc], [#707][npm-topo], and [#872][npm-catalog], all open, read
+2026-10-16). Reopening it: spike-html-packages releasing through a registry rather than git tags,
+which leaves no prefixed tags or git-tag dependencies to weigh, so npm's majority among the
+libraries and its stronger stewardship, with its smaller footprint behind them, stand against
+pnpm's multi-package practice and npm's monorepo gaps; spike-html-packages weighs that call with
+its hosting and repository-layout decisions. Toward Bun: the survey's consensus moving, Bun's runtime use nearing Node's or the
 web-component libraries adopting bun install or `bun build`; Node losing its foundation or its LTS
 windows; an application-scale bundle where Vite against `bun build` is seconds against tenths, in
 the edit loop rather than a one-shot build (the branches task measures it); or a hard footprint
@@ -611,6 +624,8 @@ The JSDoc and plain JS forms stay in `src/` as this comparison's evidence, not a
 [node-blog]: https://nodejs.org/en/blog/announcements/evolving-the-nodejs-release-schedule
 [pnpm-oc]: https://opencollective.com/pnpm
 [pnpm-rel]: https://github.com/pnpm/pnpm/releases
+[pnpm-gh-latest]: https://api.github.com/repos/pnpm/pnpm/releases/latest
+[pnpm-tags]: https://registry.npmjs.org/-/package/pnpm/dist-tags
 [pnpm-commits]: https://api.github.com/repos/pnpm/pnpm/commits?per_page=100
 [bun-heise]: https://heise.de/-11102416
 [bun-lic]: https://github.com/oven-sh/bun/blob/main/LICENSE.md
@@ -646,6 +661,7 @@ The JSDoc and plain JS forms stay in `src/` as this comparison's evidence, not a
 [npm-topo]: https://github.com/npm/rfcs/issues/707
 [npm-ws-proto]: https://github.com/npm/cli/issues/8845
 [npm-catalog]: https://github.com/npm/rfcs/issues/872
+[npm-ws-rfc]: https://github.com/npm/rfcs/issues/765
 [npm-10082]: https://github.com/npm/cli/issues/10082
 [npm-9982]: https://github.com/npm/cli/issues/9982
 [pnpm-filter]: https://pnpm.io/filtering
