@@ -42,8 +42,8 @@
 # which pack a git dependency by its `files`, and its whole tag tree under bun, which doesn't; that
 # every exports target is installed; that none of this package's devDependencies, its lint
 # tooling, is installed, since a consumer installs a dependency's dependencies only; that tsc
-# type-checks the fixture's elements.ts against the
-# installed elements; and that the column's runtime imports the route matcher by its exports.
+# type-checks the fixture's elements.ts against the installed elements; and that the column's
+# runtime imports the route matcher by its exports.
 set -euo pipefail
 
 root=$(cd "$(dirname "$0")/.." && pwd)

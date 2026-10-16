@@ -141,36 +141,36 @@
 #                   spike-html-design v0.7.0 from jsDelivr, Lit through an import map to jsDelivr,
 #                   and the JS forms of the element; each page reports the design's registry and
 #                   a token, and the element defined and rendering page 3 of 7.
-#   lint and format per setup: footprint, each tool's installed size, B's devDependencies and
-#                   D's scratch packages included, passing when every tool and package is at its
-#                   pin; time,
-#                   the timings' means, passing when the lint, the format check, and both pass on
-#                   the tree; leaves unchanged, each formatter configured to biome.json's options
-#                   and Biome's defaults (D: Stylistic's and jsonc's rules), written over a copy
-#                   of the tree and over a copy of the tracked JSON files, passing when every file
-#                   comes out byte for byte the original, from a copy padded as below so a file
-#                   the formatter skips fails it; restores, the same over copies whose line breaks
-#                   and indentation lint-compare.js disturb rewrote (calls and arrays split and
-#                   joined, some joins past the 100-column width, closing braces raised, every
-#                   line re-indented to 0 or 4 spaces), code and JSON apart; both pass when the
+#   lint and format per setup: footprint, each tool's installed size, B's devDependencies and D's
+#                   scratch packages included, passing when every tool and package is at its pin;
+#                   time, the timings' means, passing when the lint, the format check, and both pass
+#                   on the tree; leaves unchanged, each formatter configured to biome.json's options
+#                   and Biome's defaults (D: Stylistic's and jsonc's rules), written over a copy of
+#                   the tree and over a copy of the tracked JSON files, passing when every file
+#                   comes out byte for byte the original, from a copy padded as below so a file the
+#                   formatter skips fails it; restores, the same over copies whose line breaks and
+#                   indentation lint-compare.js disturb rewrote (calls and arrays split and joined,
+#                   some joins past the 100-column width, closing braces raised, every line
+#                   re-indented to 0 or 4 spaces), code and JSON apart; both pass when the formatter
+#                   ran (exit 0, or on a restore ESLint's 1, the problems its fixes leave) and the
 #                   files that differ are the ones recorded below, a formatter that can't being a
-#                   fact; scope, each formatter over a copy of the repository's tracked files,
-#                   every file padded with three trailing newlines, which a formatter strips from
-#                   any file it formats, so the files that change are the files it touched: the
-#                   default scope recorded, JSON counted, and the row passing when the scope its
-#                   configuration limits it to (Biome's files.includes, a .prettierignore that
-#                   Prettier and oxfmt both read, the files globs of D's config) is the code and
-#                   JSON files exactly; rewrites, the same unpadded, recording each file the
-#                   default run rewrites and its changed lines, every Markdown file named, passing
-#                   when no code file changes and the padded default run reached every code file;
-#                   direction, the layer rules over test/layers-tree.js's trees, which hold the
-#                   files their imports name, passing when the flagged files are the violation
-#                   files less the edges the rule can't express or the misses recorded below, and
-#                   the allowed tree draws none but those recorded: Biome's and oxlint's rules,
-#                   ESLint's no-restricted-imports, and the two resolved-file plugins under ESLint;
-#                   surface, each setup's binaries on PATH, config files, and packages to keep
-#                   current, with the installed packages under them. B's .prettierrc.json holds
-#                   the options the formatters are matched with.
+#                   fact; scope, each formatter over a copy of the repository's tracked files, every
+#                   file padded with three trailing newlines, which a formatter strips from any file
+#                   it formats, so the files that change are the files it touched: the default scope
+#                   recorded, JSON counted, and the row passing when the scope its configuration
+#                   limits it to (Biome's files.includes, a .prettierignore that Prettier and oxfmt
+#                   both read, the files globs of D's config) is the code and JSON files exactly;
+#                   rewrites, the same unpadded, recording each file the default run rewrites and
+#                   its changed lines, every Markdown file named, passing when no code file changes
+#                   and the padded default run reached every code file; direction, the layer rules
+#                   over test/layers-tree.js's trees, which hold the files their imports name,
+#                   passing when the flagged files are the violation files less the edges the rule
+#                   can't express or the misses recorded below, and the allowed tree draws none but
+#                   those recorded: Biome's and oxlint's rules, ESLint's no-restricted-imports, and
+#                   the two resolved-file plugins under ESLint; surface, each setup's binaries on
+#                   PATH, config files, and packages to keep current, with the installed packages
+#                   under them. B's .prettierrc.json holds the options the formatters are matched
+#                   with.
 #                   Per tool, whether it runs as a native binary or on Node, as expected below.
 #
 # The GitHub and jsDelivr rows run against spike-html-design v0.7.0 always, and against this
@@ -1578,34 +1578,12 @@ if ((!own_released)); then
 fi
 
 echo "measure: lint and format rows" >&2
-# pin TOOL: TOOL's version in mise.toml, or for ESLint and Prettier in package.json's
-# devDependencies.
-pin() {
-  if [[ "$1" == eslint || "$1" == prettier ]]; then
-    node -p 'require(process.argv[1]).devDependencies[process.argv[2]] ?? ""' "$root/package.json" "$1"
-  else
-    sed -nE "s/^\"?$1\"? = \"([^\"]+)\"$/\1/p" "$root/mise.toml"
-  fi
-}
+# pin TOOL: TOOL's version in mise.toml.
+pin() { sed -nE "s/^\"?$1\"? = \"([^\"]+)\"$/\1/p" "$root/mise.toml"; }
 # tool_version COMMAND: the first version number COMMAND --version prints.
 tool_version() { "$1" --version | grep -m1 -oE '[0-9]+\.[0-9]+\.[0-9]+' || true; }
-# mise_tool COMMAND: the mise tool that provides COMMAND, or for ESLint and Prettier the
-# devDependency.
-mise_tool() {
-  case $1 in
-    biome) echo biome ;;
-    eslint | prettier) echo "$1" ;;
-    *) echo "npm:$1" ;;
-  esac
-}
-# tool_install COMMAND: the directory COMMAND's install is in: the mise tool's, or the
-# devDependency's package in node_modules.
-tool_install() {
-  case $1 in
-    eslint | prettier) readlink -f "$root/node_modules/$1" ;;
-    *) mise --cd "$root" where "$(mise_tool "$1")" ;;
-  esac
-}
+# mise_tool COMMAND: the mise tool that provides COMMAND.
+mise_tool() { if [[ "$1" == biome ]]; then echo biome; else echo "npm:$1"; fi; }
 # The mise tools each setup runs: A's and C's; B's and D's tools are packages (below).
 declare -A setup_tools=([A]="biome" [B]="" [C]="oxlint oxfmt" [D]="")
 declare -A setup_formatter=([A]=biome [B]=prettier [C]=oxfmt [D]=stylistic)
@@ -1623,10 +1601,12 @@ declare -A runs_expected=([biome]=native [eslint]=node [prettier]=node [oxlint]=
   [oxfmt]="node, native addon")
 declare -A runs_as
 for tool in biome eslint prettier oxlint oxfmt; do
-  if [[ "$tool" == eslint || "$tool" == prettier ]]; then exe=$(readlink -f "$(command -v "$tool")"); else
-    exe=$(mise --cd "$root" which "$tool")
+  # ESLint and Prettier are devDependencies, run from node_modules; the rest are mise tools.
+  if [[ "$tool" == eslint || "$tool" == prettier ]]; then
+    exe=$(readlink -f "$(command -v "$tool")") install=$(readlink -f "$root/node_modules/$tool")
+  else
+    exe=$(mise --cd "$root" which "$tool") install=$(mise --cd "$root" where "$(mise_tool "$tool")")
   fi
-  install=$(tool_install "$tool")
   mapfile -t addons < <(find "$install" -type f -name '*.node')
   if [[ "$(head -c 4 "$exe")" == $'\x7fELF' ]]; then
     runs_as[$tool]=native
@@ -1832,8 +1812,12 @@ for setup in "${setups[@]}"; do
     diff=$(differing "$dir" "$root")
     diff=${diff% }
     want=${unrestored[$setup $kind]:-}
+    # The formatter must have run: exit 0, or for ESLint 1, the problems its fixes leave (max-len
+    # has no fixer), where 2 is a crash or a bad config.
+    formatter_ran=0
+    if ((status == 0)) || { [[ "$setup" == D ]] && ((status == 1)); }; then formatter_ran=1; fi
     ok=0
-    if [[ "$diff" == "$want" ]]; then ok=1; fi
+    if ((formatter_ran == 1)) && [[ "$diff" == "$want" ]]; then ok=1; fi
     fact="$what disturbed ($done_; wide: joined lines past 100 columns, which only a reflow breaks again); exit $status; "
     if [[ -z "$diff" ]]; then fact+="every file comes out byte for byte the original"; else
       fact+="$(wc -w <<<"$diff") files differ: $diff"
@@ -1843,6 +1827,7 @@ for setup in "${setups[@]}"; do
       fact+="; Stylistic has no line-width reflow and max-len no fixer, so a split call stays split and a joined line stays past the width"
     fi
     if [[ "$diff" != "$want" ]]; then fact+="; recorded: ${want:-none}"; fi
+    if ((formatter_ran == 0)); then fact+="; the formatter failed: $(tail -n3 "$dir.log")"; fi
     row "$prefix: $label restores the $kind_label from a copy with disturbed line breaks and indentation" "$ok" "$fact"
   done
 done
@@ -1886,10 +1871,10 @@ declare -A limit_how=(
   [stylistic]="its config's own files globs, the code and **/*.json, the same run as its default"
 )
 # format_repo FORMATTER DIR MODE: FORMATTER's default run over DIR, with the matched options, the
-# copied .prettierignore moved out of DIR for the run, since Prettier and oxfmt both read it; with limited, as
-# its configuration limits it to the code and JSON, Prettier and oxfmt by the repository's
-# .prettierignore, copied with the tracked files. ESLint, D's formatter, runs its config over the
-# files the config names in both modes.
+# copied .prettierignore moved out of DIR for the run, since Prettier and oxfmt both read it; with
+# limited, as its configuration limits it to the code and JSON, Prettier and oxfmt by the
+# repository's .prettierignore, copied with the tracked files. ESLint, D's formatter, runs its
+# config over the files the config names in both modes.
 format_repo() {
   local config=$tree/biome.json status=0
   if [[ "$3" == limited ]]; then config=$lint/biome-code/biome.json; else mv "$2/.prettierignore" "$2.prettierignore"; fi
