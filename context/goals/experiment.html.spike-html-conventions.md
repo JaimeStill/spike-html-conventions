@@ -300,6 +300,7 @@ slices 7/7 committed · standards done · spec — · editor — (amendment: sli
 - structure: architect: the check switches to the provisional pick in this task (rejected: a separate task).
 - structure: if an ESLint setup wins, its packages become devDependencies installed by `mise run install`, and STANDARDS.md's rule becomes "Lit is the only runtime dependency; lint tooling is the only devDependencies"; Biome leaves the check for a measure-only pin, the direction lives in the passing plugin alone with no-unresolved, and the normalization convention goes. If neither plugin passes the trees under ESLint 10 while an ESLint setup would win, BUILD escalates.
 - structure: Results 3 and 6 are rewritten as provisional, titled for the outcome.
+- structure: escalation: architect: eslint's devDependency pin is 10.12.0, keeping pnpm's one-day minimumReleaseAge gate intact; rejected: 10.13.0 (published 2026-10-16T14:24Z) with a minimumReleaseAgeExclude entry. currency raises 10.13.0 once the gate passes.
 
 ## Pending edits
 
