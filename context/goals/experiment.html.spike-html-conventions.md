@@ -1,6 +1,6 @@
 # goal · experiment.html.spike-html-conventions
 
-- **State:** brief ready
+- **State:** building
 - **Task:** toolchain
 - **Branch:** toolchain
 
@@ -12,138 +12,82 @@
 4. [ ] testing
 5. [ ] branches
 
-## Task brief · toolchain
+## Task brief · toolchain (revised after the redirect)
 
 ```
 Problem       The native web stack has no toolchain, TypeScript form, or
-              tested way to consume tagged releases. Every later task
-              (structure, components, testing, branches) and
-              spike-html-packages builds on these. Evidence 1, 2, and 7 come
-              from this task.
+              tested way to consume tagged releases, and the first pick
+              (Bun, on footprint) didn't weigh the industry standard or the
+              readability of the source. Every later task and
+              spike-html-packages builds on these. Evidence 1, 2, and 7.
 
 Behaviors
-  1. Tooling comes only from mise pins: node 26.12.0, pnpm 12.11.2,
-     bun 1.4.3, biome 2.5.15, shellcheck 0.11.0, the native tsc 7.0.2
-     (from microsoft/typescript-go's release archives, no Node needed),
-     esbuild 0.28.2 (Node column only), and hyperfine 2.0.0 (aqua).
-     Chromium is the system install. No package manifest has a
-     devDependency; lit 3.3.3 is the only package dependency.
-  2. The route matcher module (from herald's router) exists in three
-     forms: .ts limited to strippable syntax, .js checked through JSDoc,
-     and plain .js. One shared node:test suite gives the same results
-     for all three forms under `node --test` and under `bun test`.
-  3. The pagination element (from herald: page, total pages, and page
-     size in; page-change and page-size-change events out; clamps its
-     page input) exists in Lit with static properties (no decorators)
-     and in vanilla, each in the same three forms, and each defines and
-     renders the same element.
-  4. The check runs `tsc --noEmit` (strict, strippable syntax only) over
-     the .ts and JSDoc forms, and a wrongly typed property or argument
-     in either typed form fails it. Plain .js and the test files are
-     outside the type check.
-  5. The repository root is the fixture package. It exports the module
-     and both elements in all three forms and has no dependency on
-     spike-html-design.
-  6. There is one consumer fixture per toolchain, pnpm and bun. Each
-     depends on spike-html-design v0.7.0 and on the fixture package by
-     git tag. In the check, each installs offline (its git source
-     pointed at the local repository, tag kept), and the installed
-     files match the tag's files byte for byte.
-  7. `mise run check` = biome ci + shellcheck + tsc --noEmit + the
-     module tests under both runners + both offline fixture installs.
-     It reads no network and writes nothing to the working tree.
-  8. A read-only measure task, outside the check, reads the network and
-     prints a dated table with every tool's version:
-     a. hyperfine timings for each toolchain: install from a git tag
-        (cold and warm), type check, build, watch rebuild, and test. The
-        Node column times both tsc emit and an esbuild bundle; the Bun
-        column times `bun build`.
-     b. Install from GitHub by tag: spike-html-design v0.7.0 and the
-        fixture package v0.1.0, under pnpm and under bun.
-     c. jsDelivr serves each form of the fixture package at v0.1.0:
-        content type, immutable caching, and bytes equal to the tag's.
-        The .ts form is recorded as unloadable (text/plain with
-        nosniff).
-     d. Refusal rows: Node won't strip types under node_modules; pnpm
-        refuses a package that carries a git-tag dependency
-        (ERR_PNPM_EXOTIC_SUBDEP) while bun accepts it.
-     e. Prefixed-tag rows from a local, unpushed tag: pnpm installs a
-        subdirectory with path:, bun can't.
-     f. file:// pages loaded with `chromium --headless --dump-dom` load
-        spike-html-design v0.7.0 and the fixture package's JS forms from
-        jsDelivr, with Lit through an import map, and the element is
-        defined and rendered.
-  9. `mise run currency`, declared as the project's currency command,
-     prints one line per item that trails: a mise tool, a direct package
-     dependency, or a github: tag dependency compared with its
-     repository's latest tag. It exits 0 with no output when everything
-     is current, and nonzero with lines when something trails. It writes
-     nothing.
- 10. The spike README's evidence records:
-     1: the pick, Node with pnpm or Bun, never both, argued footprint
-        first, then whether each added tool is the standard for its
-        purpose and worth keeping long term; speed counts only on an
-        order-of-magnitude gap. Includes whether esbuild earns its place
-        in the Node column, weighing its per-platform binary shape
-        (shared with tsc through npm) and offline installs.
-     2: the TypeScript-form conclusion, showing what each form looks
-        like in Lit and in vanilla, with Turbo's and Svelte's positions
-        weighed.
-     7: the consumption results, with the fixture's v0.1.0 rows marked
-        pending until the structure task runs them after the release.
-     Each figure is cited with its date from the measure task.
+  1. (rev) Tooling comes only from mise pins, as before, plus Vite 8 via
+     mise's npm: backend for the Node column. Chromium is the system
+     install. No devDependency; lit 3.3.3 is the only package dependency.
+  2–7.  Unchanged (forms, element, type check, fixture package,
+        consumers, offline check).
+  8. (rev) The measure task also times Vite 8 in the Node column (build
+     of the element entries, and its dev-server/watch rebuild where
+     comparable), and adds Vite to the footprint section.
+  9.  Unchanged (currency), covering the Vite pin.
+ 10. (rev) The spike README's evidence records:
+     1: the pick, Node with pnpm or Bun, never both, argued in this
+        order: industry standard and maintainability (readable,
+        type-safe source; the survey's consensus) first, footprint
+        second, speed only on an order-of-magnitude gap. Includes the
+        build tool for the picked column (tsc emit, Vite, esbuild, or
+        bun build) and whether esbuild earns its place.
+     2: the TypeScript form: .ts with a release build, for the
+        foundation and every layer above it, with the Lit and vanilla
+        excerpts, JSDoc and plain JS recorded as considered and why
+        they lost, and what a release build must produce for tag and
+        jsDelivr consumers (handed to spike-html-packages).
+     7: consumption results, with the fixture's v0.1.0 rows pending
+        until the structure task runs them after the release.
+     Each measured figure cites its measure date; each survey claim
+     cites its source.
+ 11. (new) An ecosystem survey section in the README: how the web
+     ecosystem builds, tests, and releases component libraries and
+     apps — runtime and package manager, TS form, build tool, test
+     runner, and release hosting (git tags + jsDelivr /gh/, GitHub
+     release assets, GitHub Packages, JSR, self-hosted registries such
+     as Verdaccio, npm) — judged on performance, maintainability, and
+     scalability, from sourced evidence (surveys such as State of JS,
+     download and adoption data, and what major web-component
+     libraries use). Hosting is recorded as facts; the decision stays
+     with spike-html-packages, npm ruled out unless no workable
+     alternative exists.
 
-Test seams    `mise run check` (offline: behaviors 2–7);
-              `mise run measure` (network: behavior 8)
+Test seams    `mise run check` (offline: 2–7); `mise run measure`
+              (network: 8); the README's cited sources (11)
 
-Slices
-  1. Module and type check: tsc and the route matcher in three forms,
-     with the shared suite under both runners and tsc in the check.
-     Demo: the check passes; a planted type error fails it.
-  2. Element: pagination in Lit and vanilla, three forms each,
-     type-checked, built by tsc emit, esbuild, and bun build.
-     Demo: each build renders in `chromium --dump-dom`.
-  3. Fixture package and consumers: the root package's exports, and the
-     pnpm and bun consumer fixtures installing offline in the check.
-     Demo: the check passes with both installs.
-  4. Measure task: the timings and every row that needs no pushed tag
-     (spike-html-design v0.7.0, refusals, local prefixed tag, file://).
-     Demo: `mise run measure` prints the dated table.
-  5. Currency: the command, including the github: tag comparison.
-     Demo: `mise run currency` exits 0, and a pin set behind its latest
-     is reported.
-  6. Pushed-tag rows: GitHub install by tag and jsDelivr serving,
-     measured against spike-html-design v0.7.0 under both toolchains;
-     the fixture v0.1.0 rows (8b, 8c) are in the measure task, ready to
-     run once SHIP releases the tag.
-     Demo: `mise run measure` shows every v0.7.0 row passing, and the
-     v0.1.0 rows report "not yet released".
-  7. Evidence: README evidence 1, 2, and 7 with the pick, the esbuild
-     conclusion, and the TypeScript-form conclusion.
-     Demo: the README's evidence, with each figure cited from a dated
-     measure run.
+Slices (1–7 committed)
+  8. Vite in the Node column: the pin, its build and watch timings,
+     and its footprint in `mise run measure`.
+     Demo: measure prints the Vite rows.
+  9. Ecosystem survey: the README section with sources.
+     Demo: the section, each claim cited.
+ 10. Evidence rewrite: Results 1 and 2 re-argued under the new order
+     and the .ts decision, figures re-cited from one fresh measure run;
+     hypotheses and STANDARDS.md updated for .ts and the pick.
+     Demo: the README's Results.
 
-Out of scope  The layout, import direction, and lint/format tool
-              (structure). Vanilla against Lit on lines, brotli bytes,
-              and features (components; this task holds each base fixed
-              and compares only forms). The browser test tier and typed
-              tests (testing). Decorators. A dev server. Release builds,
-              per-package tags, tag naming, and package splitting
-              (spike-html-packages, which also gets the prefixed-tag and
-              exotic-subdependency rows). Release options beyond git tags
-              (publishing to the npm registry, release-asset tarballs
-              installed by URL, plain URL imports through an import map)
-              are spike-html-packages' question. The application SDK
-              spec (branches).
-Door          two-way, except the v0.1.0 tag: a pushed tag reaches
-              GitHub and jsDelivr consumers, jsDelivr caches it as
-              immutable, and it is never changed or re-cut.
+Out of scope  As before: layout and lint tool (structure); vanilla
+              against Lit (components); browser test tier (testing);
+              decorators; a dev server as a deliverable; release builds,
+              per-package tags, tag naming, package splitting, and the
+              hosting decision (spike-html-packages); the SDK spec
+              (branches). Rewriting the committed forms: the JSDoc and
+              plain JS forms stay as the comparison's evidence.
+Door          two-way, except the v0.1.0 tag (pushed, immutable on
+              jsDelivr, never re-cut).
 Release       v0.1.0
 ```
 
 ## Progress
 
-slices 7/7 committed · standards done · spec done (2 rounds) · editor done
+slices 7/10 committed · standards — · spec — · editor —
 
 ## Decisions
 
@@ -191,13 +135,21 @@ slices 7/7 committed · standards done · spec done (2 rounds) · editor done
 - toolchain: `mise run currency` reports a pin as trailing only when a strictly higher plain `vX.Y.Z` exists; a repository with no `vX.Y.Z` tag, or a pin ahead of its highest tag, is unreleased, not trailing; a dependency in any other form is reported as one it can't compare.
 - toolchain: the check's offline installs take this package from a scratch repository of the working tree, tagged v0.1.0 there; the check never tags this repository.
 - toolchain: brotli bytes are measured at quality 11 through bun's `node:zlib`, because mise's registry has no brotli CLI.
-- toolchain: result, evidence 1: the pick is Bun, on footprint (89.0 MB against node and pnpm's 283.3 MB); Node and pnpm's stronger stewardship doesn't overturn it, because the exit to Node stays measured in the check.
+- toolchain (superseded by the redirect): result, evidence 1: the pick is Bun, on footprint (89.0 MB against node and pnpm's 283.3 MB); Node and pnpm's stronger stewardship doesn't overturn it, because the exit to Node stays measured in the check.
 - toolchain: result, evidence 1: esbuild doesn't earn its place in the Node column; tsc emit builds with no order-of-magnitude gap and adds no binary.
-- toolchain: result, evidence 2: the TypeScript form is JSDoc checked by tsc, for the foundation and the components; plain JS remains the fallback for a module with no public contract.
+- toolchain (superseded by the redirect): result, evidence 2: the TypeScript form is JSDoc checked by tsc, for the foundation and the components; plain JS remains the fallback for a module with no public contract.
+- toolchain: the ecosystem survey is a slice of this task, the evidence for the industry-standard criterion.
+- toolchain: the pick is argued industry standard and maintainability first, footprint second, speed only on an order-of-magnitude gap (replaces footprint first).
+- toolchain: architect: .ts with a release build for components and above; builds are cheap in a release, so the zero-build argument doesn't hold there.
+- toolchain: architect: .ts for the foundation too; one form and one check across the stack.
+- toolchain: Vite 8 is measured in the Node column, through mise's npm: backend.
+- toolchain: the survey records release hosting as facts; the decision stays with spike-html-packages; npm is ruled out unless no workable alternative exists.
+- toolchain: this task records the toolchain pick after the survey.
+- Supersedes: the earlier result lines "pick Bun, on footprint" and "TS form JSDoc checked by tsc".
 
 ## Pending edits
 
-- coordinator · `context/html-artifacts.md`, "Experiment: spike-html-conventions": the toolchain hypothesis's split by role (Node + pnpm for packages, Bun for bundling) is ruled out; the pick is Node or Bun, never both. Record the spike's interim results, pending the intake's decision: the toolchain pick is Bun, on footprint; esbuild doesn't earn its place in the Node column; the TypeScript form is JSDoc checked by tsc.
+- coordinator · `context/html-artifacts.md`, "Experiment: spike-html-conventions": the toolchain hypothesis's split by role (Node + pnpm for packages, Bun for bundling) is ruled out; the pick is Node or Bun, never both. Record the spike's interim results, pending the intake's decision (rewritten by the toolchain task's redirect; the editor updates this line).
 - coordinator · roadmap, spike-html-packages: weigh registry-based release options (npm registry publish, release-asset tarballs installed by URL, plain URL imports through an import map), this spike's prefixed-tag rows (pnpm installs a subdirectory at a tag with `&path:`, bun can't), and pnpm 12's `blockExoticSubdeps` default.
 - coordinator · roadmap, this spike's `structure` task: its first step runs and records the fixture package's v0.1.0 GitHub and jsDelivr rows.
 - coordinator · roadmap, spike-html-apps: the real router fixes two herald quirks this spike's port kept (a second `?` in the query is dropped; a `#fragment` reaches the route path) and strips the base path only at a segment boundary.
