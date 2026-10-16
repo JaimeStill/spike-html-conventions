@@ -63,6 +63,11 @@
 #                   and with allow-git=all it installs both; it runs a git dependency's prepare
 #                   script when it packs the clone, though it reports the script blocked by
 #                   allowScripts, and --ignore-scripts skips it.
+#   prepare         the same throwaway git-tag package with a prepare script under pnpm and
+#                   bun: pnpm refuses the install (ERR_PNPM_GIT_DEP_PREPARE_NOT_ALLOWED) unless
+#                   allowBuilds names the package's resolved spec, which runs prepare, and
+#                   --ignore-scripts installs it without; bun installs it without running prepare,
+#                   reporting it blocked, and runs it once the package is in trustedDependencies.
 #   prefixed tag    from a local, unpushed fixture/v0.1.0 tag with the package in fixture/,
 #                   pnpm installs the subdirectory with #fixture/v0.1.0&path:/fixture, each file
 #                   the fixture's byte for byte; bun can't, reading the whole fragment as the ref;
@@ -687,6 +692,19 @@ cat >"$prep/package.json" <<'EOF'
 { "name": "prep", "version": "0.0.1", "scripts": { "prepare": "node -e \"require('fs').writeFileSync('prepared.txt', 'yes')\"" } }
 EOF
 (cd "$prep" && git init -q -b main && git add -A && git commit -q -m v0.0.1 && git tag -a v0.0.1 -m v0.0.1)
+prep_sha=$(git -C "$prep" rev-parse HEAD)
+# prep_outcome PROJECT STATUS: sets outcome, one of ran (prep installed with prepare's output),
+# skipped (installed without it), or failed (not installed), and result, the same in words.
+prep_outcome() {
+  local installed="$1/node_modules/prep"
+  if (($2 != 0)) || [[ ! -f "$installed/package.json" ]]; then
+    outcome=failed result="prep not installed"
+  elif [[ -f "$installed/prepared.txt" ]]; then
+    outcome=ran result="prepare ran (prepared.txt installed)"
+  else
+    outcome=skipped result="installed, no prepared.txt"
+  fi
+}
 observed=()
 ran=()
 for variant in default ignore-scripts; do
@@ -698,18 +716,8 @@ for variant in default ignore-scripts; do
     npm_warm "$scratch/prep-$variant" --ignore-scripts >"$scratch/prep-$variant.log" 2>&1 ||
       status=$?
   fi
-  # ran: installed with prepare's output; skipped: installed without it; failed: not installed.
-  installed="$scratch/prep-$variant/node_modules/prep"
-  if ((status != 0)) || [[ ! -f "$installed/package.json" ]]; then
-    ran+=(failed)
-    result="prep not installed"
-  elif [[ -f "$installed/prepared.txt" ]]; then
-    ran+=(ran)
-    result="prepare ran (prepared.txt installed)"
-  else
-    ran+=(skipped)
-    result="installed, no prepared.txt"
-  fi
+  prep_outcome "$scratch/prep-$variant" "$status"
+  ran+=("$outcome")
   warned=$(grep -m1 '^npm warn install-scripts .*blocked' "$scratch/prep-$variant.log" |
     sed -e 's/^npm warn install-scripts //' -e 's/:$//' || true)
   observed+=("$variant: exit $status, $result${warned:+, npm warned: $warned}")
@@ -723,6 +731,76 @@ if [[ "${ran[*]}" == "ran skipped" ]] &&
 fi
 printf -v result '%s; ' "${observed[@]}"
 row "npm runs a git dependency's prepare when it packs the clone, though allowScripts reports it blocked; --ignore-scripts skips it" \
+  "$ok" "${result%; }"
+
+# The same package under pnpm: by default, with its resolved spec in allowBuilds, and with
+# --ignore-scripts. allowBuilds takes the spec pnpm names in its refusal, the commit included;
+# the bare name "prep" doesn't admit a git-hosted package.
+observed=()
+ran=()
+for variant in default allowBuilds ignore-scripts; do
+  project="$scratch/prep-pnpm-$variant"
+  mkdir -p "$project"
+  printf '{ "name": "prep-pnpm-%s", "private": true, "dependencies": { "prep": "git+file://%s#v0.0.1" } }\n' \
+    "$variant" "$prep" >"$project/package.json"
+  flags=(--reporter ndjson)
+  case $variant in
+    allowBuilds)
+      printf 'allowBuilds:\n  "prep@git+file://%s#%s": true\n' "$prep" "$prep_sha" \
+        >"$project/pnpm-workspace.yaml"
+      ;;
+    ignore-scripts) flags+=(--ignore-scripts) ;;
+  esac
+  status=0
+  pnpm_warm "$project" "${flags[@]}" >"$scratch/prep-pnpm-$variant.log" 2>&1 || status=$?
+  prep_outcome "$project" "$status"
+  ran+=("$outcome")
+  # The ndjson reporter gives the refusal's code unwrapped.
+  refused=$(grep -m1 '"code":"ERR_PNPM_GIT_DEP_PREPARE_NOT_ALLOWED"' "$scratch/prep-pnpm-$variant.log" |
+    node -e 'console.log(JSON.parse(require("fs").readFileSync(0, "utf8")).code)' 2>/dev/null || true)
+  observed+=("$variant: exit $status, $result${refused:+, pnpm refused: $refused}")
+done
+# The default refuses the install with ERR_PNPM_GIT_DEP_PREPARE_NOT_ALLOWED; allowBuilds runs
+# prepare; --ignore-scripts installs prep without it.
+ok=0
+if [[ "${ran[*]}" == "failed ran skipped" ]] &&
+  grep -q '"code":"ERR_PNPM_GIT_DEP_PREPARE_NOT_ALLOWED"' "$scratch/prep-pnpm-default.log"; then
+  ok=1
+fi
+printf -v result '%s; ' "${observed[@]}"
+row "pnpm refuses a git dependency whose prepare isn't in allowBuilds (ERR_PNPM_GIT_DEP_PREPARE_NOT_ALLOWED); allowBuilds runs it; --ignore-scripts skips it" \
+  "$ok" "${result%; }"
+
+# The same package under bun: by default, and with prep in trustedDependencies.
+observed=()
+ran=()
+for variant in default trustedDependencies; do
+  project="$scratch/prep-bun-$variant"
+  mkdir -p "$project"
+  trusted=""
+  if [[ "$variant" == trustedDependencies ]]; then trusted=', "trustedDependencies": ["prep"]'; fi
+  printf '{ "name": "prep-bun-%s", "private": true, "dependencies": { "prep": "git+file://%s#v0.0.1" }%s }\n' \
+    "$variant" "$prep" "$trusted" >"$project/package.json"
+  status=0
+  bun_warm "$project" >"$scratch/prep-bun-$variant.log" 2>&1 || status=$?
+  prep_outcome "$project" "$status"
+  ran+=("$outcome")
+  blocked=$(grep -m1 -E '^Blocked [0-9]+ ' "$scratch/prep-bun-$variant.log" || true)
+  # bun pm untrusted names each blocked script by its lifecycle event.
+  listed=$( (cd "$project" && BUN_INSTALL_CACHE_DIR=$scratch/warm/bun-cache bun pm untrusted) 2>&1 |
+    grep -m1 -o '\[prepare\]' || true)
+  observed+=("$variant: exit $status, $result${blocked:+, bun printed: $blocked}${listed:+, bun pm untrusted lists $listed}")
+done
+# The default installs prep without running prepare and reports it blocked, in the install's
+# output and in bun pm untrusted; trustedDependencies runs it.
+ok=0
+if [[ "${ran[*]}" == "skipped ran" ]] &&
+  grep -qE '^Blocked 1 ' "$scratch/prep-bun-default.log" &&
+  [[ "${observed[0]}" == *"bun pm untrusted lists [prepare]"* ]]; then
+  ok=1
+fi
+printf -v result '%s; ' "${observed[@]}"
+row "Bun installs a git dependency without running its prepare and reports it blocked; trustedDependencies runs it" \
   "$ok" "${result%; }"
 
 echo "measure: prefixed-tag rows" >&2

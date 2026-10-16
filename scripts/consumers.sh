@@ -32,10 +32,10 @@
 # network. pnpm adds the package's files to its content-addressed store, outside the working tree.
 #
 # npm is mise's npm pin, resolved through mise so neither node's bundled npm (11.20.0 in node
-# 26.12.0) nor a global npm earlier on PATH runs instead; the check prints its version. npm 12
-# refuses git dependencies by default (allow-git=none), so consumer-npm's .npmrc opts in with
-# allow-git=root. npm packs a git dependency after cloning it, running its prepare script if it
-# has one; neither package here has one.
+# 26.12.0) nor a global npm earlier on PATH runs instead; the check fails unless its version is
+# the pin, and prints it. npm 12 refuses git dependencies by default (allow-git=none), so
+# consumer-npm's .npmrc opts in with allow-git=root. npm packs a git dependency after cloning
+# it, running its prepare script if it has one; neither package here has one.
 #
 # After each install the check asserts that every installed file of both packages equals its tag's
 # file byte for byte; that this package installs exactly package.json and src/ under pnpm and npm,
@@ -100,9 +100,17 @@ fi
 store=$(dirname "$(pnpm store path)")
 pnpm_flags=(--store-dir "$store" --package-import-method copy --reporter append-only)
 
-# npm, mise's pin for this project, by its path.
+# npm, mise's pin for this project, by its path. The npm that runs must be the version mise.toml
+# pins, the pin read from mise itself, so a stale install or a resolution to another npm fails
+# here rather than measuring the wrong npm.
 npm=$(mise --cd "$root" which npm)
 npm_flags=(--no-audit --no-fund --no-update-notifier)
+npm_pin=$(mise --cd "$root" ls --local --json npm |
+  node -e 'console.log(JSON.parse(require("fs").readFileSync(0, "utf8"))[0]?.requested_version ?? "")')
+[[ -n "$npm_pin" ]] || fail "mise.toml pins no npm"
+npm_version=$("$npm" --version --no-update-notifier)
+[[ "$npm_version" == "$npm_pin" ]] ||
+  fail "npm $npm_version runs at $npm, but mise.toml pins npm $npm_pin; run mise install"
 
 if [[ "$mode" == warm ]]; then
   lit=$(node -p 'require(process.argv[1]).dependencies.lit' "$root/package.json")
@@ -167,7 +175,7 @@ if [[ -d "$npm_global/content-v2" && -d "$npm_global/index-v5" ]]; then
   cp -as "$npm_global/content-v2" "$npm_cache/_cacache/"
   cp -r "$npm_global/index-v5" "$npm_cache/_cacache/"
 fi
-echo "consumers: npm $("$npm" --version --no-update-notifier), mise's pin, at $npm"
+echo "consumers: npm $npm_version, mise's pin, at $npm"
 
 for manager in pnpm npm bun; do
   project="$scratch/consumer-$manager"

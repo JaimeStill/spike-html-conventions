@@ -59,8 +59,11 @@ performance, maintainability, and scalability. It is the evidence for the indust
 criterion, and it decides nothing. Every source was read 2026-10-16 (UTC), and each repository is
 cited at the commit read. State of JS (SoJS) figures are Devographics' usage ratio and retention
 (the share who would use the tool again), from each results page's chart data. npm counts are for
-the week 2026-10-06 to 2026-10-12. Every package grew 5 to 10 times in a year, so the counts
-compare tools within a week and are not adoption over time.
+the week 2026-10-06 to 2026-10-12, from the npm downloads API's point range for that week. Growth
+over a year varies widely by package: against the same week of 2025 (2025-10-06 to 2025-10-12),
+webpack grew 1.7x, esbuild 4.6x, vite 5.4x, pnpm 6.8x, bun 9.8x, and rolldown 72x
+([s4][npm-pm], [s14][npm-build], [s5][npm-yoy], [s56][npm-yoy-build]). So the counts compare
+tools within one week only, and are not adoption over time.
 
 Conflict of interest: this survey was drafted by an Anthropic model, and Anthropic owns Bun.
 
@@ -78,7 +81,8 @@ Conflict of interest: this survey was drafted by an Anthropic model, and Anthrop
 
 - SoJS 2025 asks no package-manager question; the monorepo question is its nearest proxy
   ([s1][sj25-other]).
-- In a year, Bun's npm package grew 9.8x (406,541 to 3,990,852) and pnpm's 6.8x ([s5][npm-yoy]).
+- In a year, Bun's npm package grew 9.8x (406,541 to 3,990,852) and pnpm's 6.8x (32,794,521 to
+  223,195,967) ([s4][npm-pm], [s5][npm-yoy]).
   npm counts only installs made through the registry, so Bun's count is a lower bound.
 
 ### TypeScript form
@@ -105,18 +109,19 @@ Conflict of interest: this survey was drafted by an Anthropic model, and Anthrop
 | retention | 26% | 98% | 88% | 74% | 84% | 91% | 85% | 94% |
 
 - npm downloads: esbuild 303.5M, vite 195.3M, rollup 126.1M, rolldown 111.2M (1.5M a year
-  earlier), webpack 56.2M, tsup 9.5M, tsdown 4.3M ([s14][npm-build]). These include transitive
-  installs, so they overstate direct use.
+  earlier, [s56][npm-yoy-build]), webpack 56.2M, tsup 9.5M, tsdown 4.3M ([s14][npm-build]). These
+  include transitive installs, so they overstate direct use.
 - Vite 8 (2026-03-12) "ships with Rolldown as its single, unified, Rust-based bundler"
   ([s15][vite8-blog]). Its library mode (`build.lib`) builds libraries, and it points to tsdown for
   advanced library builds ([s16][vite-build]).
 - Lit's guidance: publish ES modules with `.d.ts`, unbundled and unminified, because "bundling and
   other optimizations are application concerns" ([s17][lit-pub]). For an app's production build,
   "we recommend Rollup" ([s18][lit-prod]).
-- The web-component libraries below: Lit, Material, FAST, and Fluent emit with tsc and add a
-  Rollup bundle, and Catalyst emits with tsc alone. 4 build with esbuild plus tsc for
-  `.d.ts` (Shoelace, Web Awesome, Spectrum 1st-gen, relative-time-element). Spectrum's gen2 builds
-  with Vite. Stencil and Ionic use Stencil's compiler, and Vaadin has no build step. None use
+- The 13 web-component libraries below: 4 emit with tsc and add a Rollup bundle (Lit, Material,
+  FAST, Fluent), and Catalyst emits with tsc alone. 4 build with esbuild plus tsc for `.d.ts`
+  (Shoelace, Web Awesome, Spectrum 1st-gen, relative-time-element); Spectrum's gen2 builds with
+  Vite. Stencil builds its own compiler with tsc, esbuild, and Rollup, and Ionic builds with that
+  compiler. Primer ViewComponents bundles with Rollup, and Vaadin has no build step. None use
   `bun build`.
 
 ### Test runner
@@ -161,7 +166,7 @@ scripts, and the release workflow.
 
 | option | how a consumer installs | facts | trade-offs |
 | --- | --- | --- | --- |
-| git tag + jsDelivr `/gh/` | a package manager installs the git tag; browsers load `/gh/user/repo@tag/file` | an exact tag is cached for good and can't be purged or changed; 20 MB per file, 150 MB per package; `.ts` is served `text/plain` with `nosniff`, so the tag must carry built JS ([s36][jsd]); `/+esm` returned 404 on `/gh/` (probe of `jquery@3.7.1`) | perf: a global CDN with immutable caching. maint: no infrastructure, but built JS must be committed or tagged, and a bad tag is permanent. scale: no semver range resolution or dedupe in package managers |
+| git tag + jsDelivr `/gh/` | a package manager installs the git tag; browsers load `/gh/user/repo@tag/file` | an exact tag is cached for good and can't be purged or changed; 20 MB per file, 150 MB per package; `.ts` is served `text/plain` with `nosniff`, so the tag must carry built JS ([s36][jsd]); `/+esm` returns 404 on `/gh/`: `curl -s -o /dev/null -w '%{http_code}' https://cdn.jsdelivr.net/gh/jquery/jquery@3.7.1/+esm` printed 404, as did `…/gh/jquery/jquery@3.7.1/dist/jquery.js/+esm` and `…/gh/JaimeStill/spike-html-design@v0.7.0/+esm`, against 200 for `…/npm/jquery@3.7.1/+esm` (probed 2026-10-16T12:04:23Z) | perf: a global CDN with immutable caching. maint: no infrastructure, but built JS must be committed or tagged, and a bad tag is permanent. scale: no semver range resolution or dedupe in package managers |
 | GitHub release assets | `npm install <tarball URL>`, `pnpm add <URL>`, `bun add <URL>` ([s37][npm-install], [s38][pnpm-add], [s39][bun-add]) | bun saves any credentials in the URL into package.json and the lockfile ([s39][bun-add]) | perf: a direct download. maint: built output decoupled from the source tree, but every upgrade edits a URL. scale: no ranges, so it gets harder with each package and consumer |
 | GitHub Packages (npm) | npm registry at `npm.pkg.github.com` | "You need an access token to publish, install, and delete private, internal, and public packages", a classic PAT with `read:packages`; "only supports scoped npm packages" ([s40][ghp]) | perf: a registry. maint: integrated with Actions. scale: every consumer, even of a public package, needs a token |
 | JSR | `jsr:` specs natively in pnpm 10.9+ and Yarn 4.9+; npm through `@jsr` on `npm.jsr.io` in `.npmrc` ([s41][jsr-npm]); Bun's native support isn't documented | the Deno company pays for hosting; MIT ([s42][jsr-faq]); publish `.ts` and JSR emits JS and `.d.ts` for npm ([s41][jsr-npm]); automatic provenance from Actions ([s43][jsr-trust]) | perf: a CDN-backed registry. maint: no release build to write. scale: semver ranges, but it rests on one company's funding, and npm and Bun consumers need setup |
@@ -182,28 +187,34 @@ All 13 rows publish to npm. relative-time-element also publishes to GitHub Packa
 and Web Awesome also ship CDN builds. No library surveyed releases through git tags, release
 assets, JSR, or a self-hosted registry alone.
 
+The hosting decision belongs to spike-html-packages, not this survey. The standing decision (plan
+round 4) rules npm out unless no workable alternative exists, so these rows are its facts, and
+npm's adoption among the libraries doesn't decide it.
+
 ### The consensus
 
 | dimension | majority practice | trend | consensus? |
 | --- | --- | --- | --- |
 | runtime | Node (about 90% in SoJS) | Bun, 16.4% to 20.8% in a year | yes: Node |
-| package manager | npm by use; pnpm leads for monorepos; npm in 10 of 13 web-component rows | pnpm; Bun install at 11% | none among managers; npm by default |
+| package manager | npm by use; pnpm leads for monorepos; npm in 10 of 13 web-component rows | pnpm; Bun 11.0% of SoJS monorepo-tool use (not a package-manager question) | none among managers; npm by default |
 | TS form | `.ts` source, shipped as JS with `.d.ts` | the TypeScript-only share rising | yes: `.ts` with a build; JSDoc is a minority (Svelte, Turbo, Vaadin's JS) |
 | library build | tsc emit to unbundled ESM, with an optional CDN bundle | esbuild and Vite for libraries | broad: unbundled ESM with `.d.ts` (Lit's guidance), not one tool |
 | app build | webpack by use, Vite close behind | Vite (98% retention), now on Rolldown | trend: Vite |
 | test runner | Jest overall; Web Test Runner for web-component libraries | Vitest, with browser mode stable | none for web-component libraries: Web Test Runner incumbent, Vitest rising |
-| release hosting | public npm, scoped, increasingly with provenance | trusted publishing (OIDC) | yes: npm; no surveyed alternative has adoption among these libraries |
+| release hosting | public npm, scoped, increasingly with provenance; relative-time-element also on GitHub Packages, Shoelace and Web Awesome also as CDN builds | trusted publishing (OIDC) | yes among the libraries: npm; none releases through an alternative alone. The decision is spike-html-packages', with npm ruled out unless no workable alternative exists |
 
 Not established: Stack Overflow 2026's runtime and package-manager figures; whether Bun installs
 `jsr:` specs natively; whether npm and pnpm lock a tarball URL's integrity, and whether a
 re-uploaded release asset changes under the same tag; how Shoelace, Web Awesome, and Vaadin
-publish (no publish step in their workflows); the cause of npm's registry-wide download growth.
+publish (no publish step in their workflows); the cause of npm's registry-wide download growth;
+a published support window for the npm CLI's release lines (its README defers to Node's
+supported versions, [README][npm-readme]).
 SoJS lists neither Web Test Runner nor a 2025 package-manager question.
 
 [sj25-other]: https://2025.stateofjs.com/en-US/other-tools/
 [sj24-other]: https://2024.stateofjs.com/en-US/other-tools/
 [so25]: https://survey.stackoverflow.co/2025/technology
-[npm-pm]: https://api.npmjs.org/downloads/point/last-week/pnpm,yarn,bun
+[npm-pm]: https://api.npmjs.org/downloads/point/2026-10-06:2026-10-12/pnpm,yarn,bun
 [npm-yoy]: https://api.npmjs.org/downloads/point/2025-10-06:2025-10-12/pnpm,bun
 [sj25-usage]: https://2025.stateofjs.com/en-US/usage/
 [sj24-usage]: https://2024.stateofjs.com/en-US/usage/
@@ -213,7 +224,7 @@ SoJS lists neither Web Test Runner nor a 2025 package-manager question.
 [turbo-pr]: https://github.com/hotwired/turbo/pull/971
 [jsparty]: https://changelog.com/jsparty/292
 [sj25-build]: https://2025.stateofjs.com/en-US/libraries/build-tools/
-[npm-build]: https://api.npmjs.org/downloads/point/last-week/esbuild,vite,rollup,rolldown,webpack,tsup,tsdown,vitest,jest
+[npm-build]: https://api.npmjs.org/downloads/point/2026-10-06:2026-10-12/esbuild,vite,rollup,rolldown,webpack,tsup,tsdown,vitest,jest
 [vite8-blog]: https://vite.dev/blog/announcing-vite8
 [vite-build]: https://vite.dev/guide/build.html
 [lit-pub]: https://lit.dev/docs/tools/publishing/
@@ -253,19 +264,21 @@ SoJS lists neither Web Test Runner nor a 2025 package-manager question.
 [semver]: https://semver.org/
 [npm-dep]: https://docs.npmjs.com/cli/v11/commands/npm-deprecate
 [npm-unpub]: https://docs.npmjs.com/policies/unpublish
-[npm-wtr]: https://api.npmjs.org/downloads/point/last-week/@web/test-runner
-[npm-pw]: https://api.npmjs.org/downloads/point/last-week/@playwright/test
+[npm-wtr]: https://api.npmjs.org/downloads/point/2026-10-06:2026-10-12/@web/test-runner
+[npm-pw]: https://api.npmjs.org/downloads/point/2026-10-06:2026-10-12/@playwright/test
+[npm-yoy-build]: https://api.npmjs.org/downloads/point/2025-10-06:2025-10-12/webpack,esbuild,vite,rolldown
+[npm-readme]: https://github.com/npm/cli/blob/latest/README.md
 
 ## Results
 
 Every measured figure below is from one run of `mise run measure`, dated
-**2026-10-16T11:51:40Z (UTC)**, cited as *(m 2026-10-16)*; it replaces the run of 01:32:50Z the
-same day, and is the first run that checks each bundle's shape. That covers the timings and rows,
-each mise tool's installed size (its Footprint section, `mise where` and `du -sb`), and the lines
-and brotli bytes of `src/` (its Forms section), with every tool's version as pinned in
-`mise.toml`. File counts from the offline installs are from `mise run check` the same day. Survey
-figures cite the Ecosystem survey's sources, and other facts from outside the spike carry their own
-source and date.
+**2026-10-16T13:18:28Z (UTC)**, cited as *(m 2026-10-16)*; it replaces the runs of 01:32:50Z and
+11:51:40Z the same day, and is the first run with the pnpm and bun `prepare` rows. That covers the
+timings and rows, each mise tool's installed size (its Footprint section, `mise where` and
+`du -sb`), and the lines and brotli bytes of `src/` (its Forms section), with every tool's version
+as pinned in `mise.toml`. File counts from the offline installs are from `mise run check` the same
+day. Survey figures cite the Ecosystem survey's sources, and other facts from outside the spike
+carry their own source and date.
 
 Conflict of interest: this evidence was drafted by an Anthropic model, and Anthropic owns Bun.
 The pick rests on the measured rows and the cited facts; weigh it with that in mind.
@@ -297,7 +310,8 @@ ships JS, so bun's `.ts` support under node_modules buys a consumer nothing. The
   13.4% in Stack Overflow 2025 ([s3][so25]), and 10 of the 13 web-component libraries use it (3
   use Yarn, none pnpm or bun). pnpm leads multi-package repositories, 38.4% of SoJS 2025 monorepo
   use against npm workspaces' 20.8% and Bun's 11.0% ([s1][sj25-other]), and this stack is
-  several layers released from one repository. bun install is a minority on both counts.
+  several layers released from one repository. That 11.0% is Bun's only count, and a
+  monorepo-tool figure, not package-manager use; the Stack Overflow figures above list no Bun.
 - Build: library builds are tsc emit to unbundled ESM with `.d.ts` (Lit, Material, FAST, Fluent,
   and Catalyst emit with tsc), apps trend to Vite (84% use, 98% retention, [s13][sj25-build]), and
   none of the 13 libraries uses `bun build`. Both Node columns' builds are the standards; the Bun
@@ -306,17 +320,30 @@ ships JS, so bun's `.ts` support under node_modules buys a consumer nothing. The
   from 2026-10-28 and supported to 2029-04-30 ([schedule.json][node-sched]), and from 27 every
   major is LTS ([release schedule][node-blog]). pnpm is MIT and independent, funded through
   [Open Collective][pnpm-oc], with three maintained lines and releases several times a week
-  ([releases][pnpm-rel]); its lead maintainer wrote 64 of its 100 most recent commits
-  ([commits][pnpm-commits]). Bun is Oven's, acquired by Anthropic in December 2025
-  ([heise][bun-heise]), still MIT ([LICENSE.md][bun-lic]) and developed in the open; it released
+  ([releases][pnpm-rel]); its lead maintainer wrote 65 of its 100 most recent commits
+  ([commits][pnpm-commits]). npm is GitHub's, which bought npm, Inc. in 2020
+  ([GitHub blog][npm-github]), and GitHub is Microsoft's ([Microsoft][ms-github]). The CLI is
+  under the Artistic License 2.0 ([LICENSE][npm-lic]), and it keeps release lines in parallel,
+  34 releases in the 12 months to 2026-10-16 (6 on 12, 23 on 11, 5 on 10), with 12.2.1 and
+  11.21.1 the same day, 2026-10-15 ([releases][npm-rel]); its two most frequent authors wrote 46
+  of its 100 most recent commits ([commits][npm-commits]). It publishes no support window of its
+  own; its README defers to Node's supported versions ([README][npm-readme]), and node bundles
+  it, 11.20.0 in node 26.12.0. npm also runs the registry, under terms npm "may change … in the
+  future" ([open-source terms][npm-terms], legal notices to GitHub), and it sets registry and
+  client policy unilaterally: npm 12 made git dependencies and dependency lifecycle scripts opt-in
+  ([v12.0.0][npm-12]), and classic tokens were revoked 2025-12-09 ([s49][npm-tokens]). Bun is
+  Oven's, acquired by Anthropic in December 2025 ([heise][bun-heise]), still MIT ([LICENSE.md][bun-lic]) and developed in the open; it released
   35 times in the 12 months before the acquisition and 15 in the 10.5 since, with a gap from
   2026-05-13 to 2026-08-20 that ended with 1.4.0, a feature release ([releases][bun-rel],
-  [bun.com/1.4][bun-14]). Two core engineers wrote 72 of its 100 most recent commits
+  [bun.com/1.4][bun-14]). Two core engineers wrote 74 of its 100 most recent commits
   ([commits][bun-commits]). It has no foundation and no published support window. So the setup's
   Deno test ("patches only after its acquisition") doesn't rule Bun out, but a foundation and an
-  LTS window outweigh one company and none. Commit counts are the author logins of each default
-  branch's 100 most recent commits, read 2026-10-16 with `gh api`. npm's stewardship wasn't
-  surveyed.
+  LTS window outweigh one company and none. Between the managers, npm's stewardship is the
+  stronger: a corporate owner, release lines kept in parallel, and authorship spread wider,
+  against pnpm's donations and one maintainer's 65 of 100 commits; neither has a
+  foundation or a published support window. Its cost is the same owner's hand on the client, the
+  registry, and their defaults. Commit counts are the author logins of each default branch's 100
+  most recent commits, read 2026-10-16 with `gh api`.
 - Repository releases, measured *(m 2026-10-16)* and in the check, weighed across all three:
 
   | fact | npm 12.2.1 | pnpm | bun |
@@ -325,20 +352,30 @@ ships JS, so bun's `.ts` support under node_modules buys a consumer nothing. The
   | a subdirectory at a prefixed tag | no | yes, `#fixture/v0.1.0&path:/fixture`, 11 files | no, can't resolve the spec |
   | a git-tag dependency | refused by default (`EALLOWGIT`, allow-git=none); allow-git=root admits it | installed | installed |
   | that package's own git-tag dependency | refused under allow-git=root; allow-git=all installs it | refused (`ERR_PNPM_EXOTIC_SUBDEP`); `blockExoticSubdeps: false` installs it | installed, no setting |
-  | a git dependency's `prepare` | runs at pack time, while npm warns that the package's install scripts were blocked; only `--ignore-scripts` skips it | not measured | not measured |
+  | a git dependency's `prepare` | runs at pack time, while npm warns that the package's install scripts were blocked; only `--ignore-scripts` skips it | refused by default (`ERR_PNPM_GIT_DEP_PREPARE_NOT_ALLOWED`), nothing installed; the package's resolved spec in `allowBuilds` runs it; `--ignore-scripts` installs without it | installed without running it, reported (`Blocked 1 postinstall`, and `bun pm untrusted` lists `[prepare]`); `trustedDependencies` runs it |
 
   npm ignores `&path:` as an unknown key, and its own `#fixture/v0.1.0::path:fixture` resolves the
   tag to its commit and then fails to install it (`ENOENT` on the clone's package.json). npm and
   pnpm guard git dependencies by default, npm at the root and pnpm only below it; bun has no guard.
-  npm's `prepare` warning says the opposite of what it does, a cost to anyone auditing a git
-  dependency. Whether the layers use prefixed tags or git-tag dependencies is spike-html-packages'
-  to settle, so these lean the pick, not decide it.
+  On a git dependency's `prepare`, all three ask for an opt-in, but only npm runs the script
+  anyway: its warning says the opposite of what it does, a cost to anyone auditing a git
+  dependency. pnpm refuses until the script is allowed, bun skips it and says so; pnpm's
+  `allowBuilds` takes the resolved spec with its commit, not the bare name. Whether the layers use
+  prefixed tags or git-tag dependencies is spike-html-packages' to settle; with npm hosting ruled
+  out unless no workable alternative exists, a release from the repository is the likely path, so
+  these facts weigh on the pick, and "What would reverse it" says what changes it.
 
 The first criterion picks Node, clearly: the consensus runtime, both standard builds, and the
-stronger stewardship. Between its managers it picks pnpm, narrowly. npm is the default and the
-web-component libraries' majority, but pnpm leads the multi-package repositories this stack is,
-and it is the only manager measured that installs a subdirectory at a prefixed tag; of the two
-that guard git dependencies, it takes a consumer's own without a setting.
+stronger stewardship. Between its managers it still picks pnpm, more narrowly than before npm's
+stewardship was weighed. npm has the standard by use (the default, and the web-component
+libraries' majority) and the stronger stewardship. pnpm has the multi-package practice this stack
+is, and the repository-release facts: it is the only manager measured that installs a
+subdirectory at a prefixed tag; of the two that guard git dependencies, it takes a consumer's own
+without a setting; and it never runs a git dependency's `prepare` while saying it didn't. Those
+facts decide it because hosting rules npm out unless no workable alternative exists, which leaves
+the layers released from repositories, the path where npm is weakest. If spike-html-packages
+releases through a registry instead, npm's standard and stewardship would carry the first
+criterion, and the pick would change to npm.
 
 **Second: footprint.** Bun is smallest: 89.0 MB for one binary, against Node + npm's 236.8 MB
 (271.1 MB with Vite for an app) and Node + pnpm's 283.3 MB (317.6 MB with Vite)
@@ -351,40 +388,41 @@ don't overturn the first.
 
 | step | Node + npm | Node + pnpm | Bun | ratio, npm; pnpm |
 | --- | ---: | ---: | ---: | ---: |
-| install, cold | 952.5 ms | 434.6 ms | 345.6 ms | 2.8x; 1.3x |
-| install, warm | 679.0 ms | 170.8 ms | 14.4 ms | 47.2x; 11.9x |
-| type check (shared tsc) | 72.9 ms | 72.9 ms | 72.9 ms | 1x |
-| library build | tsc emit 77.1 ms | the same | bun build 5.4 ms | not like for like |
-| app bundle | vite build 124.7 ms; esbuild 36.2 ms | the same | bun build 5.4 ms | 23.1x; 6.7x |
-| watch rebuild | vite 17.5 ms; tsc 67.8 ms; esbuild 107.7 ms | the same | 12.6 ms | 1.4x; 5.4x; 8.5x |
-| test | node --test 123.2 ms | the same | bun test 19.4 ms | 6.4x |
+| install, cold | 963.2 ms | 420.0 ms | 271.7 ms | 3.5x; 1.5x |
+| install, warm | 664.4 ms | 169.6 ms | 14.3 ms | 46.5x; 11.9x |
+| type check (shared tsc) | 79.6 ms | 79.6 ms | 79.6 ms | 1x |
+| library build | tsc emit 77.6 ms | the same | bun build 5.5 ms | not like for like |
+| app bundle | vite build 122.3 ms; esbuild 36.2 ms | the same | bun build 5.5 ms | 22.2x; 6.6x |
+| watch rebuild | vite 18.7 ms; tsc 68.1 ms; esbuild 107.4 ms | the same | 13.2 ms | 1.4x; 5.2x; 8.1x |
+| test | node --test 117.4 ms | the same | bun test 19.0 ms | 6.2x |
 
-Only the installs differ between the Node columns: pnpm installs 2.2 times faster than npm cold and
-4.0 times warm, under an order of magnitude. tsc emit transpiles each file and bundles nothing, so
+Only the installs differ between the Node columns: pnpm installs 2.3 times faster than npm cold and
+3.9 times warm, under an order of magnitude. tsc emit transpiles each file and bundles nothing, so
 it isn't compared with `bun build`. The same run checked each bundle's shape: Vite wrote six
 entries and one shared Lit chunk (20,567 bytes) that each Lit entry imports, esbuild and `bun
 build` each wrote six self-contained entries with Lit inlined, and none holds Lit's development
-build. Vite's 124.7 ms includes starting node and loading its config. Three gaps clear 10x: a
-warm install against npm (47.2x) and against pnpm (11.9x), and a one-shot Vite bundle (23.1x). All
+build. Vite's 122.3 ms includes starting node and loading its config. Three gaps clear 10x: a
+warm install against npm (46.5x) and against pnpm (11.9x), and a one-shot Vite bundle (22.2x). All
 are under 700 ms per run at this size, and the edit loop, a Vite watch rebuild, is within 1.4x of
 Bun's. Speed is the last criterion and these gaps don't reach a scale anyone waits on, so they
 don't overturn the first either.
 
 **The pick: Node 26 with pnpm, never npm or Bun beside it.** The industry standard and
-maintainability decide it: Node over Bun clearly, and pnpm over npm on the multi-package practice
-and the repository-release facts. Footprint is Bun's real advantage at about a third the size, and
+maintainability decide it: Node over Bun clearly, and pnpm over npm narrowly, on the
+multi-package practice and the repository-release facts, against npm's standard by use and its
+stronger stewardship. Footprint is Bun's real advantage at about a third the size, and
 npm's at 46.5 MB; speed gaps of an order of magnitude exist only where the absolute times are
 under a second.
 
 **The build tool: tsc emit for the foundation and components, Vite for apps.** A library build is
 tsc emit to unbundled ESM with `.d.ts`, the survey's library practice and Lit's guidance, which
 leaves bundling to the app ([s17][lit-pub]): the same tsc that type-checks, so it adds no tool
-(`mise run build:tsc`, 77.1 ms *(m 2026-10-16)*). An app's bundle is Vite, the survey's trend
+(`mise run build:tsc`, 77.6 ms *(m 2026-10-16)*). An app's bundle is Vite, the survey's trend
 ([s13][sj25-build], [s15][vite8-blog]), adding 34.3 MB *(m 2026-10-16)* only where an app needs
 it; the branches task confirms it at application scale. `bun build` leaves with Bun.
 
 **esbuild doesn't earn its place.** Its build is 2.1x faster than tsc emit (36.2 ms against
-77.1 ms) and 3.4x faster than Vite, and its watch rebuild is the slowest of the three (107.7 ms)
+77.6 ms) and 3.4x faster than Vite, and its watch rebuild is the slowest of the three (107.4 ms)
 *(m 2026-10-16)*: no order-of-magnitude gap over the tools the column keeps. It adds a second
 native binary to mirror for offline installs: esbuild 0.28.2 on npm is a stub with a `postinstall`
 and 26 per-platform optional packages ([registry][esb-npm]). Vite 8 bundles with Rolldown and
@@ -395,7 +433,8 @@ in `mise.toml` only for the measure task's comparison.
 
 **What would reverse it.** Toward npm: spike-html-packages releasing through a registry rather
 than git tags, which leaves no prefixed tags or git-tag dependencies to weigh, so npm's majority
-among the libraries and its smaller footprint would decide; or npm installing a subdirectory with
+among the libraries and its stronger stewardship would carry the first criterion, with its smaller
+footprint behind them; or npm installing a subdirectory with
 `::path:`. Toward Bun: the survey's consensus moving, Bun's runtime use nearing Node's or the
 web-component libraries adopting bun install or `bun build`; Node losing its foundation or its LTS
 windows; an application-scale bundle where Vite against `bun build` is seconds against tenths, in
@@ -456,8 +495,9 @@ Considered, and why they lost:
   (3%) *(m 2026-10-16)*, a separate `globals.d.ts` because JSDoc can't write `declare global`, and
   a tsc 7.0.2 declaration-emit fault on one typedef shape (a multi-line object typedef with quoted
   keys copies each line's `*` into the `.d.ts`, which then fails to parse; reproduced 2026-10-16).
-  It is the survey's minority: 12 of 13 web-component libraries write `.ts`, and Svelte and Turbo
-  are the holdouts ([s10][svelte-src], [s11][turbo-pr]).
+  It is the survey's minority: 12 of the 13 web-component libraries write `.ts`, and the 13th,
+  Vaadin, writes JS with hand-written `.d.ts`, not JSDoc ([s20][vaadin]). Outside the table,
+  Svelte and Turbo are the known holdouts ([s10][svelte-src], [s11][turbo-pr]).
 - **Plain JS** is the shortest, 50 lines and 699 brotli bytes under `.ts` *(m 2026-10-16)*, and
   runs everywhere as written, but nothing checks a type, so the element's contract (its
   properties and its events' detail) is unchecked. It lost on type safety.
@@ -505,7 +545,10 @@ The JSDoc and plain JS forms stay in `src/` as this comparison's evidence, not a
   it. pnpm refuses that nested dependency (`ERR_PNPM_EXOTIC_SUBDEP`) by default and installs it
   with `blockExoticSubdeps: false` in the consumer's `pnpm-workspace.yaml`; bun installs it as is.
   npm runs a git dependency's `prepare` when it packs the clone while warning that its install
-  scripts were blocked; `--ignore-scripts` skips it. Handed to spike-html-packages.
+  scripts were blocked; `--ignore-scripts` skips it. pnpm refuses that dependency
+  (`ERR_PNPM_GIT_DEP_PREPARE_NOT_ALLOWED`) until `allowBuilds` names its resolved spec, and bun
+  installs it without running `prepare`, reporting it blocked, until `trustedDependencies` names
+  it. Handed to spike-html-packages.
 - **Prefixed tags** *(m 2026-10-16)*, from a local, unpushed `fixture/v0.1.0`: pnpm installs the
   subdirectory with `#fixture/v0.1.0&path:/fixture` (11 files); bun can't resolve the spec; npm
   ignores `&path:` as an unknown key, and its own `#fixture/v0.1.0::path:fixture` resolves the tag
@@ -531,6 +574,13 @@ The JSDoc and plain JS forms stay in `src/` as this comparison's evidence, not a
 [esb-commits]: https://api.github.com/repos/evanw/esbuild/commits?per_page=100
 [lit-ts]: https://cdn.jsdelivr.net/gh/lit/lit@lit@3.3.3/packages/lit/src/index.ts
 [openjs]: https://openjsf.org/projects
+[npm-github]: https://github.blog/news-insights/company-news/npm-is-joining-github/
+[ms-github]: https://news.microsoft.com/2018/06/04/microsoft-to-acquire-github-for-7-5-billion/
+[npm-lic]: https://github.com/npm/cli/blob/latest/LICENSE
+[npm-rel]: https://github.com/npm/cli/releases
+[npm-commits]: https://api.github.com/repos/npm/cli/commits?per_page=100
+[npm-terms]: https://docs.npmjs.com/policies/open-source-terms
+[npm-12]: https://github.com/npm/cli/releases/tag/v12.0.0
 
 ## Capabilities
 

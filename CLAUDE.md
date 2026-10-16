@@ -8,8 +8,8 @@ repository is managed with the marathon workflow; start from `context/README.md`
 
 - **Standards:** `STANDARDS.md`, with pointers into the architecture repository.
 - **Check:** `mise run check`: biome ci, shellcheck, `tsc --noEmit`, the shared suite in
-  `test/` under `node --test` and `bun test`, and the pnpm and bun consumer fixtures installed
-  offline. Run `mise run install` once first.
+  `test/` under `node --test` and `bun test`, and the pnpm, npm, and bun consumer fixtures
+  installed offline. Run `mise run install` once first.
 - **Tasks:** `mise run install` (Lit, and the managers' caches for the offline installs),
   `build`, `demo`, `measure` (the evidence's dated figures; reads the network), and `currency`.
   Each task's description in `mise.toml` says what it does.
