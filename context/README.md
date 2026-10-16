@@ -784,8 +784,9 @@ clearly: 9,697 and 9,295 SoJS 2025 respondents against Biome's 1,762 and oxlint'
 ([s1][sj25-other]); 158.7M and 139.1M npm downloads against Biome's 17.9M and oxlint's and oxfmt's
 26.8M and 17.1M ([s57][npm-lint], [s58][npm-biome]); and ESLint in 10 and Prettier in 11 of the
 13 web-component libraries, where Biome is in one (FAST) and Oxc in none (Ecosystem survey, Lint
-and format). Oxc's tools have neither the use nor the libraries, and oxfmt is still 0.x. Against
-the standard, B's measured gaps:
+and format). Oxc's tools lead Biome on npm downloads but have neither the survey's respondents
+(123 write-ins) nor any of the 13 libraries, and oxfmt is still 0.x. Against the standard, B's
+measured gaps:
 
 - **Direction.** ESLint's rule can't enforce the layer direction on `import()`, the form an app
   uses to load a view lazily: 5 of the 62 violation files have no expression in it at all. The
@@ -831,8 +832,8 @@ groups' cost (Results 3). Speed doesn't decide it.
 `biome.json` as it is. ESLint + Prettier is the clear standard, and the evidence weighs against it
 on maintainability: it can't enforce the direction on `import()`, it needs Node and four packages
 in the check, and its formatter rewrites Markdown and the lockfile unless limited. Its
-configurability matched Biome's on this tree. Footprint slightly favours the other two, and speed
-doesn't decide it: ESLint + Prettier is 7.1 times slower together, under an order of magnitude
+configurability matched Biome's on this tree. Footprint favours the other two, C by 1.9 times,
+short of an order of magnitude, and speed doesn't decide it: ESLint + Prettier is 7.1 times slower together, under an order of magnitude
 and under a second, and oxlint + oxfmt is 1.3 times faster than Biome, a gap of 27 ms.
 
 **What would reverse it.** Toward ESLint + Prettier: ESLint's rule checking `import()`, or a
