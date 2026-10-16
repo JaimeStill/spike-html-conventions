@@ -12,8 +12,10 @@ The repository is managed with the marathon workflow; start from `context/README
   bun) installed offline, failing unless the npm that runs is the version `mise.toml` pins. Run
   `mise run install` once first.
 - **Tasks:** `mise run install` (Lit, and the managers' caches for the offline installs),
-  `build`, `demo`, `measure` (the evidence's dated figures: installs under npm, pnpm, and bun,
-  and builds with tsc, esbuild, Vite, and bun build; reads the network), and `currency`.
+  `build`, `demo`, `measure` (the evidence's dated figures: installs under npm, in its hoisted
+  and linked layouts, pnpm, and bun; the layout rows, which record phantom dependencies, lockfile
+  determinism, and disk sharing under each manager; and builds with tsc, esbuild, Vite, and bun
+  build; reads the network), and `currency`.
   Each task's description in `mise.toml` says what it does.
 - **Goals:** this spike's tasks live in the coordinator's roadmap,
   `standards-lab/context/roadmap.toml`, under `experiment.html.spike-html-conventions`. Its goal
