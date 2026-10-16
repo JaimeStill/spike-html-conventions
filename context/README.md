@@ -325,12 +325,13 @@ ships JS, so bun's `.ts` support under node_modules buys a consumer nothing. The
   names ([README][pnpm-readme]). It keeps three lines, with 122 stable releases in the 12 months
   to 2026-10-16 (30 on 12, 55 on 11, 37 on 10), and 56 prereleases beside them, counted as npm's
   are below ([releases][pnpm-rel], `gh api --paginate`, read 2026-10-16). This repository's
-  12.11.2 pin is the release pnpm marks latest on GitHub (v12.11.2, 2026-10-09;
-  [latest release][pnpm-gh-latest]), which mise follows, since it resolves pnpm through
-  `aqua:pnpm/pnpm` (`mise registry pnpm`), so `mise run currency` reports the pin current.
-  The registry is ahead: pnpm hasn't marked any 12.12 or later release latest on GitHub, while
-  npm's `latest` dist-tag is 12.14.0, released 2026-10-15 ([dist-tags][pnpm-tags], read
-  2026-10-16). Its lead maintainer wrote 65 of its 100 most recent commits
+  12.11.2 pin is what mise resolves natively: `mise latest pnpm` answers 12.11.2, since mise
+  resolves pnpm through `aqua:pnpm/pnpm` (`mise registry pnpm`), which reads the release pnpm
+  marks latest on GitHub (v12.11.2, 2026-10-09; [latest release][pnpm-gh-latest]). The pin
+  follows the tool manager's own resolution, so `mise use pnpm` and `mise run currency` agree on
+  it, and currency reports it current. The registry is ahead: pnpm hasn't marked any 12.12 or
+  later release latest on GitHub, while npm's `latest` dist-tag was 12.14.0 on 2026-10-16,
+  released 2026-10-15 ([dist-tags][pnpm-tags]). Its lead maintainer wrote 65 of its 100 most recent commits
   ([commits][pnpm-commits]), and 2,716 of the 4,201 on its main branch in the year to 2026-10-16
   (`gh api`). vuejs/core, vitejs/vite, and nuxt/nuxt each declare `pnpm@12.11.2` in their
   `packageManager` field, vercel/next.js `pnpm@12.9.1`, withastro/astro `pnpm@11.28.4`, and
@@ -614,11 +615,17 @@ The JSDoc and plain JS forms stay in `src/` as this comparison's evidence, not a
   subdirectory with `#fixture/v0.1.0&path:/fixture` (11 files); bun can't resolve the spec; npm
   ignores `&path:` as an unknown key, and its own `#fixture/v0.1.0::path:fixture` resolves the tag
   to its commit, then fails to install it. Handed to spike-html-packages.
-- **Pending:** this package's v0.1.0 rows, *not yet released* at *m 2026-10-16*: its GitHub
-  install under npm, pnpm, and bun, jsDelivr serving each of its nine source files (the three `.ts`
-  as unloadable), and the file:// page loading its JS forms from jsDelivr. v0.1.0 ships source
-  only; the release build is spike-html-packages'. The structure task runs these rows after the
-  release.
+- **This package from GitHub by tag** *(m 2026-10-16T17:15:39Z, a run after its v0.1.0 tag was
+  pushed)*: v0.1.0 (commit 3b68fb8) under npm and pnpm (its `files`, 11 of the tag's 43) and bun
+  (43 of 43), each the tag's byte for byte, its exports map resolving, and the same set as the
+  offline install. v0.1.0 ships source only; the release build is spike-html-packages'.
+- **This package on jsDelivr** *(the same run)*: each of its nine source files at v0.1.0, with
+  `max-age=31536000, immutable`, CORS open to any origin, and bytes equal to the tag's. The six
+  `.js` files in `src/jsdoc/` and `src/js/` come as `application/javascript`, and the three in
+  `src/ts/` as `text/plain` with `nosniff`, so a browser won't run them as modules.
+- **file://, released** *(the same run)*: the four pages load spike-html-design v0.7.0, Lit
+  3.3.3, and the element's JSDoc and plain JS forms in Lit and vanilla, all from jsDelivr at their
+  tags; each element is defined and renders page 3 of 7.
 
 [node-sched]: https://github.com/nodejs/Release/blob/main/schedule.json
 [node-blog]: https://nodejs.org/en/blog/announcements/evolving-the-nodejs-release-schedule
