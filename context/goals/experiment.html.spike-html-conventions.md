@@ -1,12 +1,12 @@
 # goal · experiment.html.spike-html-conventions
 
-- **State:** brief ready
-- **Task:** toolchain
-- **Branch:** toolchain
+- **State:** idle
+- **Task:** none
+- **Branch:** none
 
 ## Tasks
 
-1. [ ] toolchain
+1. [x] toolchain
 2. [ ] structure
 3. [ ] components
 4. [ ] testing
@@ -102,10 +102,6 @@ Amendment (redirect at BRIEF): npm against pnpm, today.
      strategy, disk use), sourced otherwise; Results 1 re-weighed.
      Architect's addition: Bun as a third column for every concern.
 ```
-
-## Progress
-
-slices 12/12 committed · standards done (3 passes) · spec done (2 rounds after the redirect) · editor done · amendment 13 done (standards, spec 2 rounds, editor)
 
 ## Decisions
 
