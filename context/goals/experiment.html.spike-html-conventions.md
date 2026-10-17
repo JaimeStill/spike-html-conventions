@@ -191,9 +191,54 @@ Door          two-way: no tag, nothing published; the pin upgrade is
               reverted by restoring the pin and lockfile.
 ```
 
+Amendment (escalation at the review stop): component styles live in native .css files.
+
+Behaviors (new and revised)
+ 12. (new) Every component's own CSS lives in a .css file beside its
+     module, imported as a CSS module script
+     (`import sheet from "./x.css" with { type: "css" }`) and typed by one
+     ambient declaration; no CSS is written in .ts. This covers all 8
+     versions and status-badge. Lit shadow versions put the sheet in
+     `static styles`; vanilla shadow versions adopt it into their root;
+     light versions adopt it into the document once, their cascade layer
+     written inside the .css. The shared button styles are one .css file
+     adopted by reference into every shadow version, so one edit still
+     reaches both elements.
+ 13. (new) A local Vite plugin of herald's shape, about 30 lines, no new
+     package, turns each `type: "css"` import into a module that builds
+     and default-exports a constructed sheet, in `vite` dev and
+     `vite build`. Measure's pages use it. If the plugin can't see the
+     attribute before Vite strips it, BUILD escalates.
+ 14. (new) `mise run build:tsc` copies each .css beside its emitted .js.
+     `mise run demo` loads the components from tsc's emit natively in
+     Chromium from file://, with no bundling of the components; the
+     probe and restyle checks still pass across all four versions with
+     identical reports.
+ 15. (new) The check refuses a .css import without
+     `with { type: "css" }` (core ESLint no-restricted-syntax).
+  9. (rev) The served-bytes and source-size rows re-run on the .css form.
+ 11. (rev) Results 4 also records: the architect's judgement (Lit with a
+     shadow root as the default; styles in native .css files); CSS module
+     scripts' support (Chrome/Edge 123+, Firefox 147+, no Safari release;
+     WebKit landed it 2026-10-06) and the Safari gap for unbundled
+     loading, which apps close by building through Vite; that Bun 1.4.3
+     doesn't load the form either and herald's native CSS was a bundler
+     plugin, so Results 1's pick stands.
+ 16. (new) STANDARDS.md records: components are Lit with a shadow root by
+     default; a component's CSS lives in its own .css file, imported as a
+     CSS module script, and CSS is never written in .ts.
+
+Slices (inserted after the review stop, before the evidence slice)
+  5b. Style files: the .css files, the ambient declaration, the Vite
+      plugin, build:tsc's copy, the demo on tsc's emit, the lint rule.
+      Demo: check, demo, and measure pass on the .css form.
+  6.  (rev) Evidence: Results 4 and STANDARDS.md from one fresh measure
+      run; pending edits for html-artifacts.md, spike-html-packages
+      (ship each .css beside its .js), and the spike-html-design note.
+
 ## Progress
 
-slices 5/6 committed · review stop pending · standards — · spec — · editor —
+slices 5/7 committed · review stop done · escalation answered · standards — · spec — · editor —
 
 ## Decisions
 
@@ -344,6 +389,16 @@ slices 5/6 committed · review stop pending · standards — · spec — · edit
 - components: architect: the analysis rests on the components' final form, read in nvim. Rejected: per-scenario commits, directories, or patches.
 - components: BUILD pauses for an architect review once all 8 versions exist and before Results 4; the judgement is logged as a Decision.
 - components: Results 4 records the judgement, the sourced facts, served bytes, and source sizes as context; no rubric.
+- components: architect, at the review stop: Lit with a shadow root is the default for components; light DOM's hand-placed composition costs more than it gives. The one complaint: styles written as strings in .ts rather than natively in .css files.
+- components: escalation: component styles are standard CSS module scripts (`with { type: "css" }`) with one ambient declaration. Rejected: fetch plus replace() (a request per sheet, not the standard form); a <link> per shadow root (unstyled flash, no shared sheet, advised against by Lit); Vite's `?inline` (Vite-only, breaks tsc library emit).
+- components: escalation: a local ~30-line Vite plugin of herald's shape resolves the form in dev and build. Rejected: @arcmantle/vite-plugin-import-css-sheet (niche, a non-lint devDependency); es-module-shims at runtime (about 20 kB brotli, one maintainer).
+- components: escalation: Safari, which no release yet supports CSS module scripts in (WebKit landed it 2026-10-06), is a recorded gap for unbundled loading; apps build through Vite, so production pages don't depend on it. No shim ships.
+- components: escalation: the demo loads the components from tsc's emit natively in Chromium, not through esbuild IIFE pages or an esbuild plugin; build:tsc copies each .css beside its .js, and spike-html-packages is handed the release consequence.
+- components: escalation: all 8 versions, status-badge, and the shared button sheet move to .css; the button sheet is one .css file adopted by reference into every shadow version.
+- components: escalation: the check refuses a .css import without `with { type: "css" }` (core no-restricted-syntax), since the ambient declaration alone accepts a bare import no browser loads as a sheet.
+- components: escalation: Results 1's toolchain pick doesn't reopen. Bun 1.4.3 loads a CSS module script as `{}`; herald's native CSS was a 30-line BunPlugin, which a Vite plugin reproduces.
+- components: escalation: STANDARDS.md records Lit with a shadow root as the component default and the .css convention.
+- components: escalation: spike-html-design's elements layer as an adoptable sheet, and its theme-menu's string-built sheet, go to the session as a note, not into this task.
 
 ## Pending edits
 
