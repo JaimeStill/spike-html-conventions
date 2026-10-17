@@ -2,19 +2,21 @@
  * The button styles every shadow-root version shares, folded from herald's shared buttons module.
  * Imported as a CSS module script, it is one CSSStyleSheet per document, adopted by reference into
  * each shadow version's root, Lit and vanilla alike, so a single edit to it reaches every button
- * the shadow versions render. It reads the design tokens, each with a fallback for a page that
- * defines none.
+ * the shadow versions render. It keeps herald's rules and reads spike-html-design v0.7.0's
+ * baseline tokens in place of herald's, each with a fallback for a page that defines none. Herald's
+ * divider becomes --border-2, the control boundary, and its --font-mono becomes --font-ui, the
+ * interface controls' font.
  */
 
-/* The `.btn` class: a bordered, monospace button that dims while disabled. */
+/* The `.btn` class: a bordered button in the interface font that dims while disabled. */
 .btn {
-  padding: var(--space-1, 0.25rem) var(--space-3, 0.75rem);
-  border: 1px solid var(--divider, GrayText);
+  padding: var(--space-3xs, 0.25rem) var(--space-xs, 0.75rem);
+  border: var(--line-s, 1px) solid var(--border-2, GrayText);
   border-radius: var(--radius-sm, 0.25rem);
   background: var(--bg, Canvas);
-  color: var(--color, CanvasText);
+  color: var(--fg, CanvasText);
   font-size: var(--text-xs, 0.75rem);
-  font-family: var(--font-mono, monospace);
+  font-family: var(--font-ui, monospace);
   cursor: pointer;
   transition: background 0.15s;
 
@@ -23,7 +25,7 @@
   }
 
   &:focus-visible {
-    outline: 2px solid var(--blue, AccentColor);
+    outline: var(--line-m, 2px) solid var(--blue, AccentColor);
     outline-offset: 2px;
   }
 

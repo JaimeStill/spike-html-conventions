@@ -1,49 +1,52 @@
 /*
  * The pagination's own styles in a shadow root, beside buttons.css's: the Lit and vanilla versions
  * import this one sheet and adopt it into each element's root, so both style their controls alike.
- * It reads the design tokens, each with a fallback for a page that defines none.
+ * It keeps herald's rules and reads spike-html-design v0.7.0's baseline tokens in place of
+ * herald's, each with a fallback for a page that defines none. Herald's divider becomes --border
+ * for the rule above the controls and --border-2, the control boundary, for the field's border;
+ * its --font-mono becomes --font-ui, the interface controls' font.
  */
 
 :host {
   display: block;
 }
 .summary {
-  margin: 0 0 var(--space-2, 0.5rem);
-  font-size: var(--text-sm, 0.875rem);
-  color: var(--color-1, GrayText);
+  margin: 0 0 var(--space-2xs, 0.5rem);
+  font-size: var(--text-s, 0.875rem);
+  color: var(--fg-2, GrayText);
 }
 .pagination {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--space-3, 0.75rem);
-  margin-top: var(--space-3, 0.75rem);
-  padding-top: var(--space-3, 0.75rem);
-  border-top: 1px solid var(--divider, GrayText);
+  gap: var(--space-xs, 0.75rem);
+  margin-top: var(--space-xs, 0.75rem);
+  padding-top: var(--space-xs, 0.75rem);
+  border-top: var(--line-s, 1px) solid var(--border, GrayText);
 }
 .page-size,
 .page-controls,
 .page-indicator {
   display: flex;
   align-items: center;
-  gap: var(--space-2, 0.5rem);
+  gap: var(--space-2xs, 0.5rem);
 }
 .page-size-label,
 .page-indicator {
-  font-size: var(--text-sm, 0.875rem);
-  color: var(--color-1, GrayText);
+  font-size: var(--text-s, 0.875rem);
+  color: var(--fg-2, GrayText);
 }
 .input {
-  padding: var(--space-2, 0.5rem) var(--space-3, 0.75rem);
-  border: 1px solid var(--divider, GrayText);
+  padding: var(--space-2xs, 0.5rem) var(--space-xs, 0.75rem);
+  border: var(--line-s, 1px) solid var(--border-2, GrayText);
   border-radius: var(--radius-sm, 0.25rem);
   background: var(--bg-1, Field);
-  color: var(--color, FieldText);
-  font-size: var(--text-sm, 0.875rem);
-  font-family: var(--font-mono, monospace);
+  color: var(--fg, FieldText);
+  font-size: var(--text-s, 0.875rem);
+  font-family: var(--font-ui, monospace);
 
   &:focus-visible {
-    outline: 2px solid var(--blue, AccentColor);
+    outline: var(--line-m, 2px) solid var(--blue, AccentColor);
     outline-offset: 2px;
   }
 
@@ -54,7 +57,7 @@
 }
 .page-input {
   width: 4ch;
-  padding: var(--space-2, 0.5rem) var(--space-1, 0.25rem);
+  padding: var(--space-2xs, 0.5rem) var(--space-3xs, 0.25rem);
   text-align: center;
   appearance: textfield;
 
@@ -66,7 +69,7 @@
 }
 .btn-page {
   align-self: stretch;
-  padding: 0 var(--space-3, 0.75rem);
+  padding: 0 var(--space-xs, 0.75rem);
   font-size: var(--text-xl, 1.25rem);
   line-height: 1;
 }
