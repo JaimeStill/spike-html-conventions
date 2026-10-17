@@ -55,6 +55,16 @@ The architecture pages that apply, in the architecture repository:
 - An app-internal element is promoted to `components/` once a second app needs it.
 - Whether the static branch uses Lit is undecided, not a rule; the branches task decides it.
 
+## Components
+
+- A component is Lit with a shadow root by default (the architect's judgement, Results 4): light
+  DOM's hand-placed composition costs more than it gives. A vanilla or light-DOM component is an
+  exception its file argues.
+- A component's CSS lives in its own `.css` file beside its module, imported as a CSS module
+  script; CSS is never written in `.ts`, as a string, a `css` template, or a `replaceSync`
+  argument. Styles several components share are one `.css` file each adopts by reference. The
+  check enforces only the import's `with { type: "css" }`.
+
 ## Evidence
 
 - A check, demo, or measure row passes only when the value it reports is the expected one, not
