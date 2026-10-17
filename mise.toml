@@ -75,7 +75,7 @@ description = "Every build of the pagination element: tsc emit, esbuild, and bun
 depends = ["build:tsc", "build:esbuild", "build:bun"]
 
 [tasks.demo]
-description = "Render every build of the pagination element in headless Chromium, from file://"
+description = "Render every build of the frozen pagination element, and the components layer's composition (pagination holding entries from the fixture) in each version, through the shared probe, in headless Chromium, from file://"
 depends = ["build"]
 run = "scripts/demo.sh"
 dir = "{{config_root}}"

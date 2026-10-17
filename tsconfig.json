@@ -13,5 +13,5 @@
     "noEmit": true,
     "skipLibCheck": true
   },
-  "include": ["src/ts", "src/jsdoc", "layers"]
+  "include": ["src/ts", "src/jsdoc", "layers", "demo"]
 }
