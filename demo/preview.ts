@@ -15,23 +15,10 @@ import type {
   PageSizeChangeDetail,
 } from "../layers/components/pagination-lit-shadow.js";
 import { continued, directories, files, type Page } from "./documents.js";
-import { versions, type Version } from "./versions.js";
-
-/** The contract every pagination version keeps, as demo/probe.ts reaches it. */
-interface PaginationElement extends HTMLElement {
-  page: number | null;
-  size: number | null;
-  total: number | null;
-  more: boolean;
-  pageSizes: number[] | null;
-  disabled: boolean;
-}
+import { pageSizes, versions, type PaginationElement, type Version } from "./versions.js";
 
 /** Every item the fixture holds, in one listing the columns page through. */
 const listing: EntryItem[] = [...directories.items, ...files.items, ...continued.items];
-
-/** The page sizes every column offers, as demo/probe.ts sets them; the first is the default. */
-const pageSizes = [3, 6, 12];
 
 // A cursor names the last item read, as the fixture's own do ({"name":"legal"}, base64 without
 // padding). It is opaque to the element, which only asks for the page after this one.

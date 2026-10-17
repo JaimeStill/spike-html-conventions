@@ -6,17 +6,7 @@
 
 import type { EntryItem } from "../layers/components/entry-lit-shadow.js";
 import { continued, directories, files, type Page } from "./documents.js";
-import { versions, type Version } from "./versions.js";
-
-/** The contract every pagination version keeps. */
-interface PaginationElement extends HTMLElement {
-  page: number | null;
-  size: number | null;
-  total: number | null;
-  more: boolean;
-  pageSizes: number[] | null;
-  disabled: boolean;
-}
+import { pageSizes, versions, type PaginationElement, type Version } from "./versions.js";
 
 /** The contract every entry version keeps. The fixture's Directory and File fit its `item`. */
 interface EntryElement extends HTMLElement {
@@ -42,9 +32,6 @@ interface Compositions {
 
 /** A control `disabled` reaches. */
 type FormControl = HTMLButtonElement | HTMLInputElement | HTMLSelectElement;
-
-/** The page sizes every composition offers, set as a property before the version loads. */
-const pageSizes = [3, 6, 12];
 
 /** The events the probe hears, as they bubble out of the composition to the document. */
 const eventTypes = ["page-change", "page-size-change", "open"];
@@ -271,11 +258,14 @@ function contractCases(report: Report, parts: Parts, version: Version, { listing
     "[5,10] -> null",
   );
 
+  // Read from what renders, not from the properties: a value set before the definition that the
+  // element never took in still reads back from its own field, but renders nothing.
   const sizes = Array.from(parts.sizeSelect(listing).options, (option) => option.value);
   const [first] = parts.entries(listing);
+  const name = /^(?:directory|file) (\S+)/.exec(renderedText(first))?.[1] ?? "none";
   report.equal(
     "contract properties set before definition",
-    `page ${listing.page}, sizes ${sizes.join("/")}, first entry ${first.item?.name}`,
+    `page ${parts.pageInput(listing).value}, sizes ${sizes.join("/")}, first entry ${name}`,
     "page 2, sizes 3/6/12, first entry designs",
   );
 }

@@ -39,15 +39,12 @@ import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { constants, brotliCompressSync } from "node:zlib";
 import { directories } from "../demo/documents.ts";
-import { versions } from "../demo/versions.ts";
+import { pageSizes, versions } from "../demo/versions.ts";
 
 const [command, ...args] = process.argv.slice(2);
 
 /** The root of the repository, whose layers/components/ holds every version's modules. */
 const root = join(import.meta.dirname, "..");
-
-/** The page sizes every composition offers, as demo/probe.ts sets them. */
-const pageSizes = [3, 6, 12];
 
 /** Lit's dev-mode warning, which only its development builds hold. */
 const devMode = "Lit is in dev mode";

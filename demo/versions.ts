@@ -1,7 +1,22 @@
 // The versions of the composition the probe compares: each names its pair of tags and loads the
 // modules that define them. The probe loads a version only after building its composition, so
 // every property it sets is set before the elements are defined. Each import() runs only when
-// called, so a page that loads tsc's emit of the probe defines its own version alone.
+// called, so a page that loads tsc's emit of the probe defines its own version alone. Beside them,
+// what every page that composes them shares: the pagination's contract and the page sizes, which
+// the probe, the preview, and measure's pages (scripts/components.js) all set.
+
+/** The contract every pagination version keeps, as the probe and the preview reach it. */
+export interface PaginationElement extends HTMLElement {
+  page: number | null;
+  size: number | null;
+  total: number | null;
+  more: boolean;
+  pageSizes: number[] | null;
+  disabled: boolean;
+}
+
+/** The page sizes every composition offers, the first the preview's default. */
+export const pageSizes = [3, 6, 12];
 
 /** One version of the composition: a pagination element and the entry element it holds. */
 export interface Version {
