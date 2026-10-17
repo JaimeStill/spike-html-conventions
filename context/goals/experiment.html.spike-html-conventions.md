@@ -1,8 +1,8 @@
 # goal · experiment.html.spike-html-conventions
 
-- **State:** idle
-- **Task:** none
-- **Branch:** none
+- **State:** building
+- **Task:** components
+- **Branch:** components
 
 ## Tasks
 
@@ -12,178 +12,188 @@
 4. [ ] testing
 5. [ ] branches
 
-## Task brief · structure
+## Task brief · components
 
 ```
-Problem       The native web stack has a toolchain but no layout: nothing
-              says where foundation, component, SDK, and app code live, or
-              which way imports may run between them, and nothing fails
-              when an import runs upward (herald's elements import domain
-              code, unenforced). The lint/format tool, Biome, entered the
-              check by default and was never compared against the industry
-              standard. Components, branches, and spike-html-packages build
-              on this layout. Evidence 3 and 6, plus the fixture's v0.1.0
-              rows deferred from toolchain (evidence 7).
+Problem       The component convention (vanilla for the foundation and
+              static pages, Lit from components up) has never been tested.
+              The only vanilla/Lit pair is the frozen per-form pagination
+              port, which lives outside the layers, uses no foundation, and
+              diverges from Lit's contract in ways no one has listed.
+              Herald's shadow roots made it re-import shared styles into
+              every element, and no one has tried light DOM against
+              spike-html-design's class-free baseline. Nor has anyone
+              checked whether a build can remove Lit's runtime. Evidence 4.
+              The architect judges readability, maintainability, and
+              scalability by reading the final components, not by metrics,
+              so the task builds them, measures what each serves in
+              development and production, and records that judgement.
+              currency at planning: pnpm 12.11.2 -> 12.14.0 (what mise now
+              resolves natively).
 
 Behaviors
-  1. `mise run measure` records the fixture package's own v0.1.0 rows:
-     its GitHub install under npm, pnpm, and bun; jsDelivr serving each
-     of its nine source files (the three .ts files as unloadable); and
-     the file:// page loading each JS form of the element from jsDelivr
-     at v0.1.0. Each row passes only on its expected value. README
-     Results 7 records them, dated, and its Pending line is gone.
-  2. README Results 1 records the pnpm pin as following what mise
-     resolves natively (12.11.2, aqua:pnpm/pnpm) and why, with the npm
-     registry's latest dist-tag (12.14.0) as a fact. Pin and currency
-     unchanged.
-  3. A stack-layer tree, apart from the frozen per-form tree, holds a
-     small .ts occupant per layer that type-checks: foundation (native
-     only), components (element tier), the application SDK, one
-     static-branch app, and at least two application-branch apps — just
-     enough to show each layer's allowed imports.
-  4. The check enforces the direction with the lint tool's
-     restricted-imports rule, per layer directory:
-       foundation    → no other layer, no Lit
-       components    → foundation, Lit; never SDK or any app
-       SDK           → foundation (and Lit); never components or any app
-       static app    → foundation, Lit, components; never SDK, an
-                       application-branch app, or another app
-       application   → foundation, components, SDK, Lit; never another app
-     The rules cover static imports, `export … from`, type-only imports,
-     and dynamic `import()`, under relative paths, any alias, and the
-     package's own name.
-  5. A test runs the lint tool against a scratch tree outside the working
-     tree, with one violating import per rule; it passes only when each
-     violation draws that rule's own diagnostic. The real tree passes.
-  6. `mise run measure` compares Biome, ESLint + Prettier
-     (typescript-eslint), and oxlint + oxfmt on the same tree, each from
-     a mise npm: pin used only by measure (no devDependency, nothing in
-     the check). Rows per setup: footprint; lint and format-check time
-     (hyperfine); configurability (reproduces this repo's formatter
-     options — space indent, width 2, line width 100, and the defaults
-     its output relies on — passing only on byte-identical code);
-     content scope (file types its formatter touches by default here,
-     Markdown included, and whether it can be limited to code); and
-     direction (its restricted-imports rule fails the item 5 tree on
-     every rule). Measure writes nothing to the working tree.
-  7. The currency command covers the new pins and stays silent while
-     they are at their latest.
-  8. The README's survey gains a lint/format section, each claim cited:
-     SoJS 2025 usage, the npm counts for the survey week, what the 13
-     web-component libraries use, oxlint/oxfmt as facts.
-  9. README Results 3 records the layout, the direction table, the
-     mechanism and what it can't see (import text, not resolved files),
-     dependency-cruiser and tsc project references as rejected with
-     reasons, and hands spike-html-packages the package-boundary facts
-     and herald's elements importing domain code.
- 10. README Results 6 argues the lint/format pick in the toolchain
-     order: industry standard and maintainability first (configurability
-     and content scope count here), footprint second, speed only on an
-     order-of-magnitude gap; each figure cites its dated measure run.
- 11. STANDARDS.md gains the judgement calls the check can't enforce:
-     what belongs in each layer, promotion of an element once a second
-     app needs it, and the static branch's use of Lit as undecided. It
-     doesn't restate the enforced rules.
+  1. The pinned tools are current. pnpm is pinned at what mise resolves
+     natively (12.14.0), and every other pin currency reports when BUILD
+     starts is raised too (eslint 10.13.0 once it clears pnpm's
+     release-age gate). `mise run install` succeeds from the frozen
+     lockfile and `mise run check` passes. README Results 1 states the
+     current pnpm pin; its measured figures keep the run they cite.
+  2. Two element-tier components live in the components layer, each in
+     four versions: Lit and vanilla, each with a shadow root and in light
+     DOM. That is 8 versions, each with its own tag. Every version imports
+     only the foundation and Lit (vanilla: the platform plus the
+     foundation's define, emit, and required, with no base class), and
+     the check's lint, layer rule, and type check pass. The frozen
+     per-form tree, its exports, and its rows are unchanged.
+  3. The pagination element is a container whose controls sit around
+     the entries the host places inside it.
+     Its properties come from go-web-sdk's Page envelope:
+     - page, size, total, and more, plus the offered page sizes;
+     - the page count is worked out from total and size;
+     - when total is absent, Next is enabled by more;
+     - when page is absent, the page input is disabled.
+     It sends page-change {page} and page-size-change {size}; it never
+     changes its own page.
+     Its final form also has:
+     - a boolean disabled property that reflects to the attribute and
+       disables every control;
+     - a "Showing X–Y of N" summary, rendered only when total is present
+       and above zero;
+     - author content that replaces the default "Page Size" label: a named
+       slot under a shadow root, children placed by hand in light DOM.
+  4. The entry element shows one directory or one file of a document
+     hierarchy:
+     - kind, name, and status;
+     - for a file, its size and content type, with no size for a pending
+       file whose size is null;
+     - the updated time.
+     Size and time are formatted with Intl. It types its properties with
+     its own interface holding only those fields, so go-web-service's
+     Directory and File objects fit it with no import. Opening it sends
+     open {id, kind}.
+  5. Each render root takes all its button styling from one source, so a
+     single edit reaches both elements: a shared sheet adopted into both
+     elements' shadow roots for the shadow versions, and
+     spike-html-design v0.7.0's baseline for the light-DOM versions.
+     Shadow versions keep herald's folded control styles. Light-DOM
+     versions drop them and take the baseline's elements layer. Each
+     light-DOM component adopts one constructed sheet into the document
+     once, in a named cascade layer above the baseline. The sheet reads
+     only tokens, with its rules nested under the element's tag.
+  6. Every vanilla version matches its Lit counterpart's observable
+     contract, built by hand:
+     - removing a number attribute yields null;
+     - invalid JSON in an array attribute yields null;
+     - a property set before the element is defined is kept.
+     Batched updates and binding-level template updates are forgone and
+     listed as such.
+  7. A static fixture, written by hand in go-web-service's wire shape at
+     15e0bc3, feeds every page. It holds a directories page and a files
+     page in the Page envelope ({items, page, size, total, more, next}),
+     a pending file with a null size, and a page continued by cursor that
+     has no page or total. Nothing fetches.
+  8. `mise run demo` renders the composition (pagination with entries
+     from the fixture) in each of the four versions in headless Chromium
+     with --dump-dom and no driver. One shared probe passes only when all
+     four report the same:
+     - rendered text;
+     - the same events for prev, next, the two clamps, a size change,
+       and an entry's open;
+     - the contract cases of behavior 6;
+     - disabled reflected in both directions;
+     - the summary present and absent;
+     - the cursor page's disabled input;
+     - the slotted label shown.
+     The frozen pagination demo still passes.
+  9. `mise run measure` records what each version serves, for a page
+     with the pagination element alone and for the composition page:
+     - development: Vite 8.3.4's dev server on a scratch copy, the total
+       bytes of every response the page fetches, uncompressed, with Lit's
+       development builds;
+     - production: `vite build` of the same page, every emitted file raw
+       and brotli q11 (node:zlib), with Lit's share split out.
+     Each row passes only on its expected shape: a Lit page in
+     development loads Lit's development build and a vanilla page loads
+     no Lit; no production output holds a development build. Each
+     version's source lines and source brotli are recorded as context.
+     Measure writes nothing to the working tree.
+ 10. Review stop: once 1–9 hold, BUILD pauses. The architect reads the
+     final files of all 8 versions, and the judgement on readability,
+     maintainability, and scalability is logged as a goal-record
+     Decision before any evidence is written.
+ 11. README Results 4 records:
+     - the architect's judgement, in the architect's words;
+     - the features table: reactive properties, batched updates,
+       attribute conversion, reflection, templates with binding updates,
+       event binding, shadow root and adopted styles, pre-upgrade
+       properties, lifecycle, controllers, keyed lists, slots, form
+       association, and SSR, each row marked as Lit provides, vanilla
+       builds by hand, vanilla forgoes, or not exercised; form
+       association and SSR are given as sourced facts;
+     - the sourced facts:
+       - no build removes Lit's runtime: @lit-labs/compiler prepares
+         templates that lit-html still renders;
+       - Svelte, Stencil, and solid-element each ship a runtime of their
+         own instead;
+       - what light DOM loses (static styles, slots, encapsulation) and
+         how it lets the baseline reach the controls herald had to
+         restyle;
+     - the served-bytes figures, each citing its dated measure run, and
+       the source sizes as context.
+     There is no rubric score. The goal record gains the pending edit for
+     html-artifacts.md's interim components result.
 
-Test seams    `mise run check`: layer tree lint and type check, the
-              violation-tree test (3–5, 7). `mise run measure` (1, 6).
-              The README's cited sources (2, 8–10).
-
-Slices
-  1. v0.1.0 rows: one measure run records the released rows in Results
-     7; the pnpm pin's reason goes in Results 1.
-     Demo: measure prints the v0.1.0 GitHub, jsDelivr, and file:// rows
-     passing; Results 7 has no pending line.
-  2. Layer tree and direction: occupants, per-layer restricted-imports
-     rules in Biome, the violation-tree test, STANDARDS.md's layout calls.
-     Demo: the check passes; an upward import fails it with the rule's
-     diagnostic.
-  3. Lint/format comparison: the three setups' pins and measure rows.
-     Demo: measure prints all three setups' rows.
-  4. Evidence: the survey section, then Results 3 and 6 argued from one
-     fresh measure run.
-     Demo: the survey section and Results 3 and 6.
-
-Out of scope  App-internal tiers and whether static pages use Lit
-              (branches). Import cycles and private-export visibility.
-              Vanilla against Lit (components). Packages, release builds,
-              and package boundaries (spike-html-packages). Moving or
-              rewriting the per-form tree, its exports, or its rows.
-              Linting CSS or Markdown beyond the content-scope rows.
-              Changing the pnpm pin or currency's sources. Switching the
-              check's lint tool: if Results 6 picks another setup, BUILD
-              escalates first.
-Door          two-way: no tag, nothing published.
-Amendment (redirect at BRIEF): the lint/format pick reopens, all four setups in
-contention, and the check switches to the provisional pick in this task.
-
-Behaviors (revised and new)
-  6. (rev) `mise run measure` compares four setups on the same tree: Biome;
-     ESLint + Prettier; oxlint + oxfmt; ESLint + ESLint Stylistic with
-     eslint-plugin-jsonc for JSON. Both ESLint setups use typescript-eslint
-     and a resolved-file direction plugin. Rows per setup:
-     - footprint; lint and format time (hyperfine);
-     - formatting, split in two, for code and for the 11 JSON files:
-       "leaves unchanged" (byte-identical on the formatted tree) and
-       "restores" (byte-identical after formatting a scratch copy whose
-       line breaks and indentation are disturbed);
-     - content scope, JSON included;
-     - direction: core no-restricted-imports (recorded 57 of 62),
-       eslint-plugin-boundaries 7.2.0 with eslint-import-resolver-typescript,
-       and eslint-plugin-import-x's no-restricted-paths, each paired with
-       its no-unresolved rule, run on trees whose imports name real files,
-       so a resolved-file rule is tested fairly; each passes only on an
-       exact match of flagged to violation files;
-     - surface: binaries, config files, and packages to keep current.
-     Measure writes nothing to the working tree; currency covers every new
-     package.
- 10. (rev) Results 6 picks provisionally among the four, in the toolchain
-     order, with stewardship (organization or foundation, maintainers,
-     funding, each sourced) and surface weighed inside maintainability;
-     footprint second; speed only on an order-of-magnitude gap. Prettier
-     against Stylistic follows the same order. Results 3 and 6 are
-     rewritten as provisional, titled for the outcome; Biome's earlier pick
-     is recorded as superseded in the goal record.
- 12. (new) The ecosystem survey gains ESLint Stylistic, eslint-plugin-jsonc,
-     the direction plugins, and a sourced stewardship table for every tool.
- 13. (new) The check runs the provisional pick:
-     - If Biome wins: the check, biome.json's direction rules, and the
-       layer test stay as they are.
-     - If an ESLint setup wins: its packages become devDependencies
-       installed by `mise run install` (pnpm, frozen lockfile), and
-       STANDARDS.md's rule becomes "Lit is the only runtime dependency; lint
-       tooling is the only devDependencies". eslint.config.js holds the
-       layer table in the passing direction plugin, with no-unresolved.
-       biome.json's direction overrides and the normalization convention
-       go; Biome leaves the check and stays a measure-only pin. The layer
-       test runs ESLint on the real-file trees with the same exact-match
-       rule. mise pins that move into the manifest are dropped, and
-       currency gains `pnpm outdated`. STANDARDS.md's Layers section points
-       to the ESLint config. If Stylistic wins, JSON is formatted through
-       jsonc.
-     - If an ESLint setup would win but neither direction plugin passes the
-       trees under ESLint 10, BUILD escalates.
-
-Test seams    `mise run check` (13 and the layer test); `mise run measure`
-              (6); the README's cited sources (10, 12).
+Test seams    `mise run check`: the layer rule, the type check, and the
+              lint over the 8 versions (1, 2, 4, 5). `mise run demo`: the
+              shared probe over the four versions of the composition
+              (3–8). `mise run measure` (9). The review stop (10). The
+              README's cited sources (11).
 
 Slices
-  5. Four-way measure: ESLint + Stylistic + jsonc, the direction plugins on
-     real-file trees, the split formatting rows for code and JSON, content
-     scope with JSON, surface rows, currency for the new packages.
-     Demo: measure prints all four setups' rows.
-  6. Evidence: the survey additions and stewardship table, then Results 3
-     and 6 rewritten as provisional from one fresh measure run.
-     Demo: Results 6's pick and its argument.
-  7. The check on the provisional pick, per behavior 13.
-     Demo: the check passes on the picked setup; an upward import fails it
-     with the picked tool's diagnostic.
+  1. Upgrade (only when currency reports a pin when BUILD starts; at
+     planning: pnpm 12.14.0, and eslint 10.13.0 once past the gate).
+     Demo: currency prints nothing; install and check pass; Results 1
+     states the new pin.
+  2. Fixture and the Lit shadow-root pair: pagination container and
+     entry with every behavior 3–4 requirement, the shared button sheet,
+     and the probe over this one version.
+     Demo: the demo renders the composition from the fixture and the
+     probe passes.
+  3. Vanilla shadow-root pair, with the contract cases built by hand;
+     the probe now compares two versions.
+     Demo: both shadow versions pass the probe with identical reports.
+  4. Light-DOM pair, Lit and vanilla: children placed by hand, one
+     constructed sheet per component in its cascade layer, controls
+     styled by the baseline; the probe compares all four.
+     Demo: all four versions pass the probe; one button-style edit
+     visibly reaches both elements in each render root.
+  5. Served bytes: the development and production rows for both pages
+     per version, and the source-size context rows.
+     Demo: measure prints every row passing.
+  -- Review stop: BUILD pauses for the architect to read the 8 final
+     versions; the judgement is logged as a Decision. --
+  6. Evidence: Results 4 from the logged judgement, one fresh measure
+     run, and the sourced facts; the pending edit for html-artifacts.md.
+     Demo: Results 4.
 
-Out of scope  (replaces "Switching the check's lint tool"): nothing beyond
-              behavior 13; dprint and other formatters; CSS or Markdown
-              linting.
-Door          two-way: no tag, nothing published.
+Out of scope  The frozen per-form tree and its rows. Per-scenario commits
+              or diffs as evidence: the scenarios are requirements of the
+              final form, judged by reading the files. A scored rubric.
+              A compile-to-custom-element column (Svelte, Stencil, Solid):
+              facts only. A breadcrumb or any element beyond the two.
+              Fetching, the SDK, app modules, and cursor-following logic.
+              The browser test tier in the check (testing). Whether static
+              pages use Lit (branches). Component rules in STANDARDS.md
+              beyond what the review's judgement settles. Release builds
+              and packaging (spike-html-packages). @scope (recorded as
+              the alternative to nesting). Re-running Results 1's figures.
+Door          two-way: no tag, nothing published; the pin upgrade is
+              reverted by restoring the pin and lockfile.
 ```
+
+## Progress
+
+slices 0/6 committed · review stop — · standards — · spec — · editor —
 
 ## Decisions
 
@@ -310,6 +320,30 @@ Door          two-way: no tag, nothing published.
 - structure: each "restores" row passes only when the formatter exits 0, so a crash that leaves the recorded misses unchanged fails the row.
 - structure: result, evidence 3: the layers are the directories of `layers/` in one package, with the direction enforced, provisionally, on the file each import resolves to, by eslint-plugin-boundaries' `dependencies` rule over the layer table in `eslint.config.js`, beside import-x's `no-unresolved`. The layer test flags 60 of 60 violation files, all by `boundaries/dependencies`, and 0 of 16 allowed ones (m 2026-10-16T21:11:09Z). Rejected: Biome's `noRestrictedImports`, which matches import text and flags the two non-normalized allowed paths; import-x's `no-restricted-paths`, which flags 2 allowed files in directories whose names start with dots; ESLint's core `no-restricted-imports`, which never checks `import()` (55 of 60); dependency-cruiser and tsc project references, as before.
 - structure: result, evidence 6: ESLint + Prettier is the lint and format setup, provisionally, argued in the toolchain order. On the first criterion it is the standard by a wide margin (9,697 and 9,295 SoJS 2025 respondents against Biome's 1,762; ESLint in 10 and Prettier in 11 of the 13 web-component libraries), its two tools are better stewarded (ESLint under the OpenJS Foundation), and its direction rule judges the resolved file; that outweighs Biome's smaller surface, one binary and one config file against B's 9 pins, four config files, and 140 installed packages. ESLint Stylistic loses to Prettier because it can't restore a disturbed tree (19 of 21 code files and 8 of 13 JSON files differ); oxlint + oxfmt isn't the standard, moves a key in `package.json`, and judges direction by text. Footprint (A 66.7 MB, B 62.1 MB, C 35.6 MB, D 55.2 MB) doesn't overturn it, nor do speed's two order-of-magnitude gaps (B's lint and format at 950.0 ms, 10.3 times C's 92.5 ms; ESLint's lint 11.0 times `biome lint`'s) (m 2026-10-16T21:11:09Z). It reopens if spike-html-packages makes the layers packages, whose declared dependencies would enforce the direction at install and shrink the plugin's role, or if ESLint's or Prettier's foundation or funding changes.
+- components: currency at planning (2026-10-17T13:35Z) reported pnpm 12.11.2 -> 12.14.0, which mise now resolves natively (`aqua:pnpm/pnpm`, GitHub's Latest), so under the structure Decision the pin follows it in an upgrade slice; eslint 10.13.0 joins if currency reports it once past pnpm's release-age gate (2026-10-17T14:24Z).
+- components: the element is herald's pagination, rewritten as a new set in the components layer on the foundation; the frozen src/ pair stays untouched.
+- components: the vanilla versions build on the platform and the foundation's define, emit, and required only, with no base class.
+- components: architect: the vanilla versions match Lit's observable contract by hand (attribute removal and invalid JSON give null, a pre-upgrade property is kept) and forgo batched and binding-level updates, to expose the pain of building without Lit so the tradeoffs can be weighed.
+- components: the features table is one fixed list, each row marked Lit provides, vanilla builds by hand, vanilla forgoes, or not exercised; form association and SSR are sourced facts.
+- components: a shared probe in `mise run demo` (outside the check, Chromium --dump-dom, no driver) passes only when every version reports the same text, events, and contract cases; the check's browser tier stays with testing.
+- components: architect: size is compared as what is served in development and in production after the build.
+- components: architect: line count is a poor metric; source lines and source brotli are context only.
+- components: architect: readability, maintainability, and scalability are the architect's judgement from reading the files, not metrics. Rejected: metrics drawn from scenario diffs; a scored rubric.
+- components: the four change scenarios (reflected `disabled`, conditional "Showing X–Y of N" summary, author content in place of the "Page Size" label, one shared button-style source across both elements) are requirements of the final components.
+- components: compile-to-custom-element alternatives are sourced facts, no column. No build removes Lit's runtime: @lit-labs/compiler 1.1.2 (Labs) prepares templates that lit-html still renders; Svelte, Stencil, and solid-element ship their own runtimes.
+- components: architect: both render roots are explored; the full two-by-two (vanilla and Lit, shadow and light DOM) per element.
+- components: light-DOM component styles are one constructed sheet per component, adopted into document.adoptedStyleSheets once, in a named cascade layer above the baseline, tokens only (spike-html-design's theme-menu convention).
+- components: light-DOM selectors nest under the element's tag; @scope (Baseline newly available 2026-03-24) is the recorded alternative.
+- components: light-DOM versions drop herald's folded control styles and take spike-html-design v0.7.0's elements layer; shadow versions keep them.
+- components: measure records served bytes per version for a pagination-only page and the composition page: development (Vite 8.3.4 dev server on a scratch copy, every response uncompressed, Lit's development builds) and production (`vite build`, every emitted file raw and brotli q11 via node:zlib, Lit's share split out).
+- components: architect: the second element renders within pagination; pagination becomes a container, entries slotted under a shadow root or placed by hand in light DOM. Rejected: confirm-dialog; a list element rendering pagination; herald's siblings.
+- components: the blobfs-shaped element is one entry element for a directory or a file (kind, name, size and content type for files, status, updated time via Intl), sending open {id, kind}. Rejected: separate row elements; a breadcrumb.
+- components: pagination takes go-web-sdk's Page envelope fields (page, size, total, more); page count derived, Next follows more when total is absent, page input disabled when page is absent. Rejected: herald's page, total-pages, size.
+- components: the entry element types its properties with its own interface of the fields it renders; go-web-service's objects fit structurally; no cross-layer import.
+- components: a static fixture in go-web-service's wire shape at 15e0bc3 feeds demo, probe, and measure, including a pending null-size file and a cursor page with no page or total.
+- components: architect: the analysis rests on the components' final form, read in nvim. Rejected: per-scenario commits, directories, or patches.
+- components: BUILD pauses for an architect review once all 8 versions exist and before Results 4; the judgement is logged as a Decision.
+- components: Results 4 records the judgement, the sourced facts, served bytes, and source sizes as context; no rubric.
 
 ## Pending edits
 
