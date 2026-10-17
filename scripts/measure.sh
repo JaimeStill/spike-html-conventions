@@ -1940,7 +1940,7 @@ pad() {
 declare -A changed_json=([C]="package.json")
 declare -A unrestored=(
   [C json]="package.json"
-  [D code]="layers/apps/application/documents/main.ts layers/apps/application/documents/views/list.ts layers/apps/application/prompts/main.ts layers/apps/static/site/main.ts layers/components/status-badge.ts layers/foundation/dom.ts layers/sdk/session.ts src/js/pagination-lit.js src/js/pagination-vanilla.js src/js/router.js src/jsdoc/pagination-lit.js src/jsdoc/pagination-vanilla.js src/jsdoc/router.js src/ts/pagination-lit.ts src/ts/pagination-vanilla.ts src/ts/router.ts test/layers-tree.js test/layers.test.js test/router.test.js"
+  [D code]="layers/apps/application/documents/main.ts layers/apps/application/documents/views/list.ts layers/apps/application/prompts/main.ts layers/apps/static/site/main.ts layers/components/entry-lit-light.ts layers/components/entry-lit-shadow.ts layers/components/entry-vanilla-light.ts layers/components/entry-vanilla-shadow.ts layers/components/pagination-lit-light.ts layers/components/pagination-lit-shadow.ts layers/components/pagination-vanilla-light.ts layers/components/pagination-vanilla-shadow.ts layers/components/status-badge.ts layers/foundation/dom.ts layers/sdk/session.ts src/js/pagination-lit.js src/js/pagination-vanilla.js src/js/router.js src/jsdoc/pagination-lit.js src/jsdoc/pagination-vanilla.js src/jsdoc/router.js src/ts/pagination-lit.ts src/ts/pagination-vanilla.ts src/ts/router.ts test/layers-tree.js test/layers.test.js test/router.test.js"
   [D json]=".claude/settings.json fixtures/consumer-bun/tsconfig.json fixtures/consumer-npm/tsconfig.json fixtures/consumer-pnpm/tsconfig.json package.json scripts/biome-layers.json tsconfig.build.json tsconfig.json"
 )
 

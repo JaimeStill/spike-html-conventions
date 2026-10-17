@@ -51,7 +51,10 @@ const pageSizes = [3, 6, 12];
 /** Lit's dev-mode warning, which only its development builds hold. */
 const devMode = "Lit is in dev mode";
 
-/** The version registries each of Lit's packages pushes onto, in its development and production builds alike. */
+/**
+ * The version registries each of Lit's packages pushes onto, in its development and production
+ * builds alike.
+ */
 const litMarker = /\b(litHtmlVersions|reactiveElementVersions|litElementVersions)\b/;
 
 /** The brotli bytes of data: quality 11, a 24-bit window. */
@@ -86,9 +89,12 @@ function walk(dir) {
     .sort();
 }
 
+/** Where a light version's pages link spike-html-design's baseline from. */
+const baseline = "/spike-html-design/baseline.css";
+
 /** A page's HTML: its title, the baseline link for a light version, and the body given. */
 function html(name, light, body) {
-  const link = light ? '\n<link rel="stylesheet" href="/spike-html-design/baseline.css">' : "";
+  const link = light ? `\n<link rel="stylesheet" href="${baseline}">` : "";
   return `<!doctype html>
 <html><head><meta charset="utf-8"><title>${name}</title>${link}
 </head><body>
