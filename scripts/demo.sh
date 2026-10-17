@@ -157,7 +157,7 @@ done
 # the probe for one version. Each page writes a verdict and one line per case; every verdict must
 # be ok, and every version's report the same text as the first's. TZ and --lang fix the
 # formatted times and sizes, so a report reads the same on any machine.
-versions=(lit-shadow)
+versions=(lit-shadow vanilla-shadow)
 esbuild "$root/demo/probe.ts" --bundle --format=iife --global-name=composition \
   --log-level=warning --outfile="$out/composition.js"
 first=""
