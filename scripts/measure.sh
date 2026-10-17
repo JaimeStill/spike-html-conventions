@@ -148,9 +148,11 @@
 #                   Lit's dev-mode warning (its development build) and a vanilla version's hold
 #                   no Lit, and each stylesheet arrives as scripts/css-sheets.js's sheet module,
 #                   none injected into the document; and from vite build, every emitted file raw
-#                   and brotli, Lit in a chunk of its own, passing when the build succeeds, no
-#                   file holds the dev-mode warning, and Lit is all in its chunk or, for vanilla,
-#                   nowhere. The section prints its figures under its own heading, the element
+#                   and brotli, Lit in a chunk of its own and the foundation's adopted sheets in
+#                   another, counted with the linked baseline, passing when the build succeeds, no
+#                   file holds the dev-mode warning, Lit is all in its chunk or, for vanilla,
+#                   nowhere, and a shadow version's page has the foundation's chunk, reset and
+#                   elements in it as well as linked, and a light version's none. The section prints its figures under its own heading, the element
 #                   sources' lines and brotli bytes beside them as context, and reads no network.
 #                   See "Components" below.
 #   lint and format per setup: footprint, each tool's installed size, B's devDependencies and D's
@@ -1613,7 +1615,11 @@ fi
 # Production: one vite build per page, minified as Vite builds by default, into scratch, every
 # emitted file raw and brotli; Lit's share is the chunk the config's codeSplitting group puts every
 # lit, lit-html, lit-element, and @lit/* module in, under lit/, and the baseline's is the CSS Vite
-# emits for the linked entry.
+# emits for the linked entry and, for a shadow version, the chunk a second group puts the port's
+# sheet modules in, under foundation/, as Lit has its own: the reset and elements sheets the
+# version adopts through layers/foundation/baseline.ts, which a light version never imports. A
+# shadow page so loads those two layers twice, linked in the entry's CSS and adopted from the
+# chunk, and its rows record both files.
 echo "measure: components" >&2
 components="$scratch/components"
 project="$components/project"
@@ -1697,7 +1703,7 @@ echo "### Development (Vite dev server)"
 echo
 echo "Every 2xx response from Vite's dev server headless Chromium read for the page, from its NetLog (--net-log-capture-mode=Everything), with a fresh profile after a warm-up load that let Vite pre-bundle Lit; bytes as the dev server sends them, uncompressed. Vite's client is the HMR client the dev server injects into every page."
 echo
-echo "| page | responses | total | Lit | baseline CSS | Vite client | page and elements |"
+echo "| page | responses | total | Lit | baseline | Vite client | page and elements |"
 echo "| --- | ---: | ---: | ---: | ---: | ---: | ---: |"
 for page in "${component_pages[@]}"; do
   tsv="$components/$page.responses.tsv"
@@ -1735,6 +1741,9 @@ for page in "${component_pages[@]}"; do
     awk -F'\t' -v path="$path" '$NF == path { found = 1 } END { exit !found }' "$tsv" || missing+=("$path")
   done
   fact="$(wc -l <"$tsv") responses, $(share_sum "$tsv" all 2) B: Lit $(share_sum "$tsv" lit 2) B, baseline $(share_sum "$tsv" baseline 2) B, Vite client $(share_sum "$tsv" client 2) B, page and elements $(share_sum "$tsv" page 2) B"
+  if [[ "$page_version" == *-shadow ]]; then
+    fact+="; reset and elements load twice: linked in /layers/foundation/baseline.css and adopted as the sheet modules of layers/foundation/baseline/reset.css and elements.css"
+  fi
   ok=1
   if ((${#missing[@]} > 0)); then
     ok=0
@@ -1771,9 +1780,9 @@ done
 
 echo "### Production (vite build)"
 echo
-echo "One vite build per page, as Vite builds by default (minified, Lit's production build), every emitted file raw and brotli (quality 11, node's node:zlib). Lit's share is the chunk a codeSplitting group puts every lit, lit-html, lit-element, and @lit/* module in; the baseline's is the CSS Vite emits for the linked entry, the foundation's baseline."
+echo "One vite build per page, as Vite builds by default (minified, Lit's production build), every emitted file raw and brotli (quality 11, node's node:zlib). Lit's share is the chunk a codeSplitting group puts every lit, lit-html, lit-element, and @lit/* module in; the baseline's is the CSS Vite emits for the linked entry, the foundation's baseline, and, on a shadow version's page, the chunk a second group puts the foundation's sheet modules in: the reset and elements sheets its shadow roots adopt, which it so loads twice, linked and adopted. The sheet modules hold each ported file as written, comments included, since scripts/css-sheets.js passes the CSS through as it reads it."
 echo
-echo "| page | files | total | total, brotli | Lit | Lit, brotli | baseline CSS | baseline CSS, brotli | page and elements | page and elements, brotli |"
+echo "| page | files | total | total, brotli | Lit | Lit, brotli | baseline | baseline, brotli | page and elements | page and elements, brotli |"
 echo "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |"
 for page in "${component_pages[@]}"; do
   cat >"$components/build-$page.config.mjs" <<EOF
@@ -1791,10 +1800,15 @@ export default {
       input: "$project/$page.html",
       output: {
         codeSplitting: {
-          groups: [{ name: "lit", test: /[\\\\/]node_modules[\\\\/](lit|lit-html|lit-element|@lit)[\\\\/]/ }],
+          groups: [
+            { name: "lit", test: /[\\\\/]node_modules[\\\\/](lit|lit-html|lit-element|@lit)[\\\\/]/ },
+            { name: "foundation", test: /^\\0css-sheet:.*[\\\\/]layers[\\\\/]foundation[\\\\/]/ },
+          ],
         },
         chunkFileNames: (chunk) =>
-          chunk.name === "lit" ? "lit/[name]-[hash].js" : "assets/[name]-[hash].js",
+          chunk.name === "lit" || chunk.name === "foundation"
+            ? chunk.name + "/[name]-[hash].js"
+            : "assets/[name]-[hash].js",
       },
     },
   },
@@ -1832,6 +1846,29 @@ EOF
     fact+="; Lit's dev-mode warning in $dev"
   else
     fact+="; no file holds Lit's dev-mode warning"
+  fi
+  # The baseline's files: the entry's CSS, and a shadow version's chunk of the foundation's sheet
+  # modules, which must hold both adopted layers; a light version adopts none, so has no chunk.
+  baseline_css=$(awk -F'\t' '$1 == "baseline" && $NF ~ /\.css$/ { printf "%s%s", sep, $NF; sep = " " }' "$tsv")
+  foundation_files=$(awk -F'\t' '$NF ~ /^foundation\// { printf "%s%s", sep, $NF; sep = " " }' "$tsv")
+  if [[ "$page_version" == *-shadow ]]; then
+    adopted=0
+    if [[ -n "$foundation_files" ]]; then
+      read -ra chunk <<<"$foundation_files"
+      layers=$(cd "$components/build/$page" && cat "${chunk[@]}" | grep -oE '@layer foundation\.(reset|elements) ' | sort -u | wc -l)
+      if ((layers == 2)); then adopted=1; fi
+    fi
+    if [[ -n "$baseline_css" ]] && ((adopted == 1)); then
+      fact+="; reset and elements load twice: linked in $baseline_css and adopted from $foundation_files"
+    else
+      ok=0
+      fact+="; the baseline's CSS: ${baseline_css:-none}; the foundation's chunk, which must hold reset and elements: ${foundation_files:-none}"
+    fi
+  elif [[ -n "$foundation_files" || -z "$baseline_css" ]]; then
+    ok=0
+    fact+="; the baseline's CSS: ${baseline_css:-none}; a foundation chunk a light version shouldn't have: ${foundation_files:-none}"
+  else
+    fact+="; the baseline linked in $baseline_css, no sheet adopted"
   fi
   if [[ "$page_version" == lit-* ]]; then
     name="Components, production: $page builds, with Lit's production build in a chunk of its own"

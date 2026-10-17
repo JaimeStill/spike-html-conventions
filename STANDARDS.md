@@ -46,6 +46,11 @@ The architecture pages that apply, in the architecture repository:
 - The stack's layers are the directories of `layers/`, beside the frozen per-form tree in `src/`;
   the layer table in `eslint.config.js` enforces the import direction between them.
 - The foundation holds native platform code only, the code every other layer may build on.
+- The foundation holds the design-system port (`layers/foundation/baseline/`, from
+  spike-html-design v0.7.0) as native CSS this repository owns: each file wraps its rules in its
+  own `@layer foundation.<layer>` block and imports nothing, so it loads as a CSS module script.
+  `@import` is written only in the page entry, `layers/foundation/baseline.css`, which only a page
+  links.
 - Components are the element tier: an element takes properties in and sends events out, and
   holds no services, data, or app state.
 - The SDK holds what application-branch apps share: the router, the API client, the auth hook,
@@ -64,9 +69,13 @@ The architecture pages that apply, in the architecture repository:
   exceptions to argue.
 - A component's CSS lives in its own `.css` file beside its module, imported as a CSS module
   script; CSS is never written in `.ts`, as a string, a `css` template, or a `replaceSync`
-  argument. Styles several components share are one `.css` file each adopts by reference. The
-  check enforces only that form: a static import's `with { type: "css" }`, and no `import()` of a
-  `.css` file.
+  argument. Styles several components share are one `.css` file each adopts by reference; in a
+  shadow root, that file is the foundation's elements layer. The check enforces only that form: a
+  static import's `with { type: "css" }`, and no `import()` of a `.css` file.
+- A shadow-root component adopts the foundation's baseline sheets (`baseline` from
+  `layers/foundation/baseline.ts`: reset, then elements), then a layout-only sheet of its own, and
+  never styles a control's look itself: no background, border, color, padding, or font on a
+  control. The page's baseline can't reach inside a shadow root; only its tokens cross.
 
 ## Evidence
 

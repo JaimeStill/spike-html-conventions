@@ -32,7 +32,10 @@
 // lit-element, and @lit/* module in, under lit/); baseline, the foundation's baseline, the port's
 // CSS (under Vite's dev server, the page entry every page links, its imports inlined, and any of
 // the port's sheets a module imports, as scripts/css-sheets.js serves them; in a build, the CSS
-// asset Vite emits for the linked entry); client, the Vite dev server's client, which it injects
+// asset Vite emits for the linked entry, and the chunk measure's config puts the port's sheet
+// modules in, under foundation/, which a shadow version's page alone has: it adopts the reset and
+// elements sheets as modules beside the entry it links, so it loads those two layers twice);
+// client, the Vite dev server's client, which it injects
 // into every page it serves (/@vite/client and the env module it imports); and page, the rest: the
 // page's HTML, its script, the elements' and the fixture's modules, and the elements' stylesheets,
 // as the sheet modules scripts/css-sheets.js makes of them.
@@ -197,7 +200,7 @@ document.body.append(pagination);
     const data = readFileSync(join(dir, path));
     let share = "page";
     if (path.startsWith("lit/")) share = "lit";
-    else if (path.endsWith(".css")) share = "baseline";
+    else if (path.startsWith("foundation/") || path.endsWith(".css")) share = "baseline";
     console.log([share, data.length, brotli(data), ...markers(data), path].join("\t"));
   }
 } else if (command === "brotli") {
