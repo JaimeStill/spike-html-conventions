@@ -7,11 +7,13 @@
 // Light DOM costs it the button's placement: the button is built in the constructor but placed
 // only while connected, since an element gains no children while it is constructed, and the
 // connection renders it. It costs encapsulation too: its styles sit in the document, so it
-// adopts one sheet there, once, in the cascade layer spike-html-conventions.entry, every rule
-// nested under its tag. The button is bare: the page's spike-html-design baseline styles it, so
-// the sheet gives it layout alone, and its parts their type, reading only that baseline's tokens.
+// imports its sheet, entry-vanilla-light.css, as a CSS module script and adopts it there, once, in
+// the cascade layer spike-html-conventions.entry, every rule nested under its tag. The button is
+// bare: the page's spike-html-design baseline styles it, so the sheet gives it layout alone, and
+// its parts their type, reading only that baseline's tokens.
 
 import { define, emit, required } from "../foundation/dom.js";
+import sheet from "./entry-vanilla-light.css" with { type: "css" };
 
 /** The tag this version defines. */
 export const tagName = "sl-entry-vanilla-light";
@@ -65,40 +67,6 @@ function formatSize(bytes: number): string {
   const step = Math.min(Math.floor(Math.log10(Math.max(bytes, 1)) / 3), sizeUnits.length - 1);
   return sizeUnits[step].format(bytes / 1000 ** step);
 }
-
-// The element's layout, adopted into the document by the first instance to connect. Its layer
-// comes after the baseline's, as the sheet is adopted after the page links it.
-const sheet = new CSSStyleSheet();
-sheet.replaceSync(`
-  @layer spike-html-conventions.entry {
-    sl-entry-vanilla-light {
-      display: block;
-
-      & > .entry {
-        display: grid;
-        grid-template-columns: 8ch 1fr auto;
-        align-items: baseline;
-        justify-items: start;
-        gap: var(--space-3xs) var(--space-xs);
-        inline-size: 100%;
-        margin-block: var(--space-3xs);
-      }
-      & :is(.kind, .meta) {
-        color: var(--fg-2);
-      }
-      & .name {
-        font-size: var(--text-s);
-        font-weight: 600;
-      }
-      & .meta {
-        grid-column: 2 / -1;
-        display: flex;
-        flex-wrap: wrap;
-        gap: var(--space-xs);
-      }
-    }
-  }
-`);
 
 /** Adds the sheet to the document's adopted sheets, once however many instances connect. */
 function adopt(): void {

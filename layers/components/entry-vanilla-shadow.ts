@@ -1,11 +1,13 @@
 // Entry, vanilla with a shadow root: the same entry as the Lit version, on the platform alone. By
 // hand it keeps the `item` accessor, an item set before the definition, and rendering: one button
-// built once, filled in place on every change and taken out while there is no item. Its button
-// takes its styles from the shared sheet. It declares its own item types, as the Lit version does,
-// so each file reads alone.
+// built once, filled in place on every change and taken out while there is no item. Its shadow
+// root adopts two CSS module scripts: the shared buttons.css for its button, and entry-shadow.css,
+// the Lit version's own sheet too. It declares its own item types, as the Lit version does, so each
+// file reads alone.
 
 import { define, emit, required } from "../foundation/dom.js";
-import { buttonSheet } from "./button-sheet.js";
+import buttons from "./buttons.css" with { type: "css" };
+import styles from "./entry-shadow.css" with { type: "css" };
 
 /** The tag this version defines. */
 export const tagName = "sl-entry-vanilla-shadow";
@@ -60,36 +62,6 @@ function formatSize(bytes: number): string {
   return sizeUnits[step].format(bytes / 1000 ** step);
 }
 
-const styles = new CSSStyleSheet();
-styles.replaceSync(`
-  :host {
-    display: block;
-  }
-  .entry {
-    display: grid;
-    grid-template-columns: 8ch 1fr auto;
-    align-items: baseline;
-    gap: var(--space-1, 0.25rem) var(--space-3, 0.75rem);
-    width: 100%;
-    margin-block: var(--space-1, 0.25rem);
-    text-align: start;
-  }
-  .kind,
-  .meta {
-    color: var(--color-2, GrayText);
-  }
-  .name {
-    font-size: var(--text-sm, 0.875rem);
-    font-weight: 600;
-  }
-  .meta {
-    grid-column: 2 / -1;
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--space-3, 0.75rem);
-  }
-`);
-
 // The button, cloned once per element; a directory's render leaves out the size and the type.
 const template = document.createElement("template");
 template.innerHTML = `
@@ -124,7 +96,7 @@ export class EntryVanillaShadow extends HTMLElement {
   constructor() {
     super();
     const root = this.attachShadow({ mode: "open" });
-    root.adoptedStyleSheets = [buttonSheet, styles];
+    root.adoptedStyleSheets = [buttons, styles];
 
     const button = template.content.cloneNode(true) as DocumentFragment;
     this.#button = required(button, "button");

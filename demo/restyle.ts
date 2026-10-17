@@ -1,13 +1,14 @@
 // The button styles' single source, shown in one version: a pagination holding one entry renders,
 // then one edit to the source the version's render root takes its button styles from repaints
-// both elements' buttons. A shadow root's source is button-sheet.ts, adopted into every shadow
-// version's root, and the edit rewrites the background its `.btn` rule declares. Light DOM's
+// both elements' buttons. A shadow root's source is buttons.css, one CSSStyleSheet per document as
+// a CSS module script, adopted into every shadow version's root, and the edit rewrites the
+// background its `.btn` rule declares, on the very sheet this module imports. Light DOM's
 // source is the page's spike-html-design baseline, its elements layer, which no light version's
 // sheet overrides for a button, and the edit is one rule added to that layer. scripts/demo.sh runs
 // one page per version; each passes when both buttons painted from the source before the edit and
 // both take the edit after it.
 
-import { buttonSheet } from "../layers/components/button-sheet.js";
+import buttonSheet from "../layers/components/buttons.css" with { type: "css" };
 import type { EntryItem } from "../layers/components/entry-lit-shadow.js";
 import { directories } from "./documents.js";
 import { versions, type Version } from "./versions.js";
@@ -25,7 +26,7 @@ interface Source {
 }
 
 const shadowSource: Source = {
-  name: "button-sheet.ts .btn",
+  name: "buttons.css .btn",
   get background() {
     return buttonRule().style.getPropertyValue("background");
   },
@@ -53,7 +54,7 @@ function buttonRule(): CSSStyleRule {
   const rule = Array.from(buttonSheet.cssRules).find(
     (r): r is CSSStyleRule => r instanceof CSSStyleRule && r.selectorText === ".btn",
   );
-  if (rule === undefined) throw new Error("button-sheet.ts has no .btn rule");
+  if (rule === undefined) throw new Error("buttons.css has no .btn rule");
   return rule;
 }
 

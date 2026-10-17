@@ -1,11 +1,13 @@
 // Pagination, Lit with a shadow root: a container for a page of entries, its controls around the
 // host's own children. Ported from herald's pagination-controls onto go-web-sdk's Page envelope,
-// with herald's folded control styles, the buttons' from the shared sheet.
+// with herald's folded control styles as CSS module scripts in `static styles`: the shared
+// buttons.css for its buttons, and pagination-shadow.css, which the vanilla version adopts too.
 
-import { css, html, LitElement, nothing, type PropertyDeclarations } from "lit";
+import { html, LitElement, nothing, type PropertyDeclarations } from "lit";
 
 import { define, emit } from "../foundation/dom.js";
-import { buttonSheet } from "./button-sheet.js";
+import buttons from "./buttons.css" with { type: "css" };
+import styles from "./pagination-shadow.css" with { type: "css" };
 
 /** The tag this version defines. */
 export const tagName = "sl-pagination-lit-shadow";
@@ -31,77 +33,7 @@ export interface PageSizeChangeDetail {
  * it sends `page-change` and `page-size-change` and the host sets the next page's fields.
  */
 export class PaginationLitShadow extends LitElement {
-  static styles = [
-    buttonSheet,
-    css`
-      :host {
-        display: block;
-      }
-      .summary {
-        margin: 0 0 var(--space-2, 0.5rem);
-        font-size: var(--text-sm, 0.875rem);
-        color: var(--color-1, GrayText);
-      }
-      .pagination {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: var(--space-3, 0.75rem);
-        margin-top: var(--space-3, 0.75rem);
-        padding-top: var(--space-3, 0.75rem);
-        border-top: 1px solid var(--divider, GrayText);
-      }
-      .page-size,
-      .page-controls,
-      .page-indicator {
-        display: flex;
-        align-items: center;
-        gap: var(--space-2, 0.5rem);
-      }
-      .page-size-label,
-      .page-indicator {
-        font-size: var(--text-sm, 0.875rem);
-        color: var(--color-1, GrayText);
-      }
-      .input {
-        padding: var(--space-2, 0.5rem) var(--space-3, 0.75rem);
-        border: 1px solid var(--divider, GrayText);
-        border-radius: var(--radius-sm, 0.25rem);
-        background: var(--bg-1, Field);
-        color: var(--color, FieldText);
-        font-size: var(--text-sm, 0.875rem);
-        font-family: var(--font-mono, monospace);
-
-        &:focus-visible {
-          outline: 2px solid var(--blue, AccentColor);
-          outline-offset: 2px;
-        }
-
-        &:disabled {
-          opacity: 0.4;
-          cursor: not-allowed;
-        }
-      }
-      .page-input {
-        width: 4ch;
-        padding: var(--space-2, 0.5rem) var(--space-1, 0.25rem);
-        text-align: center;
-        appearance: textfield;
-
-        &::-webkit-inner-spin-button,
-        &::-webkit-outer-spin-button {
-          appearance: none;
-          margin: 0;
-        }
-      }
-      .btn-page {
-        align-self: stretch;
-        padding: 0 var(--space-3, 0.75rem);
-        font-size: var(--text-xl, 1.25rem);
-        line-height: 1;
-      }
-    `,
-  ];
+  static styles = [buttons, styles];
 
   // Lit reads the reactive properties from this static map, in place of decorators. Each field is
   // `declare`d, so the class emits no field to shadow Lit's accessor, and given its default in

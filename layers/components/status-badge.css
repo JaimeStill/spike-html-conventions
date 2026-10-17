@@ -1,0 +1,5 @@
+/* The badge's host, an inline box; Lit adopts this sheet into its shadow root. */
+
+:host {
+  display: inline-block;
+}

@@ -2,14 +2,15 @@
 // opens it, rendered into the element itself (`createRenderRoot` returns the element).
 //
 // Light DOM costs it encapsulation, and Lit's `static styles`, which Lit adopts into a shadow
-// root alone. It adopts one sheet into the document instead, once, in the cascade layer
-// spike-html-conventions.entry, every rule nested under its tag. The button is bare: the page's
-// spike-html-design baseline styles it, so the sheet gives it layout alone, and its parts their
-// type, reading only that baseline's tokens.
+// root alone. It imports its sheet, entry-lit-light.css, as a CSS module script and adopts it into
+// the document instead, once, in the cascade layer spike-html-conventions.entry, every rule nested
+// under its tag. The button is bare: the page's spike-html-design baseline styles it, so the sheet
+// gives it layout alone, and its parts their type, reading only that baseline's tokens.
 
 import { html, LitElement, nothing, type PropertyDeclarations } from "lit";
 
 import { define, emit } from "../foundation/dom.js";
+import sheet from "./entry-lit-light.css" with { type: "css" };
 
 /** The tag this version defines. */
 export const tagName = "sl-entry-lit-light";
@@ -63,40 +64,6 @@ function formatSize(bytes: number): string {
   const step = Math.min(Math.floor(Math.log10(Math.max(bytes, 1)) / 3), sizeUnits.length - 1);
   return sizeUnits[step].format(bytes / 1000 ** step);
 }
-
-// The element's layout, adopted into the document by the first instance to connect. Its layer
-// comes after the baseline's, as the sheet is adopted after the page links it.
-const sheet = new CSSStyleSheet();
-sheet.replaceSync(`
-  @layer spike-html-conventions.entry {
-    sl-entry-lit-light {
-      display: block;
-
-      & > .entry {
-        display: grid;
-        grid-template-columns: 8ch 1fr auto;
-        align-items: baseline;
-        justify-items: start;
-        gap: var(--space-3xs) var(--space-xs);
-        inline-size: 100%;
-        margin-block: var(--space-3xs);
-      }
-      & :is(.kind, .meta) {
-        color: var(--fg-2);
-      }
-      & .name {
-        font-size: var(--text-s);
-        font-weight: 600;
-      }
-      & .meta {
-        grid-column: 2 / -1;
-        display: flex;
-        flex-wrap: wrap;
-        gap: var(--space-xs);
-      }
-    }
-  }
-`);
 
 /** Adds the sheet to the document's adopted sheets, once however many instances connect. */
 function adopt(): void {

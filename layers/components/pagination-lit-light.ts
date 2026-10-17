@@ -13,15 +13,17 @@
 // empty, so the parts are always three.
 //
 // Light DOM costs it encapsulation too, and Lit's `static styles`, which Lit adopts into a shadow
-// root alone. It adopts one sheet into the document instead, once, in the cascade layer
-// spike-html-conventions.pagination, every rule nested under its tag. The controls are bare: the
-// page's spike-html-design baseline styles them, buttons included, so the sheet gives them
-// layout alone and reads only that baseline's tokens.
+// root alone. It imports its sheet, pagination-lit-light.css, as a CSS module script and adopts it
+// into the document instead, once, in the cascade layer spike-html-conventions.pagination, every
+// rule nested under its tag. The controls are bare: the page's spike-html-design baseline styles
+// them, buttons included, so the sheet gives them layout alone and reads only that baseline's
+// tokens.
 
 import { html, LitElement, nothing, type PropertyDeclarations } from "lit";
 import { createRef, ref } from "lit/directives/ref.js";
 
 import { define, emit } from "../foundation/dom.js";
+import sheet from "./pagination-lit-light.css" with { type: "css" };
 
 /** The tag this version defines. */
 export const tagName = "sl-pagination-lit-light";
@@ -38,56 +40,6 @@ export interface PageChangeDetail {
 export interface PageSizeChangeDetail {
   size: number;
 }
-
-// The element's layout, adopted into the document by the first instance to connect. Its layer
-// comes after the baseline's, as the sheet is adopted after the page links it; a page that
-// declares its own layers names spike-html-conventions before its own to keep this one under them.
-const sheet = new CSSStyleSheet();
-sheet.replaceSync(`
-  @layer spike-html-conventions.pagination {
-    sl-pagination-lit-light {
-      display: block;
-
-      & > .summary {
-        margin-block-end: var(--space-2xs);
-        font-size: var(--text-s);
-        color: var(--fg-2);
-      }
-      & > .pagination {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: var(--space-xs);
-        margin-block-start: var(--space-xs);
-        padding-block-start: var(--space-xs);
-        border-block-start: var(--line-s) solid var(--border);
-      }
-      & :is(.page-size, .page-controls, .page-indicator) {
-        display: flex;
-        align-items: center;
-        gap: var(--space-2xs);
-      }
-      & :is(.page-size-label, .page-indicator) {
-        font-size: var(--text-s);
-        color: var(--fg-2);
-      }
-      & .page-input {
-        inline-size: 4ch;
-        text-align: center;
-        appearance: textfield;
-
-        &::-webkit-inner-spin-button,
-        &::-webkit-outer-spin-button {
-          appearance: none;
-          margin: 0;
-        }
-      }
-      & .page-step {
-        align-self: stretch;
-      }
-    }
-  }
-`);
 
 /** Adds the sheet to the document's adopted sheets, once however many instances connect. */
 function adopt(): void {

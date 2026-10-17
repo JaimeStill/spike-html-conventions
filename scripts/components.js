@@ -31,8 +31,9 @@
 // lit-element, and @lit/* module in, under lit/); baseline, spike-html-design's baseline CSS (the
 // stylesheet the light pages link; in a build, the CSS asset Vite emits for it); client, the Vite
 // dev server's client, which it injects into every page it serves (/@vite/client and the env
-// module it imports); and page, the rest: the page's HTML, its script, and the elements' and the
-// fixture's modules.
+// module it imports); and page, the rest: the page's HTML, its script, the elements' and the
+// fixture's modules, and the elements' stylesheets, as the sheet modules scripts/css-sheets.js
+// makes of them.
 
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";

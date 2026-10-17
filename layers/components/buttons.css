@@ -1,0 +1,34 @@
+/*
+ * The button styles every shadow-root version shares, folded from herald's shared buttons module.
+ * Imported as a CSS module script, it is one CSSStyleSheet per document, adopted by reference into
+ * each shadow version's root, Lit and vanilla alike, so a single edit to it reaches every button
+ * the shadow versions render. It reads the design tokens, each with a fallback for a page that
+ * defines none.
+ */
+
+/* The `.btn` class: a bordered, monospace button that dims while disabled. */
+.btn {
+  padding: var(--space-1, 0.25rem) var(--space-3, 0.75rem);
+  border: 1px solid var(--divider, GrayText);
+  border-radius: var(--radius-sm, 0.25rem);
+  background: var(--bg, Canvas);
+  color: var(--color, CanvasText);
+  font-size: var(--text-xs, 0.75rem);
+  font-family: var(--font-mono, monospace);
+  cursor: pointer;
+  transition: background 0.15s;
+
+  &:hover:not(:disabled) {
+    background: var(--bg-2, color-mix(in srgb, CanvasText 8%, Canvas));
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--blue, AccentColor);
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+}

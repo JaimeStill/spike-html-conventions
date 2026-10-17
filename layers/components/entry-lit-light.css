@@ -1,0 +1,34 @@
+/*
+ * sl-entry-lit-light's layout, which the element adopts into the document once. Its layer comes
+ * after the baseline's, as the sheet is adopted after the page links it. Every rule is nested
+ * under the tag, and reads only spike-html-design's baseline tokens.
+ */
+
+@layer spike-html-conventions.entry {
+  sl-entry-lit-light {
+    display: block;
+
+    & > .entry {
+      display: grid;
+      grid-template-columns: 8ch 1fr auto;
+      align-items: baseline;
+      justify-items: start;
+      gap: var(--space-3xs) var(--space-xs);
+      inline-size: 100%;
+      margin-block: var(--space-3xs);
+    }
+    & :is(.kind, .meta) {
+      color: var(--fg-2);
+    }
+    & .name {
+      font-size: var(--text-s);
+      font-weight: 600;
+    }
+    & .meta {
+      grid-column: 2 / -1;
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-xs);
+    }
+  }
+}

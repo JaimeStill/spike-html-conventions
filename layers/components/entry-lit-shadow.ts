@@ -1,10 +1,12 @@
 // Entry, Lit with a shadow root: one directory or one file of a document hierarchy, as a button
-// that opens it. Its button takes its styles from the shared sheet.
+// that opens it. Its styles are CSS module scripts in its shadow root's `static styles`: the
+// shared buttons.css for its button, and entry-shadow.css, which the vanilla version adopts too.
 
-import { css, html, LitElement, nothing, type PropertyDeclarations } from "lit";
+import { html, LitElement, nothing, type PropertyDeclarations } from "lit";
 
 import { define, emit } from "../foundation/dom.js";
-import { buttonSheet } from "./button-sheet.js";
+import buttons from "./buttons.css" with { type: "css" };
+import styles from "./entry-shadow.css" with { type: "css" };
 
 /** The tag this version defines. */
 export const tagName = "sl-entry-lit-shadow";
@@ -64,37 +66,7 @@ function formatSize(bytes: number): string {
  * content type; and when it was last updated. Activating it sends `open` with its id and kind.
  */
 export class EntryLitShadow extends LitElement {
-  static styles = [
-    buttonSheet,
-    css`
-      :host {
-        display: block;
-      }
-      .entry {
-        display: grid;
-        grid-template-columns: 8ch 1fr auto;
-        align-items: baseline;
-        gap: var(--space-1, 0.25rem) var(--space-3, 0.75rem);
-        width: 100%;
-        margin-block: var(--space-1, 0.25rem);
-        text-align: start;
-      }
-      .kind,
-      .meta {
-        color: var(--color-2, GrayText);
-      }
-      .name {
-        font-size: var(--text-sm, 0.875rem);
-        font-weight: 600;
-      }
-      .meta {
-        grid-column: 2 / -1;
-        display: flex;
-        flex-wrap: wrap;
-        gap: var(--space-3, 0.75rem);
-      }
-    `,
-  ];
+  static styles = [buttons, styles];
 
   static properties = {
     item: { attribute: false },

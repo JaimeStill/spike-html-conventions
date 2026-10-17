@@ -3,10 +3,12 @@
 // conversion, the accessors, `disabled`'s reflection, properties set before the definition, and
 // rendering. It forgoes batching and binding-level updates: every property change re-renders at
 // once, in place, except the page input's value, which only `page` writes, so typing survives
-// other changes. Its control styles mirror the Lit version's, as a sheet of its own.
+// other changes. Its shadow root adopts the Lit version's two CSS module scripts, the shared
+// buttons.css and pagination-shadow.css, so its controls style alike.
 
 import { define, emit, required } from "../foundation/dom.js";
-import { buttonSheet } from "./button-sheet.js";
+import buttons from "./buttons.css" with { type: "css" };
+import styles from "./pagination-shadow.css" with { type: "css" };
 
 /** The tag this version defines. */
 export const tagName = "sl-pagination-vanilla-shadow";
@@ -23,76 +25,6 @@ export interface PageChangeDetail {
 export interface PageSizeChangeDetail {
   size: number;
 }
-
-const styles = new CSSStyleSheet();
-styles.replaceSync(`
-  :host {
-    display: block;
-  }
-  .summary {
-    margin: 0 0 var(--space-2, 0.5rem);
-    font-size: var(--text-sm, 0.875rem);
-    color: var(--color-1, GrayText);
-  }
-  .pagination {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--space-3, 0.75rem);
-    margin-top: var(--space-3, 0.75rem);
-    padding-top: var(--space-3, 0.75rem);
-    border-top: 1px solid var(--divider, GrayText);
-  }
-  .page-size,
-  .page-controls,
-  .page-indicator {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2, 0.5rem);
-  }
-  .page-size-label,
-  .page-indicator {
-    font-size: var(--text-sm, 0.875rem);
-    color: var(--color-1, GrayText);
-  }
-  .input {
-    padding: var(--space-2, 0.5rem) var(--space-3, 0.75rem);
-    border: 1px solid var(--divider, GrayText);
-    border-radius: var(--radius-sm, 0.25rem);
-    background: var(--bg-1, Field);
-    color: var(--color, FieldText);
-    font-size: var(--text-sm, 0.875rem);
-    font-family: var(--font-mono, monospace);
-
-    &:focus-visible {
-      outline: 2px solid var(--blue, AccentColor);
-      outline-offset: 2px;
-    }
-
-    &:disabled {
-      opacity: 0.4;
-      cursor: not-allowed;
-    }
-  }
-  .page-input {
-    width: 4ch;
-    padding: var(--space-2, 0.5rem) var(--space-1, 0.25rem);
-    text-align: center;
-    appearance: textfield;
-
-    &::-webkit-inner-spin-button,
-    &::-webkit-outer-spin-button {
-      appearance: none;
-      margin: 0;
-    }
-  }
-  .btn-page {
-    align-self: stretch;
-    padding: 0 var(--space-3, 0.75rem);
-    font-size: var(--text-xl, 1.25rem);
-    line-height: 1;
-  }
-`);
 
 // The parts that are always there, cloned once per element. The summary and the page count come
 // and go, so they are built apart and placed by the render.
@@ -163,7 +95,7 @@ export class PaginationVanillaShadow extends HTMLElement {
   constructor() {
     super();
     const root = this.attachShadow({ mode: "open" });
-    root.adoptedStyleSheets = [buttonSheet, styles];
+    root.adoptedStyleSheets = [buttons, styles];
     root.append(template.content.cloneNode(true));
     this.#summary.className = "summary";
     this.#count.setAttribute("aria-hidden", "true");

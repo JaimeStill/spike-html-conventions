@@ -12,6 +12,10 @@
 //
 // test/layers.test.js runs this config over test/layers-tree.js's trees, and scripts/measure.sh
 // runs it as setup B; scripts/lint-compare.js reads the layer table for import-x's zones.
+//
+// A .css import is a CSS module script, `with { type: "css" }`, everywhere: core
+// no-restricted-syntax refuses one without that attribute, in an import, an export-from, or an
+// import() with a literal specifier, so no .css import leans on a bundler's own CSS handling.
 
 import js from "@eslint/js";
 import { defineConfig, globalIgnores } from "eslint/config";
@@ -21,6 +25,22 @@ import globals from "globals";
 import tseslint from "typescript-eslint";
 
 const code = ["**/*.js", "**/*.ts"];
+
+// The attribute a CSS module script carries, by its key's name or its quoted key, among a
+// declaration's attributes or the properties of import()'s options.
+const cssType = (node) =>
+  `:matches(${node}[key.name='type'], ${node}[key.value='type'])[value.value='css']`;
+const cssSource = "[source.value=/\\.css$/]";
+const cssImports = [
+  ...["ImportDeclaration", "ExportNamedDeclaration", "ExportAllDeclaration"].map((type) => ({
+    selector: `${type}${cssSource}:not(:has(${cssType("ImportAttribute")}))`,
+    message: "A .css import is a CSS module script: add with { type: 'css' }.",
+  })),
+  {
+    selector: `ImportExpression${cssSource}:not(:has(Property[key.name='with'] > ObjectExpression > ${cssType("Property")}))`,
+    message: "A .css import() is a CSS module script: pass { with: { type: 'css' } }.",
+  },
+];
 
 // The layer table: each layer's directory and the layers it may import, "own" an app's own
 // directory and "lit" the one package. No app imports another, and a file directly in layers/,
@@ -72,6 +92,7 @@ export default defineConfig([
   globalIgnores(["dist/"]),
   { files: code, extends: [js.configs.recommended, tseslint.configs.recommended] },
   { files: code, languageOptions: { globals: globals.browser } },
+  { files: code, rules: { "no-restricted-syntax": ["error", ...cssImports] } },
   // The suite, the scripts, and the consumer fixtures run on node or bun.
   { files: ["test/**", "scripts/**", "fixtures/**"], languageOptions: { globals: globals.node } },
   {

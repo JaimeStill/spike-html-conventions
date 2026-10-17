@@ -1,7 +1,7 @@
 // The versions of the composition the probe compares: each names its pair of tags and loads the
 // modules that define them. The probe loads a version only after building its composition, so
-// every property it sets is set before the elements are defined. The demo's bundle keeps each
-// import() in the bundle, run only when called, so a page defines its own version alone.
+// every property it sets is set before the elements are defined. Each import() runs only when
+// called, so a page that loads tsc's emit of the probe defines its own version alone.
 
 /** One version of the composition: a pagination element and the entry element it holds. */
 export interface Version {

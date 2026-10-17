@@ -51,8 +51,8 @@ const eventTypes = ["page-change", "page-size-change", "open"];
 
 /**
  * Lets pending updates land. Lit renders in a microtask queued when a property changes, so one
- * microtask queued after it runs once the render is done. The probe never waits on a timer or a
- * fetch: --dump-dom takes the page once it has loaded, and only microtasks finish before that.
+ * microtask queued after it runs once the render is done. The probe never waits on a timer: the
+ * demo's page holds its load event, which --dump-dom waits for, only until the run returns.
  */
 const settle = () => Promise.resolve();
 

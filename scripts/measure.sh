@@ -146,7 +146,8 @@
 #                   a scratch copy of the project: under Vite's dev server, every response
 #                   headless Chromium's NetLog records, passing when a Lit version's bytes hold
 #                   Lit's dev-mode warning (its development build) and a vanilla version's hold
-#                   no Lit; and from vite build, every emitted file raw and brotli, Lit in a chunk
+#                   no Lit, and each stylesheet arrives as scripts/css-sheets.js's sheet module,
+#                   none injected into the document; and from vite build, every emitted file raw and brotli, Lit in a chunk
 #                   of its own, passing when the build succeeds, no file holds the dev-mode
 #                   warning, and Lit is all in its chunk or, for vanilla, nowhere. The section
 #                   prints its figures under its own heading, the element sources' lines and
@@ -1594,7 +1595,10 @@ fi
 # packages copied into its own node_modules (pnpm list's closure of the dependencies), so Vite's
 # cache, node_modules/.vite by default, is scratch too, and spike-html-design's baseline extracted
 # from its tag as scripts/demo.sh extracts it. The section reads no network: Chromium's host
-# resolver maps every name but the dev server's address to nothing.
+# resolver maps every name but the dev server's address to nothing. Both list scripts/css-sheets.js,
+# which gives each component's CSS module script (`with { type: "css" }`) the module a browser
+# gives it, one constructed sheet as its default export, where Vite would inject the CSS into the
+# document in dev and fail the build on the missing export.
 #
 # Development: one dev server over the copy, each page loaded once to let Vite pre-bundle Lit, then
 # again in headless Chromium with a fresh profile and its NetLog capturing every byte; a page's
@@ -1635,8 +1639,10 @@ port=$(node -e '
   server.listen(0, "127.0.0.1", () => { console.log(server.address().port); server.close(); });')
 origin="http://127.0.0.1:$port"
 cat >"$components/dev.config.mjs" <<EOF
+import { cssSheets } from "$root/scripts/css-sheets.js";
 export default {
   root: "$project",
+  plugins: [cssSheets()],
   publicDir: false,
   logLevel: "warn",
   clearScreen: false,
@@ -1702,8 +1708,20 @@ for page in "${component_pages[@]}"; do
   component_page "$page"
   tsv="$components/$page.responses.tsv"
   component_modules=("/layers/components/pagination-$page_version.ts")
+  # Each stylesheet the version imports, as the virtual sheet module scripts/css-sheets.js serves.
+  sheet="/@id/__x00__css-sheet:$project/layers/components"
+  if [[ "$page_version" == *-shadow ]]; then
+    component_modules+=("$sheet/buttons.css.js" "$sheet/pagination-shadow.css.js")
+  else
+    component_modules+=("$sheet/pagination-$page_version.css.js")
+  fi
   if [[ "$page_kind" == composition ]]; then
     component_modules+=("/layers/components/entry-$page_version.ts" /demo/documents.ts)
+    if [[ "$page_version" == *-shadow ]]; then
+      component_modules+=("$sheet/entry-shadow.css.js")
+    else
+      component_modules+=("$sheet/entry-$page_version.css.js")
+    fi
   fi
   missing=()
   for path in "${component_modules[@]}"; do
@@ -1715,6 +1733,10 @@ for page in "${component_pages[@]}"; do
     ok=0
     fact+="; never fetched: ${missing[*]}"
   fi
+  # Vite's own CSS handling would inject a stylesheet it took into a <style> in the document.
+  injected=$({ grep -o '<style[^>]*data-vite-dev-id' "$components/$page.dom.html" || true; } | wc -l)
+  fact+="; the dumped DOM holds $injected style Vite injected"
+  if ((injected != 0)); then ok=0; fi
   # The composition's script appends the pagination with its entries, which the dumped DOM holds.
   if [[ "$page_kind" == composition ]]; then
     entries=$(grep -o "<${page_entry}[ >]" "$components/$page.dom.html" | wc -l)
@@ -1748,8 +1770,10 @@ echo "| page | files | total | total, brotli | Lit | Lit, brotli | baseline CSS 
 echo "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |"
 for page in "${component_pages[@]}"; do
   cat >"$components/build-$page.config.mjs" <<EOF
+import { cssSheets } from "$root/scripts/css-sheets.js";
 export default {
   root: "$project",
+  plugins: [cssSheets()],
   publicDir: false,
   logLevel: "warn",
   build: {
@@ -1824,15 +1848,19 @@ done
 echo
 echo "### Context: the element sources"
 echo
-echo "Each version's source as written, for context: lines (\`wc -l\`) and brotli bytes (quality 11, node's node:zlib). button-sheet.ts is the shadow versions' shared button styles."
+echo "Each version's source as written, for context: lines (\`wc -l\`) and brotli bytes (quality 11, node's node:zlib): its module, and its stylesheet, a CSS module script. The Lit and vanilla shadow versions share one stylesheet per element (pagination-shadow.css, entry-shadow.css), and buttons.css is every shadow version's shared button styles."
 echo
 echo "| file | lines | brotli |"
 echo "| --- | ---: | ---: |"
 component_sources=()
 for version in lit-shadow vanilla-shadow lit-light vanilla-light; do
   component_sources+=("layers/components/pagination-$version.ts" "layers/components/entry-$version.ts")
+  if [[ "$version" == *-light ]]; then
+    component_sources+=("layers/components/pagination-$version.css" "layers/components/entry-$version.css")
+  fi
 done
-component_sources+=(layers/components/button-sheet.ts)
+component_sources+=(layers/components/pagination-shadow.css layers/components/entry-shadow.css)
+component_sources+=(layers/components/buttons.css)
 while IFS=$'\t' read -r path bytes; do
   printf '| %s | %s | %s B |\n' "$path" "$(wc -l <"$root/$path")" "$bytes"
 done < <(cd "$root" && node scripts/components.js brotli "${component_sources[@]}")
@@ -1922,6 +1950,11 @@ copy_json() {
   mkdir -p "$1"
   (cd "$root" && printf '%s\0' "${json_files[@]}" | xargs -0 cp --parents -t "$1")
 }
+# strip_css DIR: DIR's copy of src/, layers/, and test/ without the components' stylesheets. The
+# comparison's code is the .js and .ts files, as code_files counts them, and the check's Prettier
+# formats no CSS (.prettierignore), so the stylesheets are no setup's code here; the scope rows
+# below, over every tracked file, still show what each formatter does with them by default.
+strip_css() { find "$1" -name '*.css' -delete; }
 # pad DIR: three trailing newlines on every file in DIR, which a formatter strips from any file it
 # formats, so a file it skips differs from the original and fails the row.
 pad() {
@@ -1941,7 +1974,7 @@ declare -A changed_json=([C]="package.json")
 declare -A unrestored=(
   [C json]="package.json"
   [D code]="layers/apps/application/documents/main.ts layers/apps/application/documents/views/list.ts layers/apps/application/prompts/main.ts layers/apps/static/site/main.ts layers/components/entry-lit-light.ts layers/components/entry-lit-shadow.ts layers/components/entry-vanilla-light.ts layers/components/entry-vanilla-shadow.ts layers/components/pagination-lit-light.ts layers/components/pagination-lit-shadow.ts layers/components/pagination-vanilla-light.ts layers/components/pagination-vanilla-shadow.ts layers/components/status-badge.ts layers/foundation/dom.ts layers/sdk/session.ts src/js/pagination-lit.js src/js/pagination-vanilla.js src/js/router.js src/jsdoc/pagination-lit.js src/jsdoc/pagination-vanilla.js src/jsdoc/router.js src/ts/pagination-lit.ts src/ts/pagination-vanilla.ts src/ts/router.ts test/layers-tree.js test/layers.test.js test/router.test.js"
-  [D json]=".claude/settings.json fixtures/consumer-bun/tsconfig.json fixtures/consumer-npm/tsconfig.json fixtures/consumer-pnpm/tsconfig.json package.json scripts/biome-layers.json tsconfig.build.json tsconfig.json"
+  [D json]=".claude/settings.json fixtures/consumer-bun/tsconfig.json fixtures/consumer-npm/tsconfig.json fixtures/consumer-pnpm/tsconfig.json package.json scripts/biome-layers.json tsconfig.build.json tsconfig.demo.json tsconfig.json"
 )
 
 for setup in "${setups[@]}"; do
@@ -2009,6 +2042,7 @@ for setup in "${setups[@]}"; do
     dir="$lint/format-$setup-$variant"
     mkdir -p "$dir"
     cp -r "$root/src" "$root/layers" "$root/test" "$dir/"
+    strip_css "$dir"
     pad "$dir"
     status=0
     format_with "$setup" "$dir" "$variant" src layers test >"$dir.log" 2>&1 || status=$?
@@ -2059,6 +2093,7 @@ for setup in "${setups[@]}"; do
     if [[ "$kind" == code ]]; then
       mkdir -p "$dir"
       cp -r "$root/src" "$root/layers" "$root/test" "$dir/"
+      strip_css "$dir"
       paths=(src layers test)
       what="the $code_files code files" kind_label=code
     else
