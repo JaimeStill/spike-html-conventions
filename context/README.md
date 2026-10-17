@@ -899,15 +899,16 @@ without, and `biome format` 59.1 ms against 28.8 ms (hyperfine, 30 runs, 2026-10
 **The architect's judgement** (logged at the review stop, after reading the final files of all 8
 versions, before this section was written): Lit with a shadow root is the default for
 components, and light DOM's hand-placed composition costs more than it gives. The one complaint
-was the styles, written as strings in `.ts` rather than natively in `.css` files. The task's
-amendment answered it: every component's CSS now lives in a `.css` file beside its module,
-imported as a CSS module script. Readability, maintainability, and scalability are that reading
+was the styles, written as strings in `.ts` rather than natively in `.css` files. An amendment
+to the task answered it: every component's CSS lives in a `.css` file beside its module, imported
+as a CSS module script. Readability, maintainability, and scalability are that reading
 of the files, not a metric; there is no rubric score, and the figures below are context for it.
 
 **What was built.** Two element-tier components in `layers/components/`, each in four versions,
 Lit and vanilla, each with a shadow root and in light DOM: 8 files, each with its own tag,
-`sl-{pagination,entry}-{lit,vanilla}-{shadow,light}`. Each imports only the foundation's
-`define`, `emit`, and `required` and, for Lit, `lit`; no vanilla version has a base class.
+`sl-{pagination,entry}-{lit,vanilla}-{shadow,light}`. Each imports only its stylesheets, the
+foundation's `define`, `emit`, and `required`, and, for Lit, `lit`; no vanilla version has a base
+class.
 
 - **The pagination** is a container: its controls sit around the entries the host places inside
   it. Its properties are go-web-sdk's Page envelope (`response.go`: `items`, `page`, `size`,
@@ -984,7 +985,7 @@ Lit and vanilla, each with a shadow root and in light DOM: 8 files, each with it
   rule in the baseline restyles both elements' buttons (the restyle check).
 - **A shadow root** gives the slots, encapsulation, and `static styles`. The baseline's element
   styles don't reach inside, only its inherited tokens, so the shadow versions keep herald's
-  folded control styles. Herald's shadow roots made every element list the shared style modules
+  folded control styles, written against the baseline's token names. Herald's shadow roots made every element list the shared style modules
   it needed in its own styles (`pagination-controls.ts` imports `buttons.module.css` and
   `inputs.module.css`, `document-card.ts` four, [herald][herald-elements], 6fc22b3). Here the
   shared styles are one file, `buttons.css`: a CSS module script is one `CSSStyleSheet` per
@@ -1146,16 +1147,16 @@ makes moot. eslint-plugin-import-x's `no-restricted-paths` flags the same 60, 8 
 `no-unresolved` alone, and 2 of the allowed files, a false positive on directory names that start
 with dots (Results 3).
 
-Since the components task, the check's Prettier also formats the components' stylesheets, so
-measure's scope rows now limit each setup to the code, JSON, and CSS, the check's own scope
-(`.prettierignore` lets `*.css` back in; Biome's `files.includes` adds `**/*.css`; D's Stylistic
-formats no CSS, which the row records), while the code rows still compare the `.js` and `.ts`
-files alone. The table's rows above keep the run they cite. In the later run
+The check's Prettier also formats the components' stylesheets, so measure's scope rows limit
+each setup to the code, JSON, and CSS, the check's own scope: `.prettierignore` lets `*.css` back
+in, Biome's `files.includes` adds `**/*.css`, and the row records that D's Stylistic formats no
+CSS. The code rows still compare the `.js` and `.ts` files alone, and the table above keeps the
+run it cites. In the later run
 *(m 2026-10-17T20:35:52Z)*, over 85 tracked files in 11 types, A, B, and C each limit to the 8
 stylesheets, 17 `.js`, 29 `.ts`, and 14 JSON files, and D to the same less the CSS; by default
 Prettier rewrites `context/README.md` (226 of 1,438 lines), the goal record (47 of 423), and
 `pnpm-lock.yaml` as before, oxfmt the same two Markdown files and `package.json`'s one key, and
-Biome and D nothing beside the code. The argument below doesn't turn on the change.
+Biome and D nothing beside the code. The argument below doesn't turn on the CSS.
 
 **The order.** As in Results 1: first, industry standard and maintainability, where
 maintainability holds stewardship and surface (binaries, config files, and packages to keep
@@ -1213,8 +1214,8 @@ default limited to code and JSON, don't make up for a formatter that can't resto
   moves a key in `package.json`, and D can't restore.
 - **Content scope.** Biome's by default: it touches only js, json, and ts, where Prettier also
   formats Markdown and YAML, and rewrites 174 of this README's 1,173 lines and 565 of the pnpm
-  lockfile's 1,615. A `.prettierignore` of five lines limited it to code and JSON (six since the
-  components task, which adds the CSS), so the cost is a default to undo, not a limit.
+  lockfile's 1,615. A `.prettierignore` of five lines limited it to code and JSON (six with the CSS
+  let back in), so the cost is a default to undo, not a limit.
 - **Direction.** B's now. The gap that decided the superseded pick, ESLint's rule never
   checking `import()`, is closed: boundaries flags all five dynamic edges. It judges the resolved
   file, so the layer table is its whole configuration: no override per file depth, no

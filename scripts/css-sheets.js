@@ -21,7 +21,7 @@ const isSheet = (node) =>
     (a) => (a.key.name ?? a.key.value) === "type" && a.value.value === "css",
   );
 
-/** The plugin: measure's Vite configs list it, in dev and build alike. */
+/** The plugin: measure's Vite configs and the preview's list it, in dev and build alike. */
 export function cssSheets() {
   return {
     name: "css-sheets",

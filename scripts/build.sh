@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Builds the pagination element with one tool into dist/<tool>/, outside the check.
+# Builds the pagination element with one tool into dist/<tool>/, outside the check; tsc also
+# builds the components layer and the demo's modules.
 #
 #   scripts/build.sh tsc       unbundled ESM by tsc emit, with declarations, from the .ts and
 #                              JSDoc forms (tsconfig.build.json); `lit` stays a bare import.

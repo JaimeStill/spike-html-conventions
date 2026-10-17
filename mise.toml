@@ -72,11 +72,11 @@ run = "scripts/build.sh bun"
 dir = "{{config_root}}"
 
 [tasks.build]
-description = "Every build of the pagination element: tsc emit, esbuild, and bun build"
+description = "Every build: tsc emit (the pagination element's forms, the components layer, and the demo's modules), and the pagination element bundled by esbuild and by bun build"
 depends = ["build:tsc", "build:esbuild", "build:bun"]
 
 [tasks.demo]
-description = "Render every build of the frozen pagination element, and the components layer's composition (pagination holding entries from the fixture) in each version, through the shared probe, in headless Chromium, from file://"
+description = "Render every build of the frozen pagination element, and, from tsc's emit loaded unbundled, the components layer's composition (pagination holding entries from the fixture) in each version through the shared probe and the button-style restyle check, in headless Chromium from file://; reads no network"
 depends = ["build"]
 run = "scripts/demo.sh"
 dir = "{{config_root}}"
@@ -87,7 +87,7 @@ run = "scripts/preview.sh"
 dir = "{{config_root}}"
 
 [tasks.measure]
-description = "Record each mise tool's installed size and each TypeScript form's lines and brotli bytes, time each toolchain with hyperfine (Node: pnpm installs and npm installs in its hoisted and linked layouts, tsc, esbuild, and Vite; Bun: bun install and bun build), and record every row, the layout rows (phantom dependencies, lockfile determinism, and disk sharing under npm, pnpm, and bun) and the GitHub and jsDelivr ones for v0.1.0 once it is released, record what each version of the components layer serves (the pagination alone and the composition, under Vite's dev server and from vite build, Lit's share apart), and compare four lint and format setups over the code and JSON (Biome; the check's own, ESLint with typescript-eslint and eslint-plugin-boundaries and Prettier, from the devDependencies; oxlint and oxfmt; ESLint with ESLint Stylistic and eslint-plugin-jsonc: footprint, timings, leaving the formatting unchanged and restoring it from a disturbed copy, content scope, the layer rules, and surface), as a dated markdown report on stdout; reads the network, writes nothing to the working tree"
+description = "Record each mise tool's installed size and each TypeScript form's lines and brotli bytes, time each toolchain with hyperfine (Node: pnpm installs and npm installs in its hoisted and linked layouts, tsc, esbuild, and Vite; Bun: bun install and bun build), and record every row, the layout rows (phantom dependencies, lockfile determinism, and disk sharing under npm, pnpm, and bun) and the GitHub and jsDelivr ones for v0.1.0 once it is released, record what each version of the components layer serves (the pagination alone and the composition, under Vite's dev server and from vite build, Lit's share apart), and compare four lint and format setups over the code and JSON, their content scope against the check's code, JSON, and CSS (Biome; the check's own, ESLint with typescript-eslint and eslint-plugin-boundaries and Prettier, from the devDependencies; oxlint and oxfmt; ESLint with ESLint Stylistic and eslint-plugin-jsonc: footprint, timings, leaving the formatting unchanged and restoring it from a disturbed copy, content scope, the layer rules, and surface), as a dated markdown report on stdout; reads the network, writes nothing to the working tree"
 run = "scripts/measure.sh"
 dir = "{{config_root}}"
 
