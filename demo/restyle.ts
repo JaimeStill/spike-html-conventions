@@ -1,10 +1,10 @@
 // The button styles' single source, shown in one version: a pagination holding one entry renders,
 // then one edit to the source the version's render root takes its button styles from repaints
 // both elements' buttons. A shadow root's source is button-sheet.ts, adopted into every shadow
-// version's root, and the edit rewrites the background its `.btn` rule declares. Light DOM's source is the
-// page's spike-html-design baseline, its elements layer, which no light version's sheet
-// overrides for a button, and the edit is one rule added to that layer. scripts/demo.sh runs one
-// page per version; each passes when both buttons painted from the source before the edit and
+// version's root, and the edit rewrites the background its `.btn` rule declares. Light DOM's
+// source is the page's spike-html-design baseline, its elements layer, which no light version's
+// sheet overrides for a button, and the edit is one rule added to that layer. scripts/demo.sh runs
+// one page per version; each passes when both buttons painted from the source before the edit and
 // both take the edit after it.
 
 import { buttonSheet } from "../layers/components/button-sheet.js";
@@ -70,8 +70,9 @@ function computed(background: string): string {
 /** The pagination's Next button and the entry's button, as each version renders them. */
 function buttons(pagination: Element, entry: Element): HTMLButtonElement[] {
   const root = (element: Element): ParentNode => element.shadowRoot ?? element;
+  const next = "Next page";
   const found = [
-    root(pagination).querySelector<HTMLButtonElement>('[aria-label="Next page"]'),
+    root(pagination).querySelector<HTMLButtonElement>(`[aria-label="${next}"]`),
     root(entry).querySelector<HTMLButtonElement>("button"),
   ];
   if (found.some((button) => button === null)) throw new Error("a button didn't render");

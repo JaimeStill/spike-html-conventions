@@ -222,17 +222,20 @@ function renderCases(report: Report, parts: Parts, { listing, filed, cursor }: C
   report.equal("label slotted", parts.sizeLabel(filed), "Files per page");
 }
 
+/** An event as the report writes it: its type and its detail as JSON, as the probe hears it. */
+const heard = (type: string, detail: unknown) => `${type} ${JSON.stringify(detail)}`;
+
 /** The events each control sends; the element never changes its own page. */
 async function eventCases(report: Report, parts: Parts, { listing, filed, cursor }: Compositions) {
-  await report.events("prev", 'page-change {"page":1}', () => parts.prev(listing).click());
-  await report.events("next", 'page-change {"page":3}', () => parts.next(listing).click());
-  await report.events("clamp 99", 'page-change {"page":3}', () =>
+  await report.events("prev", heard("page-change", { page: 1 }), () => parts.prev(listing).click());
+  await report.events("next", heard("page-change", { page: 3 }), () => parts.next(listing).click());
+  await report.events("clamp 99", heard("page-change", { page: 3 }), () =>
     change(parts.pageInput(listing), "99"),
   );
-  await report.events("clamp -4", 'page-change {"page":1}', () =>
+  await report.events("clamp -4", heard("page-change", { page: 1 }), () =>
     change(parts.pageInput(listing), "-4"),
   );
-  await report.events("size change", 'page-size-change {"size":6}', () =>
+  await report.events("size change", heard("page-size-change", { size: 6 }), () =>
     change(parts.sizeSelect(listing), "6"),
   );
   const [directory] = parts.entries(listing);
@@ -245,7 +248,9 @@ async function eventCases(report: Report, parts: Parts, { listing, filed, cursor
   await report.events("open file", `open {"id":"${files.items[2].id}","kind":"file"}`, () =>
     parts.opener(pending).click(),
   );
-  await report.events("cursor next", 'page-change {"page":null}', () => parts.next(cursor).click());
+  await report.events("cursor next", heard("page-change", { page: null }), () =>
+    parts.next(cursor).click(),
+  );
   report.equal("page kept after the events", String(listing.page), "2");
 }
 
