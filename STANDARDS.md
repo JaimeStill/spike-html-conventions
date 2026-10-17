@@ -59,11 +59,14 @@ The architecture pages that apply, in the architecture repository:
 
 - A component is Lit with a shadow root by default (the architect's judgement, Results 4): light
   DOM's hand-placed composition costs more than it gives. A vanilla or light-DOM component is an
-  exception its file argues.
+  exception its file argues. The vanilla-shadow, lit-light, and vanilla-light versions of the
+  pagination and the entry in `layers/components/` are this spike's comparison evidence only, not
+  exceptions to argue.
 - A component's CSS lives in its own `.css` file beside its module, imported as a CSS module
   script; CSS is never written in `.ts`, as a string, a `css` template, or a `replaceSync`
   argument. Styles several components share are one `.css` file each adopts by reference. The
-  check enforces only the import's `with { type: "css" }`.
+  check enforces only that form: a static import's `with { type: "css" }`, and no `import()` of a
+  `.css` file.
 
 ## Evidence
 
