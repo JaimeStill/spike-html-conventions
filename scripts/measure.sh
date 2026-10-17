@@ -141,6 +141,17 @@
 #                   spike-html-design v0.7.0 from jsDelivr, Lit through an import map to jsDelivr,
 #                   and the JS forms of the element; each page reports the design's registry and
 #                   a token, and the element defined and rendering page 3 of 7.
+#   components      what each version of the components layer serves, for two pages per version
+#                   (the pagination alone, and the composition with the fixture's entries), from
+#                   a scratch copy of the project: under Vite's dev server, every response
+#                   headless Chromium's NetLog records, passing when a Lit version's bytes hold
+#                   Lit's dev-mode warning (its development build) and a vanilla version's hold
+#                   no Lit; and from vite build, every emitted file raw and brotli, Lit in a chunk
+#                   of its own, passing when the build succeeds, no file holds the dev-mode
+#                   warning, and Lit is all in its chunk or, for vanilla, nowhere. The section
+#                   prints its figures under its own heading, the element sources' lines and
+#                   brotli bytes beside them as context, and reads no network. See "Components"
+#                   below.
 #   lint and format per setup: footprint, each tool's installed size, B's devDependencies and D's
 #                   scratch packages included, passing when every tool and package is at its pin;
 #                   time, the timings' means, passing when the lint, the format check, and both pass
@@ -1575,6 +1586,257 @@ done
 if ((!own_released)); then
   unreleased "file:// page: spike-html-design $design_tag, Lit $lit, and each JS form of the element from jsDelivr at $own_tag"
 fi
+
+# ---- Components: what each version of the components layer serves, under Vite's dev server and
+# from vite build, for two pages per version (scripts/components.js pages): the pagination element
+# alone, and the composition, the pagination holding one entry per item of the fixture's
+# directories page. Both run on a scratch copy of the project, layers/ and demo/, with Lit's
+# packages copied into its own node_modules (pnpm list's closure of the dependencies), so Vite's
+# cache, node_modules/.vite by default, is scratch too, and spike-html-design's baseline extracted
+# from its tag as scripts/demo.sh extracts it. The section reads no network: Chromium's host
+# resolver maps every name but the dev server's address to nothing.
+#
+# Development: one dev server over the copy, each page loaded once to let Vite pre-bundle Lit, then
+# again in headless Chromium with a fresh profile and its NetLog capturing every byte; a page's
+# figures are the bodies of every 2xx response from the dev server the browser read, as Vite sends
+# them, uncompressed (scripts/components.js responses). The dev server resolves Lit's development
+# builds, its development export condition, which the rows check for in the very bytes the browser
+# read: Lit's dev-mode warning.
+#
+# Production: one vite build per page, minified as Vite builds by default, into scratch, every
+# emitted file raw and brotli; Lit's share is the chunk the config's codeSplitting group puts every
+# lit, lit-html, lit-element, and @lit/* module in, under lit/, and the baseline's is the CSS Vite
+# emits for the linked stylesheet.
+echo "measure: components" >&2
+components="$scratch/components"
+project="$components/project"
+mkdir -p "$project/node_modules" "$project/spike-html-design"
+cp -r "$root/layers" "$root/demo" "$root/package.json" "$root/tsconfig.json" "$project/"
+while IFS= read -r dir; do
+  if [[ "$dir" == "$root" ]]; then continue; fi
+  name=${dir##*/node_modules/}
+  mkdir -p "$project/node_modules/$(dirname "$name")"
+  cp -rL "$dir" "$project/node_modules/$name"
+done < <(cd "$root" && pnpm list --prod --parseable --depth Infinity)
+git -C "$design" archive "$design_tag" baseline.css layers | tar -x -C "$project/spike-html-design"
+mapfile -t component_pages < <(node "$root/scripts/components.js" pages "$project")
+((${#component_pages[@]} == 8)) || fail "components.js wrote ${#component_pages[@]} pages, not 8"
+# component_page PAGE: the version, its entry tag, and whether it is a composition,
+# from the page's name, as components.js names it: pagination-<version> or composition-<version>.
+component_page() {
+  page_version=${1#*-}
+  page_kind=${1%%-*}
+  page_entry=sl-entry-$page_version
+}
+
+# The dev server, on a free port of the loopback address.
+port=$(node -e '
+  const server = require("node:net").createServer();
+  server.listen(0, "127.0.0.1", () => { console.log(server.address().port); server.close(); });')
+origin="http://127.0.0.1:$port"
+cat >"$components/dev.config.mjs" <<EOF
+export default {
+  root: "$project",
+  publicDir: false,
+  logLevel: "warn",
+  clearScreen: false,
+  server: { host: "127.0.0.1", port: $port, strictPort: true },
+};
+EOF
+vite --configLoader native --config "$components/dev.config.mjs" >"$components/dev.log" 2>&1 &
+dev_server=$!
+watchers+=("$dev_server")
+for ((i = 0; i < 300; i++)); do
+  curl -fs -o /dev/null "$origin/${component_pages[0]}.html" && break
+  sleep 0.1
+done
+curl -fs -o /dev/null "$origin/${component_pages[0]}.html" ||
+  fail "Vite's dev server didn't answer at $origin: $(tail -n3 "$components/dev.log")"
+# component_chromium PROFILE ARGS...: headless Chromium with a profile of its own and no name
+# resolved but the dev server's address, so its background requests never leave the machine.
+component_chromium() {
+  local profile=$1
+  shift
+  chromium --headless --user-data-dir="$profile" --no-first-run --disable-background-networking \
+    --disable-component-update --host-resolver-rules="MAP * ~NOTFOUND, EXCLUDE 127.0.0.1" \
+    "$@" 2>/dev/null
+}
+for page in "${component_pages[@]}"; do
+  component_chromium "$components/warm-profile" --dump-dom "$origin/$page.html" >/dev/null
+done
+for page in "${component_pages[@]}"; do
+  component_chromium "$components/profile-$page" --log-net-log="$components/$page.netlog.json" \
+    --net-log-capture-mode=Everything --dump-dom "$origin/$page.html" >"$components/$page.dom.html"
+  node "$root/scripts/components.js" responses "$components/$page.netlog.json" "$origin" \
+    >"$components/$page.responses.tsv"
+done
+kill "$dev_server" 2>/dev/null || true
+
+# share_sum TSV SHARE COLUMN: the sum of COLUMN over TSV's lines of SHARE, or every line's with all.
+share_sum() {
+  awk -F'\t' -v share="$2" -v col="$3" 'share == "all" || $1 == share { s += $col } END { print s + 0 }' "$1"
+}
+# marked TSV COLUMN: the paths of TSV's lines whose COLUMN is 1, on one line.
+marked() {
+  awk -F'\t' -v col="$2" '$col == 1 { printf "%s%s", sep, $NF; sep = " " }' "$1"
+}
+
+echo "## Components"
+echo
+echo "What each version of the components layer serves, for two pages per version: the pagination element alone (pagination-*), and the composition, the pagination holding the fixture's three directories (composition-*). The light versions' pages link spike-html-design $design_tag's baseline, its own share, so the element and runtime figures compare across versions."
+echo
+echo "### Development (Vite dev server)"
+echo
+echo "Every 2xx response from Vite's dev server headless Chromium read for the page, from its NetLog (--net-log-capture-mode=Everything), with a fresh profile after a warm-up load that let Vite pre-bundle Lit; bytes as the dev server sends them, uncompressed. Vite's client is the HMR client the dev server injects into every page."
+echo
+echo "| page | responses | total | Lit | baseline CSS | Vite client | page and elements |"
+echo "| --- | ---: | ---: | ---: | ---: | ---: | ---: |"
+for page in "${component_pages[@]}"; do
+  tsv="$components/$page.responses.tsv"
+  printf '| %s | %s | %s B | %s B | %s B | %s B | %s B |\n' "$page" "$(wc -l <"$tsv")" \
+    "$(share_sum "$tsv" all 2)" "$(share_sum "$tsv" lit 2)" "$(share_sum "$tsv" baseline 2)" \
+    "$(share_sum "$tsv" client 2)" "$(share_sum "$tsv" page 2)"
+done
+echo
+for page in "${component_pages[@]}"; do
+  component_page "$page"
+  tsv="$components/$page.responses.tsv"
+  component_modules=("/layers/components/pagination-$page_version.ts")
+  if [[ "$page_kind" == composition ]]; then
+    component_modules+=("/layers/components/entry-$page_version.ts" /demo/documents.ts)
+  fi
+  missing=()
+  for path in "${component_modules[@]}"; do
+    awk -F'\t' -v path="$path" '$NF == path { found = 1 } END { exit !found }' "$tsv" || missing+=("$path")
+  done
+  fact="$(wc -l <"$tsv") responses, $(share_sum "$tsv" all 2) B: Lit $(share_sum "$tsv" lit 2) B, baseline $(share_sum "$tsv" baseline 2) B, Vite client $(share_sum "$tsv" client 2) B, page and elements $(share_sum "$tsv" page 2) B"
+  ok=1
+  if ((${#missing[@]} > 0)); then
+    ok=0
+    fact+="; never fetched: ${missing[*]}"
+  fi
+  # The composition's script appends the pagination with its entries, which the dumped DOM holds.
+  if [[ "$page_kind" == composition ]]; then
+    entries=$(grep -o "<${page_entry}[ >]" "$components/$page.dom.html" | wc -l)
+    fact+="; the dumped DOM holds $entries $page_entry"
+    if ((entries != 3)); then ok=0; fi
+  fi
+  dev=$(marked "$tsv" 3) any=$(marked "$tsv" 4)
+  if [[ "$page_version" == lit-* ]]; then
+    name="Components, development: $page loads Lit's development build"
+    if [[ -n "$dev" ]]; then fact+="; Lit's dev-mode warning in $dev"; else
+      ok=0
+      fact+="; no response holds Lit's dev-mode warning${any:+, though Lit is in $any}"
+    fi
+  else
+    name="Components, development: $page loads no Lit"
+    if [[ -n "$any" || "$(share_sum "$tsv" lit 2)" != 0 ]]; then
+      ok=0
+      fact+="; Lit in ${any:-the pre-bundled dependencies}"
+    else
+      fact+="; no response holds Lit"
+    fi
+  fi
+  row "$name" "$ok" "$fact"
+done
+
+echo "### Production (vite build)"
+echo
+echo "One vite build per page, as Vite builds by default (minified, Lit's production build), every emitted file raw and brotli (quality 11, node's node:zlib). Lit's share is the chunk a codeSplitting group puts every lit, lit-html, lit-element, and @lit/* module in; the baseline's is the CSS Vite emits for the linked stylesheet."
+echo
+echo "| page | files | total | total, brotli | Lit | Lit, brotli | baseline CSS | baseline CSS, brotli | page and elements | page and elements, brotli |"
+echo "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |"
+for page in "${component_pages[@]}"; do
+  cat >"$components/build-$page.config.mjs" <<EOF
+export default {
+  root: "$project",
+  publicDir: false,
+  logLevel: "warn",
+  build: {
+    outDir: "$components/build/$page",
+    emptyOutDir: true,
+    reportCompressedSize: false,
+    rolldownOptions: {
+      input: "$project/$page.html",
+      output: {
+        codeSplitting: {
+          groups: [{ name: "lit", test: /[\\\\/]node_modules[\\\\/](lit|lit-html|lit-element|@lit)[\\\\/]/ }],
+        },
+        chunkFileNames: (chunk) =>
+          chunk.name === "lit" ? "lit/[name]-[hash].js" : "assets/[name]-[hash].js",
+      },
+    },
+  },
+};
+EOF
+  status=0
+  vite build --configLoader native --config "$components/build-$page.config.mjs" \
+    >"$components/build-$page.log" 2>&1 || status=$?
+  tsv="$components/$page.emitted.tsv"
+  if ((status == 0)); then
+    node "$root/scripts/components.js" emitted "$components/build/$page" >"$tsv"
+  else
+    : >"$tsv"
+  fi
+  printf '| %s | %s | %s B | %s B | %s B | %s B | %s B | %s B | %s B | %s B |\n' "$page" "$(wc -l <"$tsv")" \
+    "$(share_sum "$tsv" all 2)" "$(share_sum "$tsv" all 3)" "$(share_sum "$tsv" lit 2)" \
+    "$(share_sum "$tsv" lit 3)" "$(share_sum "$tsv" baseline 2)" "$(share_sum "$tsv" baseline 3)" \
+    "$(share_sum "$tsv" page 2)" "$(share_sum "$tsv" page 3)"
+
+  component_page "$page"
+  fact="exit $status"
+  ok=1
+  if ((status != 0)); then
+    ok=0
+    fact+=": $(tail -n3 "$components/build-$page.log")"
+  else
+    fact+="; $(wc -l <"$tsv") files: $(awk -F'\t' '{ printf "%s%s", sep, $NF; sep = " " }' "$tsv"); $(share_sum "$tsv" all 2) B, $(share_sum "$tsv" all 3) B brotli"
+  fi
+  dev=$(marked "$tsv" 4) any=$(marked "$tsv" 5)
+  lit_files=$(awk -F'\t' '$1 == "lit" { printf "%s%s", sep, $NF; sep = " " }' "$tsv")
+  # Lit wholly in its chunk: no other file holds Lit's version registries.
+  outside=$(awk -F'\t' '$1 != "lit" && $5 == 1 { printf "%s%s", sep, $NF; sep = " " }' "$tsv")
+  if [[ -n "$dev" ]]; then
+    ok=0
+    fact+="; Lit's dev-mode warning in $dev"
+  else
+    fact+="; no file holds Lit's dev-mode warning"
+  fi
+  if [[ "$page_version" == lit-* ]]; then
+    name="Components, production: $page builds, with Lit's production build in a chunk of its own"
+    if [[ -n "$lit_files" && -z "$outside" ]]; then
+      fact+="; Lit $(share_sum "$tsv" lit 2) B, $(share_sum "$tsv" lit 3) B brotli, all in $lit_files"
+    else
+      ok=0
+      fact+="; Lit's chunk: ${lit_files:-none}; Lit outside it: ${outside:-none}"
+    fi
+  else
+    name="Components, production: $page builds, with no Lit"
+    if [[ -n "$any" || -n "$lit_files" ]]; then
+      ok=0
+      fact+="; Lit in ${any:-$lit_files}"
+    else
+      fact+="; no file holds Lit"
+    fi
+  fi
+  row "$name" "$ok" "$fact"
+done
+echo
+echo "### Context: the element sources"
+echo
+echo "Each version's source as written, for context: lines (\`wc -l\`) and brotli bytes (quality 11, node's node:zlib). button-sheet.ts is the shadow versions' shared button styles."
+echo
+echo "| file | lines | brotli |"
+echo "| --- | ---: | ---: |"
+component_sources=()
+for version in lit-shadow vanilla-shadow lit-light vanilla-light; do
+  component_sources+=("layers/components/pagination-$version.ts" "layers/components/entry-$version.ts")
+done
+component_sources+=(layers/components/button-sheet.ts)
+while IFS=$'\t' read -r path bytes; do
+  printf '| %s | %s | %s B |\n' "$path" "$(wc -l <"$root/$path")" "$bytes"
+done < <(cd "$root" && node scripts/components.js brotli "${component_sources[@]}")
+echo
 
 echo "measure: lint and format rows" >&2
 # pin TOOL: TOOL's version in mise.toml.
