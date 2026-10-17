@@ -27,7 +27,8 @@ import tseslint from "typescript-eslint";
 const code = ["**/*.js", "**/*.ts"];
 
 // The attribute a CSS module script carries, by its key's name or its quoted key, among a
-// declaration's attributes or the properties of import()'s options.
+// declaration's attributes or the properties of import()'s options, under the options object's
+// own `with` key (`.options` anchors it there), matched the same two ways.
 const cssType = (node) =>
   `:matches(${node}[key.name='type'], ${node}[key.value='type'])[value.value='css']`;
 const cssSource = "[source.value=/\\.css$/]";
@@ -37,7 +38,7 @@ const cssImports = [
     message: "A .css import is a CSS module script: add with { type: 'css' }.",
   })),
   {
-    selector: `ImportExpression${cssSource}:not(:has(Property[key.name='with'] > ObjectExpression > ${cssType("Property")}))`,
+    selector: `ImportExpression${cssSource}:not(:has(ObjectExpression.options > :matches(Property[key.name='with'], Property[key.value='with']) > ObjectExpression > ${cssType("Property")}))`,
     message: "A .css import() is a CSS module script: pass { with: { type: 'css' } }.",
   },
 ];

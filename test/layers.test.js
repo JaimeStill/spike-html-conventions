@@ -92,12 +92,14 @@ const bareCss = {
   "layers/components/dynamic.ts": `await import("./x.css");`,
   "layers/components/dynamic-json.ts": `await import("./x.css", { with: { type: "json" } });`,
   "layers/components/dynamic-elsewhere.ts": `await import("./x.css", { with: {}, other: { type: "css" } });`,
+  "layers/components/dynamic-nested.ts": `await import("./x.css", { other: { with: { type: "css" } } });`,
 };
 const cssModules = {
   "layers/components/module.ts": `import sheet from "./x.css" with { type: "css" };`,
   "layers/components/quoted.ts": `import sheet from "./x.css" with { "type": "css" };`,
   "layers/components/export-module.ts": `export { default } from "./x.css" with { type: "css" };`,
   "layers/components/dynamic-module.ts": `await import("./x.css", { with: { type: "css" } });`,
+  "layers/components/dynamic-quoted.ts": `await import("./x.css", { "with": { "type": "css" } });`,
 };
 
 /** Writes `files` under `dir` as they stand, with the stylesheet they import; returns the paths. */
