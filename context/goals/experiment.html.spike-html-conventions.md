@@ -1,6 +1,6 @@
 # goal · experiment.html.spike-html-conventions
 
-- **State:** brief ready
+- **State:** building
 - **Task:** components
 - **Branch:** components
 
@@ -243,9 +243,82 @@ Slices (inserted after the review stop, before the evidence slice)
       run; pending edits for html-artifacts.md, spike-html-packages
       (ship each .css beside its .js), and the spike-html-design note.
 
+Amendment 2 (redirect at BRIEF): the shadow versions take the baseline from a port of
+spike-html-design v0.7.0 in the foundation.
+
+Shadow roots can't see the page's baseline: its reset and elements layers use element
+selectors, which stop at a shadow boundary; only custom and inherited properties cross. No
+platform mechanism lets a shadow root inherit page styles (survey 2026-10-17:
+csswg-drafts#10176, open-stylable/adoptStyles, unresolved; whatwg/html#11687, Declarative CSS
+Modules, open and experimental in Chromium only; the MSEdgeExplainers ShadowDOM explainer). The
+conventional answer for a layered design system: the shadow root adopts the lower layers by
+reference as constructed sheets, then its own layout-only sheet. spike-html-design v0.7.0
+doesn't fit: its one entry builds the layers with `@import ... layer()`, which constructed
+sheets and CSS module scripts don't load, and it exports no layer file. The architect: port
+it into this repo in the correct format rather than change it.
+
+Behaviors (new and revised)
+ 17. (new) The foundation owns a port of spike-html-design v0.7.0's tokens (the color, space,
+     and type facets with baseline.css's defaults: flexoki, regular, mono), reset, and
+     elements layers: one plain .css file per upstream file, no @import, each wrapped in its
+     own `@layer foundation.<layer>` block and headed by its provenance (tag v0.7.0, commit
+     fe75220, upstream path). Each loads as a CSS module script and can be linked by a page.
+     The port is this repo's own code from here on: Prettier formats it, and no test holds it
+     to upstream. The tools layer and the other profiles aren't ported.
+ 18. (new) The foundation holds a page entry: the layer order statement, then plain @imports
+     of the ported files. Every page links it (demo, preview, measure; shadow and light
+     alike, since shadow roots read its tokens by inheritance). No page reads the baseline
+     from the spike-html-design checkout any more.
+ 19. (new) The shadow versions, Lit and vanilla, take their control look only from the port:
+     a foundation module exports the reset and elements sheets in that order, and each
+     shadow version adopts them before its own sheet. Their buttons, select, and input are
+     bare, as in the light versions; the shadow sheets keep layout only, mirroring the light
+     sheets. buttons.css is deleted; no component sheet gives a control its look.
+ 20. (new) A long content type wraps inside its entry in all four versions; no entry
+     overflows its box.
+ 21. (new) The probe gains two cases (27 in all), each reporting the same across the four
+     versions: the painted look of the Next button, the page-size select, the page input,
+     and the entry's button (background, color, border, padding, font family and size); and
+     no overflow on the entry with the fixture's longest content type.
+  5. (rev) Every render root takes its control styles from the ported elements layer, so one
+     edit reaches both elements: in the shadow versions an edit to the adopted elements
+     sheet; in the light versions a rule added to the page's `foundation.elements` layer.
+     Light components still adopt one layout sheet into the document once, in a named layer
+     above the baseline.
+ 12. (rev) Shared styles stay one .css file adopted by reference; in the shadow versions that
+     file is the foundation's elements layer.
+  9. (rev) Served bytes re-run with the port counted as the baseline share (development: the
+     entry and the adopted sheet modules; production: the entry's CSS and its own chunk for
+     the adopted sheets). The rows record that a shadow page loads reset and elements twice,
+     linked and adopted.
+ 11. (rev) Results 4 also records: the shadow-root default adopts the baseline's reset and
+     elements by reference through the foundation, component sheets layout only; the survey
+     with its three sources; why @import is excluded; the port and its provenance. From one
+     fresh measure run.
+ 16. (rev) STANDARDS.md also records, under Components: a shadow-root component adopts the
+     foundation's baseline sheets, then a layout-only sheet of its own, and never styles a
+     control's look itself; under Layers: the foundation holds the design-system port, as
+     native CSS without @import except in the page entry.
+
+Slices (after 5c, before the evidence slice)
+  5d. Foundation port: the ported files, the page entry; every page links the entry.
+      Demo: check passes; the preview's light columns look as before.
+  5e. Shadow versions on the foundation: the baseline module, layout-only shadow sheets,
+      buttons.css deleted, the overflow fix in all four versions, restyle rewritten, the
+      probe's two cases.
+      Demo: demo passes 27 cases and restyle across four versions; the preview's four
+      columns look alike.
+  6.  (rev) Evidence: Results 4 and STANDARDS.md from one fresh measure run; the pending edit
+      for spike-html-design rewritten (ship each layer as a self-layered, @import-free,
+      exported sheet; the port is the interim and the reference).
+
+Out of scope  The tools layer, the non-default profiles, any change to spike-html-design;
+              ::part hooks recorded, not built.
+Door          two-way: no tag, nothing published.
+
 ## Progress
 
-slices 8/8 committed · review stop done · escalation answered · standards done · spec done · editor done
+slices 8/10 committed · review stop done · escalation answered · redirect at BRIEF: amendment 2 approved
 
 ## Decisions
 
@@ -421,6 +494,9 @@ slices 8/8 committed · review stop done · escalation answered · standards don
 - components: measure's development figures are the 2xx bodies Chromium's NetLog records (`--net-log-capture-mode=Everything`), with Vite's client as its own share. Rejected: crawling the module graph with fetch, which reproduces Vite's rewriting but not the browser's requests. Production splits Lit into its own chunk with an `output.codeSplitting` group over lit, lit-html, lit-element, and `@lit/*`.
 - components: `.prettierignore` lets `*.css` back in, so the check format-checks the component stylesheets, and measure's scope rows limit each setup to that scope, code, JSON, and CSS; the row records that D's ESLint Stylistic formats no CSS rather than failing on it. The lint comparison's code rows stay `.js` and `.ts`.
 - components: `mise run preview` serves from a scratch Vite root (the page, the config, Vite's cacheDir, and the baseline by `git archive`) and loads `demo/preview.ts` from the working tree through `/@fs/` (`server.fs.allow` names the repository), so edits to the components reach the open page and nothing is written to the tree. Every column links the baseline, so the page is one design.
+- components: redirect at BRIEF (architect): the shadow versions couldn't see the page's baseline, so they kept herald's look. Shadow roots adopt the foundation's reset and elements sheets by reference; buttons.css goes. Survey 2026-10-17: no shipped mechanism lets a shadow root inherit page styles.
+- components: spike-html-design doesn't fit the layout (its entry is @import-built, no layer is exported), so it is ported into the foundation rather than depended on or changed (architect). Layers renamed `foundation.*`; the port is owned here, formatted by Prettier, with provenance headers and no parity test (architect, questions 1 and 3). Rejected: a git-tag dependency (no exported layer files; a package.json `imports` target into node_modules throws ERR_INVALID_PACKAGE_TARGET in node 26.12.0).
+- components: the port is tokens (flexoki, regular, mono), reset, and elements; tools and other profiles stay out, as nothing uses them (architect). Shadow pages link the page entry too, for tokens; measure counts the adopted sheets in the baseline share (architect).
 
 ## Pending edits
 
