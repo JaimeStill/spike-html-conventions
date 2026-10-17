@@ -318,7 +318,7 @@ Door          two-way: no tag, nothing published.
 
 ## Progress
 
-slices 11/11 committed · review stop done · escalation answered · redirect at BRIEF: amendment 2 approved
+slices 11/11 committed · review stop done · escalation answered · redirect at BRIEF: amendment 2 approved · standards done
 
 ## Decisions
 
@@ -497,8 +497,9 @@ slices 11/11 committed · review stop done · escalation answered · redirect at
 - components: redirect at BRIEF (architect): the shadow versions couldn't see the page's baseline, so they kept herald's look. Shadow roots adopt the foundation's reset and elements sheets by reference; buttons.css goes. Survey 2026-10-17: no shipped mechanism lets a shadow root inherit page styles.
 - components: spike-html-design doesn't fit the layout (its entry is @import-built, no layer is exported), so it is ported into the foundation rather than depended on or changed (architect). Layers renamed `foundation.*`; the port is owned here, formatted by Prettier, with provenance headers and no parity test (architect, questions 1 and 3). Rejected: a git-tag dependency (no exported layer files; a package.json `imports` target into node_modules throws ERR_INVALID_PACKAGE_TARGET in node 26.12.0).
 - components: the port is tokens (flexoki, regular, mono), reset, and elements; tools and other profiles stay out, as nothing uses them (architect). Shadow pages link the page entry too, for tokens; measure counts the adopted sheets in the baseline share (architect).
-- components: amendment 2's evidence cites measure run 2026-10-17T23:34:32Z (121/121). The local CSS plugin minifies every sheet in `vite build` through Vite's own `?inline` CSS import (Lightning CSS, no new package); rejected: importing Lightning CSS directly (inside mise's Vite install, unreachable from the scratch project) and `preprocessCSS` (doesn't minify). Production splits the adopted foundation sheets into a `foundation/` chunk counted as baseline; a shadow page loads reset and elements twice, linked and adopted, and the rows say so.
+- components: amendment 2's evidence cites measure run 2026-10-17T23:45:28Z (121/121); every production row fails if a comment survives outside Lit's chunk. The local CSS plugin minifies every sheet in `vite build` through Vite's own `?inline` CSS import (Lightning CSS, no new package); rejected: importing Lightning CSS directly (inside mise's Vite install, unreachable from the scratch project) and `preprocessCSS` (doesn't minify). Production splits the adopted foundation sheets into a `foundation/` chunk counted as baseline; a shadow page loads reset and elements twice, linked and adopted, and the rows say so.
 - components: two lines of the port are respelled so Prettier, Biome, and oxfmt agree (elements.css nests the block-after-block selector under `:where()`; baseline.css states the layer order in two statements); meaning unchanged, recorded in each header. Rejected: recording the disagreement as an expected fact in measure's format rows. The entry button takes `text-align: start` in all four entry sheets so the wrapped type doesn't center; the probe's overflow case narrows the cursor composition to 22rem, the preview's narrowest column, so it can fail.
+- components: standards review of amendment 2: the probe's look case compares each control with a bare control of the same tag and type that the page's baseline paints, not with values copied from the port; production rows require every emitted file outside Lit's chunk comment-free, so a broken minify path fails measure (mutation-tested).
 
 ## Pending edits
 
