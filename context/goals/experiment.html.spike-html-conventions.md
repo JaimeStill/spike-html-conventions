@@ -232,13 +232,20 @@ Slices (inserted after the review stop, before the evidence slice)
   5b. Style files: the .css files, the ambient declaration, the Vite
       plugin, build:tsc's copy, the demo on tsc's emit, the lint rule.
       Demo: check, demo, and measure pass on the .css form.
+  5c. Preview (architect, during BUILD): `mise run preview`, outside the
+      check, starts Vite's dev server with the local CSS plugin on one
+      page showing all four versions side by side, each wired to the
+      fixture as a host would wire it (paging, page size, cursor page,
+      opening an entry), the light versions with the baseline linked.
+      Writes nothing to the working tree.
+      Demo: the page serves and each version pages through the fixture.
   6.  (rev) Evidence: Results 4 and STANDARDS.md from one fresh measure
       run; pending edits for html-artifacts.md, spike-html-packages
       (ship each .css beside its .js), and the spike-html-design note.
 
 ## Progress
 
-slices 5/7 committed · review stop done · escalation answered · standards — · spec — · editor —
+slices 6/8 committed · review stop done · escalation answered · standards — · spec — · editor —
 
 ## Decisions
 
@@ -399,6 +406,7 @@ slices 5/7 committed · review stop done · escalation answered · standards —
 - components: escalation: Results 1's toolchain pick doesn't reopen. Bun 1.4.3 loads a CSS module script as `{}`; herald's native CSS was a 30-line BunPlugin, which a Vite plugin reproduces.
 - components: escalation: STANDARDS.md records Lit with a shadow root as the component default and the .css convention.
 - components: escalation: spike-html-design's elements layer as an adoptable sheet, and its theme-menu's string-built sheet, go to the session as a note, not into this task.
+- components: architect, during BUILD: a `mise run preview` task serves the four versions side by side through Vite's dev server, interactive against the fixture, so the components can be seen in a browser before Results 4.
 
 ## Pending edits
 
