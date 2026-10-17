@@ -1015,7 +1015,7 @@ elements sheets they adopt (below).
 
 The architect's verdict weighs these: the shadow root's slots and encapsulation over light DOM's
 hand placement, layer ordering, and leaks. The cost the verdict accepted, a shared sheet each
-shadow element imports, is now the foundation's own baseline, adopted by reference.
+shadow element imports, is the foundation's own baseline, adopted by reference.
 
 **No shipped mechanism lets a shadow root inherit page styles** (survey, 2026-10-17). Open-stylable
 shadow roots, an `adoptStyles` capability for a root to take the page's styles, have been asked
