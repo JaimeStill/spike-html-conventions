@@ -427,7 +427,7 @@ where it cites a run, cite the run of **2026-10-16T21:11:09Z (UTC)** as
 after the check moved to ESLint + Prettier, with eslint pinned at 10.12.0, and after measure
 gained ESLint Stylistic, the resolved-file direction plugins on trees whose imports name real
 files, the split formatting rows, and the surface rows, and all 105 of its rows passed.
-Results 4 cites the run of **2026-10-17T20:05:32Z (UTC)** as *(m 2026-10-17T20:05:32Z)*, for
+Results 4 cites the run of **2026-10-17T20:35:52Z (UTC)** as *(m 2026-10-17T20:35:52Z)*, for
 the components' served bytes and source sizes, with pnpm at 12.14.0; all 121 of its rows passed.
 File counts from the offline installs are from `mise run check` the same day. Survey figures cite
 the Ecosystem survey's sources, and other facts from outside the spike carry their own source and
@@ -958,7 +958,7 @@ Lit and vanilla, each with a shadow root and in light DOM: 8 files, each with it
 | lifecycle hooks | Lit provides; vanilla builds by hand | Lit light: `firstUpdated` starts the child placement, and `connectedCallback` and `disconnectedCallback`, calling `super`, adopt the sheet and start and stop the observer (`pagination-lit-light.ts`). Vanilla light: the platform's `connectedCallback` and `disconnectedCallback` (`pagination-vanilla-light.ts`); with no update cycle there is nothing for `willUpdate` or `updated` to hook |
 | reactive controllers | not exercised | no component uses one; the SDK's `session.ts` (Results 3) is the repository's one controller |
 | keyed lists | not exercised | the entries are the host's children, and the size options are mapped without `repeat` |
-| slots | not exercised by Lit: the platform's, under a shadow root; light DOM builds them by hand | Both shadow versions use `<slot>` and `<slot name="label">`, the platform's, in Lit's template and in vanilla's `<template>` alike. Both light versions place the host's children by hand with a `MutationObserver` (`#place` in each `pagination-*-light.ts`) |
+| slots | not exercised | the platform's `<slot>`, under a shadow root in both: both shadow versions use `<slot>` and `<slot name="label">`, in Lit's template and in vanilla's `<template>` alike. Light DOM has no slots, Lit or vanilla: both light versions place the host's children by hand with a `MutationObserver` (`#place` in each `pagination-*-light.ts`) |
 | form association | not exercised; neither provides it | `ElementInternals` is a platform API: an element sets `static formAssociated = true` and calls `attachInternals()` ([MDN][mdn-internals]). Lit 3.3.3 adds nothing for it: none of `lit`, `lit-element`, `lit-html`, or `@lit/reactive-element` names `formAssociated` or `attachInternals`, only the server DOM shim `@lit-labs/ssr-dom-shim` (installed tree, read 2026-10-17). Either version writes it by hand |
 | SSR | not exercised | Lit's server rendering is `@lit-labs/ssr` (4.1.0, a Labs package, [overview][lit-ssr], [registry][reg-lit-ssr], read 2026-10-17), not a dependency here; a vanilla element has no counterpart beyond declarative shadow DOM written by hand |
 
@@ -973,7 +973,11 @@ Lit and vanilla, each with a shadow root and in light DOM: 8 files, each with it
   light version adopts its sheet into `document.adoptedStyleSheets` once, in a named cascade
   layer (`spike-html-conventions.pagination`, `.entry`) with every rule nested under its tag,
   and that layer ranks above the baseline only because the sheet is adopted after the page links
-  the baseline; a page that declares its own layers must name `spike-html-conventions` first. Page
+  the baseline; a page that declares its own layers must name `spike-html-conventions` first.
+  Nesting under the tag is the scoping chosen. `@scope` with a lower boundary at author content
+  is the recorded alternative, and would matter for author content placed inside the element; it
+  is Baseline newly available since 2026-03-24, in Chrome and Edge 143, Firefox 146, and Safari
+  26.4 (web-features 3.43.0, feature `scope` [web-features][reg-web-features], read 2026-10-17). Page
   styles reach the controls, the wanted ones and any other. What it gives is the baseline itself:
   spike-html-design v0.7.0's elements layer styles the bare controls with nothing adopted for
   them, so the light sheets give layout alone and drop herald's folded control styles, and one
@@ -1031,7 +1035,7 @@ constructed `CSSStyleSheet`, its default export, shared by every importer in a d
   Vite, so their production pages don't depend on it; no shim ships. The release consequence (each
   `.css` beside its `.js`, served as `text/css`) is spike-html-packages'.
 
-**Served bytes** *(m 2026-10-17T20:05:32Z)*, for each version's pagination alone and its
+**Served bytes** *(m 2026-10-17T20:35:52Z)*, for each version's pagination alone and its
 composition (the pagination holding the fixture's three directories). The light versions' pages
 link the baseline, given as its own share so the rest compares across versions.
 
@@ -1041,26 +1045,26 @@ injects into every page:
 
 | page | responses | total | Lit | baseline | Vite client | page and elements |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| pagination, Lit shadow | 9 | 557,389 B | 290,750 B | — | 226,077 B | 40,562 B |
-| pagination, vanilla shadow | 7 | 277,911 B | — | — | 226,077 B | 51,834 B |
-| pagination, Lit light | 10 | 651,731 B | 339,770 B | 42,090 B | 226,077 B | 43,794 B |
-| pagination, vanilla light | 7 | 320,794 B | — | 42,090 B | 226,077 B | 52,627 B |
-| composition, Lit shadow | 13 | 586,819 B | 290,750 B | — | 226,077 B | 69,992 B |
-| composition, vanilla shadow | 11 | 313,461 B | — | — | 226,077 B | 87,384 B |
-| composition, Lit light | 14 | 684,044 B | 339,770 B | 42,090 B | 226,077 B | 76,107 B |
-| composition, vanilla light | 11 | 359,115 B | — | 42,090 B | 226,077 B | 90,948 B |
+| pagination, Lit shadow | 9 | 560,522 B | 290,750 B | — | 226,061 B | 43,711 B |
+| pagination, vanilla shadow | 7 | 281,044 B | — | — | 226,061 B | 54,983 B |
+| pagination, Lit light | 10 | 651,715 B | 339,770 B | 42,090 B | 226,061 B | 43,794 B |
+| pagination, vanilla light | 7 | 320,778 B | — | 42,090 B | 226,061 B | 52,627 B |
+| composition, Lit shadow | 13 | 590,754 B | 290,750 B | — | 226,061 B | 73,943 B |
+| composition, vanilla shadow | 11 | 317,396 B | — | — | 226,061 B | 91,335 B |
+| composition, Lit light | 14 | 684,028 B | 339,770 B | 42,090 B | 226,061 B | 76,107 B |
+| composition, vanilla light | 11 | 359,099 B | — | 42,090 B | 226,061 B | 90,948 B |
 
 Production, `vite build` of the same pages, minified as Vite builds by default, every emitted
 file raw and brotli (quality 11, `node:zlib`), Lit in a chunk of its own:
 
 | page | total | Lit | baseline | page and elements |
 | --- | ---: | ---: | ---: | ---: |
-| pagination, Lit shadow | 21,593 B; 7,281 B br | 14,550 B; 5,031 B br | — | 7,043 B; 2,250 B br |
-| pagination, vanilla shadow | 8,181 B; 2,607 B br | — | — | 8,181 B; 2,607 B br |
+| pagination, Lit shadow | 22,157 B; 7,429 B br | 14,550 B; 5,031 B br | — | 7,607 B; 2,398 B br |
+| pagination, vanilla shadow | 8,745 B; 2,726 B br | — | — | 8,745 B; 2,726 B br |
 | pagination, Lit light | 35,234 B; 10,548 B br | 16,708 B; 5,742 B br | 11,861 B; 2,542 B br | 6,665 B; 2,264 B br |
 | pagination, vanilla light | 19,409 B; 5,051 B br | — | 11,861 B; 2,542 B br | 7,548 B; 2,509 B br |
-| composition, Lit shadow | 24,337 B; 8,143 B br | 14,550 B; 5,031 B br | — | 9,787 B; 3,112 B br |
-| composition, vanilla shadow | 11,669 B; 3,601 B br | — | — | 11,669 B; 3,601 B br |
+| composition, Lit shadow | 25,046 B; 8,295 B br | 14,550 B; 5,031 B br | — | 10,496 B; 3,264 B br |
+| composition, vanilla shadow | 12,378 B; 3,766 B br | — | — | 12,378 B; 3,766 B br |
 | composition, Lit light | 38,293 B; 11,440 B br | 16,708 B; 5,742 B br | 11,861 B; 2,542 B br | 9,724 B; 3,156 B br |
 | composition, vanilla light | 23,111 B; 6,054 B br | — | 11,861 B; 2,542 B br | 11,250 B; 3,512 B br |
 
@@ -1072,8 +1076,8 @@ since every Lit element on a page shares one runtime; the light versions' is lar
 against 290,750 B in development and 5,742 B against 5,031 B brotli in production, because they
 also load Lit's `ref` directive to find the parts they place children among. In production, the
 vanilla elements are larger than the Lit ones and the Lit runtime outweighs the difference: the
-shadow composition's elements are 3,601 B brotli in vanilla against 3,112 B in Lit, and the
-whole page 3,601 B against 8,143 B. In development, Vite's client is the largest single share of
+shadow composition's elements are 3,766 B brotli in vanilla against 3,264 B in Lit, and the
+whole page 3,766 B against 8,295 B. In development, Vite's client is the largest single share of
 every vanilla page.
 
 **Source sizes, as context only** *(the same run)*: lines (`wc -l`) and brotli bytes (quality 11)
@@ -1083,11 +1087,11 @@ argue nothing:
 | version | pagination `.ts` | entry `.ts` | its own `.css` |
 | --- | --- | --- | --- |
 | Lit shadow | 197 lines, 2,102 B | 118, 1,351 B | shared with vanilla shadow |
-| vanilla shadow | 310, 2,919 B | 174, 1,883 B | `pagination-shadow.css` 72, 567 B; `entry-shadow.css` 32, 337 B |
+| vanilla shadow | 310, 2,919 B | 174, 1,883 B | `pagination-shadow.css` 75, 691 B; `entry-shadow.css` 33, 398 B |
 | Lit light | 299, 3,372 B | 137, 1,604 B | 50, 459 B; 34, 359 B |
-| vanilla light | 382, 3,882 B | 188, 2,139 B | 50, 461 B; 34, 364 B |
+| vanilla light | 382, 3,883 B | 188, 2,139 B | 50, 461 B; 34, 364 B |
 
-`buttons.css`, every shadow version's shared button styles, is 34 lines and 494 B.
+`buttons.css`, every shadow version's shared button styles, is 36 lines and 581 B.
 
 **Handed on.**
 
@@ -1147,9 +1151,9 @@ measure's scope rows now limit each setup to the code, JSON, and CSS, the check'
 (`.prettierignore` lets `*.css` back in; Biome's `files.includes` adds `**/*.css`; D's Stylistic
 formats no CSS, which the row records), while the code rows still compare the `.js` and `.ts`
 files alone. The table's rows above keep the run they cite. In the later run
-*(m 2026-10-17T20:05:32Z)*, over 85 tracked files in 11 types, A, B, and C each limit to the 8
+*(m 2026-10-17T20:35:52Z)*, over 85 tracked files in 11 types, A, B, and C each limit to the 8
 stylesheets, 17 `.js`, 29 `.ts`, and 14 JSON files, and D to the same less the CSS; by default
-Prettier rewrites `context/README.md` (180 of 1,189 lines), the goal record (47 of 419), and
+Prettier rewrites `context/README.md` (226 of 1,438 lines), the goal record (47 of 423), and
 `pnpm-lock.yaml` as before, oxfmt the same two Markdown files and `package.json`'s one key, and
 Biome and D nothing beside the code. The argument below doesn't turn on the change.
 
