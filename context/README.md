@@ -427,10 +427,10 @@ where it cites a run, cite the run of **2026-10-16T21:11:09Z (UTC)** as
 after the check moved to ESLint + Prettier, with eslint pinned at 10.12.0, and after measure
 gained ESLint Stylistic, the resolved-file direction plugins on trees whose imports name real
 files, the split formatting rows, and the surface rows, and all 105 of its rows passed.
-Results 4 cites the run of **2026-10-17T23:26:02Z (UTC)** as *(m 2026-10-17T23:26:02Z)*, for
+Results 4 cites the run of **2026-10-17T23:34:32Z (UTC)** as *(m 2026-10-17T23:34:32Z)*, for
 the components' served bytes and source sizes, with pnpm at 12.14.0, after the shadow versions
-moved onto the foundation's port and measure gave its adopted sheets their own chunk; all 121 of
-its rows passed. Results 6's later CSS-scope figures keep the run of 2026-10-17T20:35:52Z they
+moved onto the foundation's port, measure gave its adopted sheets their own chunk, and
+`scripts/css-sheets.js` minified the sheets it builds in production; all 121 of its rows passed. Results 6's later CSS-scope figures keep the run of 2026-10-17T20:35:52Z they
 cite.
 File counts from the offline installs are from `mise run check` the same day. Survey figures cite
 the Ecosystem survey's sources, and other facts from outside the spike carry their own source and
@@ -1097,7 +1097,9 @@ constructed `CSSStyleSheet`, its default export, shared by every importer in a d
 - `scripts/css-sheets.js`, a local Vite plugin of about 30 lines of code and no package, closes
   the gap for apps: a pre transform reads the attribute from each importer's syntax tree, since
   Vite passes import attributes to no `resolveId` or `load` hook, and rewrites the import to a
-  virtual module that builds and default-exports the sheet, in dev and build. Measure's pages and
+  virtual module that builds and default-exports the sheet, in dev and build; in a build it
+  takes the sheet's text from Vite's own `?inline` import of the file, so the sheet is minified
+  as linked CSS is. Measure's pages and
   `mise run preview` use it, and measure's development rows pass only when every stylesheet
   arrives as that module and no style is injected.
 - Herald's "native CSS" was the same thing in Bun's bundler: a 33-line `BunPlugin` that turns a
@@ -1109,7 +1111,7 @@ constructed `CSSStyleSheet`, its default export, shared by every importer in a d
   Vite, so their production pages don't depend on it; no shim ships. The release consequence (each
   `.css` beside its `.js`, served as `text/css`) is spike-html-packages'.
 
-**Served bytes** *(m 2026-10-17T23:26:02Z)*, for each version's pagination alone and its
+**Served bytes** *(m 2026-10-17T23:34:32Z)*, for each version's pagination alone and its
 composition (the pagination holding the fixture's three directories). Every page links the
 foundation's baseline entry, given as its own share so the rest compares across versions. The
 baseline share also holds the reset and elements sheets a shadow version adopts: a shadow page
@@ -1122,29 +1124,33 @@ injects into every page:
 
 | page | responses | total | Lit | baseline | Vite client | page and elements |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| pagination, Lit shadow | 12 | 716,703 B | 290,750 B | 165,414 B | 226,061 B | 34,478 B |
-| pagination, vanilla shadow | 10 | 437,130 B | — | 165,414 B | 226,061 B | 45,655 B |
-| pagination, Lit light | 10 | 650,594 B | 339,770 B | 40,965 B | 226,061 B | 43,798 B |
-| pagination, vanilla light | 7 | 319,657 B | — | 40,965 B | 226,061 B | 52,631 B |
-| composition, Lit shadow | 16 | 748,850 B | 290,750 B | 165,414 B | 226,061 B | 66,625 B |
-| composition, vanilla shadow | 14 | 475,216 B | — | 165,414 B | 226,061 B | 83,741 B |
-| composition, Lit light | 14 | 684,398 B | 339,770 B | 40,965 B | 226,061 B | 77,602 B |
-| composition, vanilla light | 11 | 359,465 B | — | 40,965 B | 226,061 B | 92,439 B |
+| pagination, Lit shadow | 12 | 716,711 B | 290,750 B | 165,414 B | 226,069 B | 34,478 B |
+| pagination, vanilla shadow | 10 | 437,138 B | — | 165,414 B | 226,069 B | 45,655 B |
+| pagination, Lit light | 10 | 650,602 B | 339,770 B | 40,965 B | 226,069 B | 43,798 B |
+| pagination, vanilla light | 7 | 319,665 B | — | 40,965 B | 226,069 B | 52,631 B |
+| composition, Lit shadow | 16 | 748,858 B | 290,750 B | 165,414 B | 226,069 B | 66,625 B |
+| composition, vanilla shadow | 14 | 475,224 B | — | 165,414 B | 226,069 B | 83,741 B |
+| composition, Lit light | 14 | 684,406 B | 339,770 B | 40,965 B | 226,069 B | 77,602 B |
+| composition, vanilla light | 11 | 359,473 B | — | 40,965 B | 226,069 B | 92,439 B |
 
 Production, `vite build` of the same pages, minified as Vite builds by default, every emitted
 file raw and brotli (quality 11, `node:zlib`), Lit in a chunk of its own and the foundation's
-adopted sheets in another, counted in the baseline share beside the entry's CSS:
+adopted sheets in another, counted in the baseline share beside the entry's CSS. In a build,
+`scripts/css-sheets.js` takes each sheet's text from Vite's own `?inline` import of the file, so
+every adopted sheet, the foundation's and each component's, is minified as Vite minifies the
+linked CSS (`build.cssMinify`, Lightning CSS by default in Vite 8), with no package added; the
+dev server still serves each file as written:
 
 | page | total | Lit | baseline | page and elements |
 | --- | ---: | ---: | ---: | ---: |
-| pagination, Lit shadow | 51,221 B; 14,744 B br | 14,550 B; 5,031 B br | 30,971 B; 7,729 B br | 5,700 B; 1,984 B br |
-| pagination, vanilla shadow | 37,808 B; 10,075 B br | — | 30,971 B; 7,729 B br | 6,837 B; 2,346 B br |
-| pagination, Lit light | 33,494 B; 10,199 B br | 16,708 B; 5,742 B br | 10,124 B; 2,200 B br | 6,662 B; 2,257 B br |
-| pagination, vanilla light | 17,669 B; 4,720 B br | — | 10,124 B; 2,200 B br | 7,545 B; 2,520 B br |
-| composition, Lit shadow | 54,436 B; 15,747 B br | 14,550 B; 5,031 B br | 30,971 B; 7,729 B br | 8,915 B; 2,987 B br |
-| composition, vanilla shadow | 41,767 B; 11,233 B br | — | 30,971 B; 7,729 B br | 10,796 B; 3,504 B br |
-| composition, Lit light | 36,804 B; 11,189 B br | 16,708 B; 5,742 B br | 10,124 B; 2,200 B br | 9,972 B; 3,247 B br |
-| composition, vanilla light | 21,622 B; 5,800 B br | — | 10,124 B; 2,200 B br | 11,498 B; 3,600 B br |
+| pagination, Lit shadow | 36,320 B; 10,334 B br | 14,550 B; 5,031 B br | 16,720 B; 3,582 B br | 5,050 B; 1,721 B br |
+| pagination, vanilla shadow | 22,907 B; 5,683 B br | — | 16,720 B; 3,582 B br | 6,187 B; 2,101 B br |
+| pagination, Lit light | 33,046 B; 10,041 B br | 16,708 B; 5,742 B br | 10,124 B; 2,200 B br | 6,214 B; 2,099 B br |
+| pagination, vanilla light | 17,249 B; 4,526 B br | — | 10,124 B; 2,200 B br | 7,125 B; 2,326 B br |
+| composition, Lit shadow | 38,731 B; 11,199 B br | 14,550 B; 5,031 B br | 16,720 B; 3,582 B br | 7,461 B; 2,586 B br |
+| composition, vanilla shadow | 26,062 B; 6,700 B br | — | 16,720 B; 3,582 B br | 9,342 B; 3,118 B br |
+| composition, Lit light | 35,768 B; 10,927 B br | 16,708 B; 5,742 B br | 10,124 B; 2,200 B br | 8,936 B; 2,985 B br |
+| composition, vanilla light | 20,626 B; 5,550 B br | — | 10,124 B; 2,200 B br | 10,502 B; 3,350 B br |
 
 Every row passed on its expected shape: each Lit page in development loads Lit's development
 build and each vanilla page no Lit, every stylesheet arrives as the plugin's sheet module, each
@@ -1153,21 +1159,22 @@ build, and each shadow page loads the reset and elements layers both linked and 
 `foundation/` in production, while no light page has that chunk; all 121 of the run's rows
 passed.
 
-The baseline is now the largest share a shadow page adds. Its entry's CSS is the same 10,124 B,
-2,200 B brotli, on every page; the adopted sheets' chunk adds 20,847 B, 5,529 B brotli, in
-production, because `scripts/css-sheets.js` passes each ported file through as written, comments
-included, while Vite minifies the linked CSS. In development the shadow pages' baseline share is
-165,414 B against the light pages' 40,965 B, the adopted sheets served as source. The double
-load and the unminified sheets are the price of the gaps the foundation absorbs (the platform
-gaps, above), not of either base: the shadow composition's own elements are 2,987 B brotli
-in Lit and 3,504 B in vanilla.
+The adopted sheets' chunk adds 6,596 B, 1,382 B brotli, to a shadow page's baseline share, beside
+the entry's CSS, the same 10,124 B, 2,200 B brotli, on every page. The chunk holds both the
+`@layer foundation.reset` and `foundation.elements` blocks, minified (Lightning CSS writes the
+port's nested `& + &` back as upstream's `:where(...) + :where(...)`), and is smaller than the
+linked entry because it leaves out the tokens, which a shadow root inherits. In development the
+shadow pages' baseline share is 165,414 B against the light pages' 40,965 B, the adopted sheets
+served as source, comments included. The double load is the price of the gap the foundation
+absorbs (the platform gaps, above), not of either base: the shadow composition's own elements
+are 2,586 B brotli in Lit and 3,118 B in vanilla.
 
 Lit's share is the same for every page of a render root, since every Lit element on a page shares
 one runtime; the light versions' is larger, 339,770 B against 290,750 B in development and 5,742 B
 against 5,031 B brotli in production, because they also load Lit's `ref` directive to find the
 parts they place children among. In production, the vanilla elements are larger than the Lit ones
-and the Lit runtime outweighs the difference: the shadow composition's elements are 3,504 B brotli
-in vanilla against 2,987 B in Lit, and the whole page 11,233 B against 15,747 B. In development,
+and the Lit runtime outweighs the difference: the shadow composition's elements are 3,118 B brotli
+in vanilla against 2,586 B in Lit, and the whole page 6,700 B against 11,199 B. In development,
 Vite's client is the largest single share of every vanilla page.
 
 **Source sizes, as context only** *(the same run)*: lines (`wc -l`) and brotli bytes (quality 11)

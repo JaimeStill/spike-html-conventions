@@ -1619,7 +1619,9 @@ fi
 # sheet modules in, under foundation/, as Lit has its own: the reset and elements sheets the
 # version adopts through layers/foundation/baseline.ts, which a light version never imports. A
 # shadow page so loads those two layers twice, linked in the entry's CSS and adopted from the
-# chunk, and its rows record both files.
+# chunk, and its rows record both files. scripts/css-sheets.js builds each sheet in a build from
+# Vite's ?inline import of the file, minified as the linked CSS is, so the group takes those
+# modules too.
 echo "measure: components" >&2
 components="$scratch/components"
 project="$components/project"
@@ -1780,7 +1782,7 @@ done
 
 echo "### Production (vite build)"
 echo
-echo "One vite build per page, as Vite builds by default (minified, Lit's production build), every emitted file raw and brotli (quality 11, node's node:zlib). Lit's share is the chunk a codeSplitting group puts every lit, lit-html, lit-element, and @lit/* module in; the baseline's is the CSS Vite emits for the linked entry, the foundation's baseline, and, on a shadow version's page, the chunk a second group puts the foundation's sheet modules in: the reset and elements sheets its shadow roots adopt, which it so loads twice, linked and adopted. The sheet modules hold each ported file as written, comments included, since scripts/css-sheets.js passes the CSS through as it reads it."
+echo "One vite build per page, as Vite builds by default (minified, Lit's production build), every emitted file raw and brotli (quality 11, node's node:zlib). Lit's share is the chunk a codeSplitting group puts every lit, lit-html, lit-element, and @lit/* module in; the baseline's is the CSS Vite emits for the linked entry, the foundation's baseline, and, on a shadow version's page, the chunk a second group puts the foundation's sheet modules in: the reset and elements sheets its shadow roots adopt, which it so loads twice, linked and adopted. In a build, scripts/css-sheets.js takes each sheet's text from Vite's own ?inline import of the file, so the adopted sheets, and every component's, are minified as the linked CSS is."
 echo
 echo "| page | files | total | total, brotli | Lit | Lit, brotli | baseline | baseline, brotli | page and elements | page and elements, brotli |"
 echo "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |"
@@ -1802,7 +1804,7 @@ export default {
         codeSplitting: {
           groups: [
             { name: "lit", test: /[\\\\/]node_modules[\\\\/](lit|lit-html|lit-element|@lit)[\\\\/]/ },
-            { name: "foundation", test: /^\\0css-sheet:.*[\\\\/]layers[\\\\/]foundation[\\\\/]/ },
+            { name: "foundation", test: /[\\\\/]layers[\\\\/]foundation[\\\\/].*\\.css(\\.js|\\?inline)\$/ },
           ],
         },
         chunkFileNames: (chunk) =>
@@ -1855,7 +1857,7 @@ EOF
     adopted=0
     if [[ -n "$foundation_files" ]]; then
       read -ra chunk <<<"$foundation_files"
-      layers=$(cd "$components/build/$page" && cat "${chunk[@]}" | grep -oE '@layer foundation\.(reset|elements) ' | sort -u | wc -l)
+      layers=$(cd "$components/build/$page" && cat "${chunk[@]}" | grep -oE '@layer foundation\.(reset|elements) ?\{' | tr -d ' {' | sort -u | wc -l)
       if ((layers == 2)); then adopted=1; fi
     fi
     if [[ -n "$baseline_css" ]] && ((adopted == 1)); then

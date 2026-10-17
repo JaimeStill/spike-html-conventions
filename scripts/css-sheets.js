@@ -6,6 +6,10 @@
 // before Vite's reads it from each importer's own syntax tree. Each .css import carrying
 // `type: "css"` is rewritten to a virtual module of that file, which builds the sheet; any other
 // .css import is left to Vite. Herald's lit-css-module BunPlugin is the prior art.
+//
+// In vite build the virtual module takes its CSS from Vite's own `?inline` import of the file, so
+// the sheet's text is minified as Vite minifies linked CSS (build.cssMinify, Lightning CSS by
+// default in Vite 8) with nothing added to the build; the dev server serves the file as written.
 
 import { readFile } from "node:fs/promises";
 
@@ -23,9 +27,13 @@ const isSheet = (node) =>
 
 /** The plugin: measure's Vite configs and the preview's list it, in dev and build alike. */
 export function cssSheets() {
+  let build = false;
   return {
     name: "css-sheets",
     enforce: "pre",
+    configResolved(config) {
+      build = config.command === "build";
+    },
     transform(code, id) {
       if (!/\.[cm]?[jt]s$/.test(id.split("?")[0]) || !code.includes(".css")) return null;
       const lang = /\.[cm]?ts$/.test(id.split("?")[0]) ? "ts" : "js";
@@ -47,9 +55,12 @@ export function cssSheets() {
     async load(id) {
       if (!id.startsWith(prefix)) return null;
       const path = id.slice(prefix.length, -suffix.length);
+      const sheet = (css) => `const sheet = new CSSStyleSheet();\nsheet.replaceSync(${css});\n`;
+      if (build) {
+        return `import css from ${JSON.stringify(path + "?inline")};\n${sheet("css")}export default sheet;\n`;
+      }
       this.addWatchFile(path);
-      const css = JSON.stringify(await readFile(path, "utf8"));
-      return `const sheet = new CSSStyleSheet();\nsheet.replaceSync(${css});\nexport default sheet;\n`;
+      return `${sheet(JSON.stringify(await readFile(path, "utf8")))}export default sheet;\n`;
     },
   };
 }
