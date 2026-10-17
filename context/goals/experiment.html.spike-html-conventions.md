@@ -318,7 +318,7 @@ Door          two-way: no tag, nothing published.
 
 ## Progress
 
-slices 11/11 committed · review stop done · escalation answered · redirect at BRIEF: amendment 2 approved · standards done
+slices 11/11 committed · review stop done · escalation answered · redirect at BRIEF: amendment 2 approved · standards done · spec done
 
 ## Decisions
 
