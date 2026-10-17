@@ -29,4 +29,22 @@ export const versions: Record<string, Version> = {
         import("../layers/components/entry-vanilla-shadow.js"),
       ]),
   },
+  "lit-light": {
+    pagination: "sl-pagination-lit-light",
+    entry: "sl-entry-lit-light",
+    load: () =>
+      Promise.all([
+        import("../layers/components/pagination-lit-light.js"),
+        import("../layers/components/entry-lit-light.js"),
+      ]),
+  },
+  "vanilla-light": {
+    pagination: "sl-pagination-vanilla-light",
+    entry: "sl-entry-vanilla-light",
+    load: () =>
+      Promise.all([
+        import("../layers/components/pagination-vanilla-light.js"),
+        import("../layers/components/entry-vanilla-light.js"),
+      ]),
+  },
 };

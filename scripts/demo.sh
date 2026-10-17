@@ -18,6 +18,11 @@
 #
 # The composition, pagination holding entries from demo/documents.ts, runs demo/probe.ts in one
 # page per version; it passes only when every version's probe holds and all their reports match.
+# Then demo/restyle.ts runs in one page per version: one edit to the source of the version's
+# button styles must repaint both elements' buttons. Every composition page links spike-html-design
+# v0.7.0's baseline, which the light-DOM versions take their control styles from, from the tag's
+# own files: extracted into dist/demo/ from its checkout, $SPIKE_HTML_DESIGN or by default the
+# sibling ../spike-html-design, as scripts/consumers.sh reads it, so the demo reads no network.
 set -euo pipefail
 
 root=$(cd "$(dirname "$0")/.." && pwd)
@@ -157,15 +162,26 @@ done
 # the probe for one version. Each page writes a verdict and one line per case; every verdict must
 # be ok, and every version's report the same text as the first's. TZ and --lang fix the
 # formatted times and sizes, so a report reads the same on any machine.
-versions=(lit-shadow vanilla-shadow)
+versions=(lit-shadow vanilla-shadow lit-light vanilla-light)
+design=${SPIKE_HTML_DESIGN:-$root/../spike-html-design}
+design_tag=v0.7.0
+if ! git -C "$design" rev-parse --verify --quiet "$design_tag^{commit}" >/dev/null; then
+  echo "demo: no $design_tag in $design; set SPIKE_HTML_DESIGN to a spike-html-design checkout" >&2
+  exit 1
+fi
+mkdir -p "$out/spike-html-design"
+git -C "$design" archive "$design_tag" baseline.css layers | tar -x -C "$out/spike-html-design"
+baseline='<link rel="stylesheet" href="spike-html-design/baseline.css">'
 esbuild "$root/demo/probe.ts" --bundle --format=iife --global-name=composition \
   --log-level=warning --outfile="$out/composition.js"
+# Each verdict and report is read back from the dumped DOM, its entities unescaped.
+unescape='s/&quot;/"/g; s/&lt;/</g; s/&gt;/>/g; s/&amp;/\&/g'
 first=""
 for version in "${versions[@]}"; do
   name="composition-$version"
   {
     echo "<!doctype html>"
-    echo "<html><head><meta charset=\"utf-8\"><title>$name</title></head><body>"
+    echo "<html><head><meta charset=\"utf-8\"><title>$name</title>$baseline</head><body>"
     echo "<main></main>"
     echo "<pre id=\"verdict\">FAIL: the probe didn't run</pre>"
     echo "<pre id=\"report\"></pre>"
@@ -175,7 +191,6 @@ for version in "${versions[@]}"; do
   } >"$out/$name.html"
   TZ=UTC chromium --headless --user-data-dir="$profile" --lang=en-US \
     --dump-dom "file://$out/$name.html" 2>/dev/null >"$out/$name.dom.html"
-  unescape='s/&quot;/"/g; s/&lt;/</g; s/&gt;/>/g; s/&amp;/\&/g'
   verdict=$(sed -n 's|.*<pre id="verdict">\(.*\)</pre>.*|\1|p' "$out/$name.dom.html" | sed "$unescape")
   awk '/<pre id="report">/ { on = 1; sub(/.*<pre id="report">/, "") }
     on && /<\/pre>/ { sub(/<\/pre>.*/, ""); print; exit }
@@ -189,6 +204,28 @@ for version in "${versions[@]}"; do
     failed=1
   fi
 done
+
+# The button styles' single source, in each version: each page writes one verdict.
+esbuild "$root/demo/restyle.ts" --bundle --format=iife --global-name=restyle \
+  --log-level=warning --outfile="$out/restyle.js"
+for version in "${versions[@]}"; do
+  name="restyle-$version"
+  {
+    echo "<!doctype html>"
+    echo "<html><head><meta charset=\"utf-8\"><title>$name</title>$baseline</head><body>"
+    echo "<main></main>"
+    echo "<pre id=\"verdict\">FAIL: the check didn't run</pre>"
+    echo "<script>$(cat "$out/restyle.js")</script>"
+    echo "<script type=\"module\">await restyle.run(\"$version\");</script>"
+    echo "</body></html>"
+  } >"$out/$name.html"
+  chromium --headless --user-data-dir="$profile" \
+    --dump-dom "file://$out/$name.html" 2>/dev/null >"$out/$name.dom.html"
+  verdict=$(sed -n 's|.*<pre id="verdict">\(.*\)</pre>.*|\1|p' "$out/$name.dom.html" | sed "$unescape")
+  printf '%-28s %s\n' "$name" "${verdict:-FAIL: no verdict in the dumped DOM}"
+  [[ "$verdict" == ok:* ]] || failed=1
+done
+
 echo
 echo "The composition's report ($first):"
 cat "$out/$first.report.txt"

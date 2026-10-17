@@ -1,0 +1,170 @@
+// Entry, Lit in light DOM: one directory or one file of a document hierarchy, as a button that
+// opens it, rendered into the element itself (`createRenderRoot` returns the element).
+//
+// Light DOM costs it encapsulation, and Lit's `static styles`, which Lit adopts into a shadow
+// root alone. It adopts one sheet into the document instead, once, in the cascade layer
+// spike-html-conventions.entry, every rule nested under its tag. The button is bare: the page's
+// spike-html-design baseline styles it, so the sheet gives it layout alone, and its parts their
+// type, reading only that baseline's tokens.
+
+import { html, LitElement, nothing, type PropertyDeclarations } from "lit";
+
+import { define, emit } from "../foundation/dom.js";
+
+/** The tag this version defines. */
+export const tagName = "sl-entry-lit-light";
+
+/** The fields of a directory the entry renders; a go-web-service Directory fits it. */
+export interface DirectoryItem {
+  id: string;
+  name: string;
+  status: string;
+  updated_at: string;
+}
+
+/**
+ * The fields of a file the entry renders; a go-web-service File fits it. `size` is null until
+ * the file's write completes.
+ */
+export interface FileItem extends DirectoryItem {
+  size: number | null;
+  content_type: string;
+}
+
+/** What the entry shows: a directory, or a file, told apart by its `content_type`. */
+export type EntryItem = DirectoryItem | FileItem;
+
+/** `open`'s detail: the entry's id and kind. */
+export interface OpenDetail {
+  id: string;
+  kind: "directory" | "file";
+}
+
+// One formatter per unit, built once: sizes step by 1000, as the SI units Intl names do.
+const sizeUnits = ["byte", "kilobyte", "megabyte", "gigabyte"].map(
+  (unit) =>
+    new Intl.NumberFormat(undefined, {
+      style: "unit",
+      unit,
+      unitDisplay: "short",
+      maximumFractionDigits: 1,
+    }),
+);
+
+const updatedTime = new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" });
+
+/** Whether the item is a directory or a file: only a file has a content type. */
+function kindOf(item: EntryItem): OpenDetail["kind"] {
+  return "content_type" in item ? "file" : "directory";
+}
+
+/** A byte count in the largest unit that keeps it at 1 or more. */
+function formatSize(bytes: number): string {
+  const step = Math.min(Math.floor(Math.log10(Math.max(bytes, 1)) / 3), sizeUnits.length - 1);
+  return sizeUnits[step].format(bytes / 1000 ** step);
+}
+
+// The element's layout, adopted into the document by the first instance to connect. Its layer
+// comes after the baseline's, as the sheet is adopted after the page links it.
+const sheet = new CSSStyleSheet();
+sheet.replaceSync(`
+  @layer spike-html-conventions.entry {
+    sl-entry-lit-light {
+      display: block;
+
+      & > .entry {
+        display: grid;
+        grid-template-columns: 8ch 1fr auto;
+        align-items: baseline;
+        justify-items: start;
+        gap: var(--space-3xs) var(--space-xs);
+        inline-size: 100%;
+        margin-block: var(--space-3xs);
+      }
+      & :is(.kind, .meta) {
+        color: var(--fg-2);
+      }
+      & .name {
+        font-size: var(--text-s);
+        font-weight: 600;
+      }
+      & .meta {
+        grid-column: 2 / -1;
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--space-xs);
+      }
+    }
+  }
+`);
+
+/** Adds the sheet to the document's adopted sheets, once however many instances connect. */
+function adopt(): void {
+  if (!document.adoptedStyleSheets.includes(sheet)) {
+    document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet];
+  }
+}
+
+/**
+ * Shows one entry: its kind, name, and status; a file's size, absent while it is pending, and
+ * content type; and when it was last updated. Activating it sends `open` with its id and kind.
+ */
+export class EntryLitLight extends LitElement {
+  static properties = {
+    item: { attribute: false },
+  } satisfies PropertyDeclarations;
+
+  /** The directory or file shown; nothing renders while it is null. */
+  declare item: EntryItem | null;
+
+  constructor() {
+    super();
+    this.item = null;
+  }
+
+  /** Renders into the element itself, in light DOM. */
+  protected createRenderRoot(): HTMLElement {
+    return this;
+  }
+
+  connectedCallback(): void {
+    super.connectedCallback();
+    adopt();
+  }
+
+  #open(): void {
+    if (this.item !== null) {
+      emit<OpenDetail>(this, "open", { id: this.item.id, kind: kindOf(this.item) });
+    }
+  }
+
+  render() {
+    const item = this.item;
+    if (item === null) return nothing;
+    const file = "content_type" in item ? item : null;
+    return html`
+      <button type="button" class="entry" @click=${this.#open}>
+        <span class="kind">${kindOf(item)}</span>
+        <span class="name">${item.name}</span>
+        <span class="status">${item.status}</span>
+        <span class="meta">
+          ${
+            file && file.size !== null
+              ? html`<span class="size">${formatSize(file.size)}</span>`
+              : nothing
+          }
+          ${file ? html`<span class="type">${file.content_type}</span>` : nothing}
+          <time datetime=${item.updated_at}>${updatedTime.format(new Date(item.updated_at))}</time>
+        </span>
+      </button>
+    `;
+  }
+}
+
+define(tagName, EntryLitLight);
+
+declare global {
+  interface HTMLElementTagNameMap {
+    "sl-entry-lit-light": EntryLitLight;
+  }
+}
