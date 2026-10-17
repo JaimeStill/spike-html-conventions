@@ -245,7 +245,7 @@ Slices (inserted after the review stop, before the evidence slice)
 
 ## Progress
 
-slices 8/8 committed · review stop done · escalation answered · standards — · spec — · editor —
+slices 8/8 committed · review stop done · escalation answered · standards done · spec — · editor —
 
 ## Decisions
 
