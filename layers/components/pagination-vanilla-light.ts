@@ -299,9 +299,9 @@ export class PaginationVanillaLight extends HTMLElement {
   // Brings the host's children into the element's parts, as the shadow versions' slots would
   // show them. If the parts aren't the host's children, on the first connection or after the host
   // replaced the element's children, they are put back first, empty of the entries and label it
-  // replaced. Then each label child goes into the label and every
-  // other child, in order, into the entries; the whitespace and comments between them stay. The
-  // moves are this method's own records, taken so the observer doesn't call it again for them.
+  // replaced. Then each label child goes into the label and every other child, in order, into the
+  // entries; the whitespace and comments between them stay. The moves are this method's own
+  // records, taken so the observer doesn't call it again for them.
   #place(): void {
     const parts: Node[] = [this.#summary, this.#entries, this.#controls];
     if (parts.some((part) => part.parentNode !== this)) {

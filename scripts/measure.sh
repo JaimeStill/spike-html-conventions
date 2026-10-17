@@ -147,12 +147,12 @@
 #                   headless Chromium's NetLog records, passing when a Lit version's bytes hold
 #                   Lit's dev-mode warning (its development build) and a vanilla version's hold
 #                   no Lit, and each stylesheet arrives as scripts/css-sheets.js's sheet module,
-#                   none injected into the document; and from vite build, every emitted file raw and brotli, Lit in a chunk
-#                   of its own, passing when the build succeeds, no file holds the dev-mode
-#                   warning, and Lit is all in its chunk or, for vanilla, nowhere. The section
-#                   prints its figures under its own heading, the element sources' lines and
-#                   brotli bytes beside them as context, and reads no network. See "Components"
-#                   below.
+#                   none injected into the document; and from vite build, every emitted file raw
+#                   and brotli, Lit in a chunk of its own, passing when the build succeeds, no
+#                   file holds the dev-mode warning, and Lit is all in its chunk or, for vanilla,
+#                   nowhere. The section prints its figures under its own heading, the element
+#                   sources' lines and brotli bytes beside them as context, and reads no network.
+#                   See "Components" below.
 #   lint and format per setup: footprint, each tool's installed size, B's devDependencies and D's
 #                   scratch packages included, passing when every tool and package is at its pin;
 #                   time, the timings' means, passing when the lint, the format check, and both pass
@@ -172,8 +172,9 @@
 #                   scope its configuration limits it to (Biome's files.includes, a .prettierignore
 #                   that Prettier and oxfmt both read, the files globs of D's config) is the
 #                   check's own, the code, JSON, and CSS files, exactly, less the CSS recorded
-#                   below for D, whose formatter formats no CSS; rewrites, the same unpadded, recording each file the
-#                   default run rewrites and its changed lines, every Markdown file named, passing
+#                   below for D, whose formatter formats no CSS; rewrites, the same unpadded,
+#                   recording each file the default run rewrites and its changed lines, every
+#                   Markdown file named, passing
 #                   when no code file changes and the padded default run reached every code file;
 #                   direction, the layer rules over test/layers-tree.js's trees, which hold the
 #                   files their imports name, passing when the flagged files are the violation files
