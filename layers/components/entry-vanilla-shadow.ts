@@ -1,12 +1,12 @@
 // Entry, vanilla with a shadow root: the same entry as the Lit version, on the platform alone. By
 // hand it keeps the `item` accessor, an item set before the definition, and rendering: one button
 // built once, filled in place on every change and taken out while there is no item. Its shadow
-// root adopts two CSS module scripts: the shared buttons.css for its button, and entry-shadow.css,
-// the Lit version's own sheet too. It declares its own item types, as the Lit version does, so each
-// file reads alone.
+// root adopts what the Lit version's `static styles` holds: the foundation's baseline sheets,
+// which give its bare button its look, then entry-shadow.css, its layout and its parts' type. It
+// declares its own item types, as the Lit version does, so each file reads alone.
 
+import { baseline } from "../foundation/baseline.js";
 import { define, emit, required } from "../foundation/dom.js";
-import buttons from "./buttons.css" with { type: "css" };
 import styles from "./entry-shadow.css" with { type: "css" };
 
 /** The tag this version defines. */
@@ -65,7 +65,7 @@ function formatSize(bytes: number): string {
 // The button, cloned once per element; a directory's render leaves out the size and the type.
 const template = document.createElement("template");
 template.innerHTML = `
-  <button type="button" class="btn entry">
+  <button type="button" class="entry">
     <span class="kind"></span>
     <span class="name"></span>
     <span class="status"></span>
@@ -96,7 +96,7 @@ export class EntryVanillaShadow extends HTMLElement {
   constructor() {
     super();
     const root = this.attachShadow({ mode: "open" });
-    root.adoptedStyleSheets = [buttons, styles];
+    root.adoptedStyleSheets = [...baseline, styles];
 
     const button = template.content.cloneNode(true) as DocumentFragment;
     this.#button = required(button, "button");

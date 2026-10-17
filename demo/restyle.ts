@@ -1,63 +1,58 @@
 // The button styles' single source, shown in one version: a pagination holding one entry renders,
 // then one edit to the source the version's render root takes its button styles from repaints
-// both elements' buttons. A shadow root's source is buttons.css, one CSSStyleSheet per document as
-// a CSS module script, adopted into every shadow version's root, and the edit rewrites the
-// background its `.btn` rule declares, on the very sheet this module imports. Light DOM's
-// source is the foundation's baseline, which the page links: its elements layer, which no light
-// version's sheet overrides for a button, and the edit is one rule added to that layer.
+// both elements' buttons. Every source is the foundation's elements layer, the port of
+// spike-html-design v0.7.0's, whose button rule reads --bg-2 and which no version's own sheet
+// overrides for a button. A shadow root's source is the elements sheet the foundation's baseline
+// module (layers/foundation/baseline.ts) exports, one CSSStyleSheet per document as a CSS module
+// script, adopted into every shadow version's root, and the edit inserts a button rule at the end
+// of its foundation.elements block, on the very sheet this module imports. Light DOM's source is
+// the same layer on the page, which links the foundation's entry, and the edit is one rule added
+// to that layer. Either rule follows the baseline's own in its layer, with the same zero
+// specificity, so it wins.
 // scripts/demo.sh runs one page per version; each passes when both buttons painted from the source
 // before the edit and both take the edit after it.
 
-import buttonSheet from "../layers/components/buttons.css" with { type: "css" };
 import type { EntryItem } from "../layers/components/entry-lit-shadow.js";
+import { elements } from "../layers/foundation/baseline.js";
 import { directories } from "./documents.js";
 import { versions, type Version } from "./versions.js";
 
 /** The background the edit gives every button: a color no source sets. */
 const edited = "rgb(1, 2, 3)";
 
-/** One render root's source of button styles: what it paints with, and the edit to it. */
+/** The background the baseline's button rule gives, as its elements layer writes it. */
+const baselineBackground = "var(--bg-2)";
+
+/** The rule each edit adds to the foundation.elements layer, after the baseline's button rule. */
+const editRule = `:where(button) { background-color: ${edited}; }`;
+
+/** One render root's source of button styles: its name, and the edit to it. */
 interface Source {
   name: string;
-  /** The `background` the source gives a button, as the source writes it. */
-  background: string;
   /** Applies the one edit. */
   edit(): void;
 }
 
 const shadowSource: Source = {
-  name: "buttons.css .btn",
-  get background() {
-    return buttonRule().style.getPropertyValue("background");
-  },
+  name: "adopted foundation.elements :where(button)",
   edit() {
-    buttonRule().style.setProperty("background", edited);
+    const layer = Array.from(elements.cssRules).find(
+      (r): r is CSSLayerBlockRule =>
+        r instanceof CSSLayerBlockRule && r.name === "foundation.elements",
+    );
+    if (layer === undefined) throw new Error("the elements sheet has no foundation.elements block");
+    layer.insertRule(editRule, layer.cssRules.length);
   },
 };
 
-// The baseline's button rule reads --bg-2 (layers/foundation/baseline/elements.css, the port of
-// spike-html-design v0.7.0's). The edit adds a rule to the same layer, foundation.elements, after
-// the baseline's own and of the same zero specificity.
 const lightSource: Source = {
-  name: "foundation.elements button",
-  background: "var(--bg-2)",
+  name: "page foundation.elements :where(button)",
   edit() {
     const style = document.createElement("style");
-    style.textContent = `@layer foundation.elements {
-      :where(button) { background-color: ${edited}; }
-    }`;
+    style.textContent = `@layer foundation.elements { ${editRule} }`;
     document.head.append(style);
   },
 };
-
-/** The shared sheet's `.btn` rule. */
-function buttonRule(): CSSStyleRule {
-  const rule = Array.from(buttonSheet.cssRules).find(
-    (r): r is CSSStyleRule => r instanceof CSSStyleRule && r.selectorText === ".btn",
-  );
-  if (rule === undefined) throw new Error("buttons.css has no .btn rule");
-  return rule;
-}
 
 /** A background as the page computes it, so a source's value compares with a button's. */
 function computed(background: string): string {
@@ -96,15 +91,15 @@ async function restyle(
   await Promise.resolve();
 
   const pair = buttons(pagination, entry);
-  // The shared sheet's buttons transition their background, so each is finished before the
-  // read: what is read is where the edit lands, not the transition's first frame.
+  // Any transition a button's background runs is finished before the read: what is read is where
+  // the edit lands, not a transition's first frame.
   const background = () =>
     pair.map((button) => {
       for (const animation of button.getAnimations()) animation.finish();
       return getComputedStyle(button).backgroundColor;
     });
   const source = pagination.shadowRoot ? shadowSource : lightSource;
-  const expected = computed(source.background);
+  const expected = computed(baselineBackground);
   const before = background();
   source.edit();
   const after = background();

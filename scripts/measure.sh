@@ -1712,9 +1712,13 @@ for page in "${component_pages[@]}"; do
   # The baseline's page entry, which every page links, and the version's own modules.
   component_modules=(/layers/foundation/baseline.css "/layers/components/pagination-$page_version.ts")
   # Each stylesheet the version imports, as the virtual sheet module scripts/css-sheets.js serves.
+  # A shadow version adopts the foundation's baseline sheets too, through its baseline module,
+  # beside the page entry it links: the reset and elements layers load twice, linked and adopted.
   sheet="/@id/__x00__css-sheet:$project/layers/components"
+  foundation_sheet="/@id/__x00__css-sheet:$project/layers/foundation/baseline"
   if [[ "$page_version" == *-shadow ]]; then
-    component_modules+=("$sheet/buttons.css.js" "$sheet/pagination-shadow.css.js")
+    component_modules+=(/layers/foundation/baseline.ts "$foundation_sheet/reset.css.js"
+      "$foundation_sheet/elements.css.js" "$sheet/pagination-shadow.css.js")
   else
     component_modules+=("$sheet/pagination-$page_version.css.js")
   fi
@@ -1851,7 +1855,7 @@ done
 echo
 echo "### Context: the element sources"
 echo
-echo "Each version's source as written, for context: lines (\`wc -l\`) and brotli bytes (quality 11, node's node:zlib): its module, and its stylesheet, a CSS module script. The Lit and vanilla shadow versions share one stylesheet per element (pagination-shadow.css, entry-shadow.css), and buttons.css is every shadow version's shared button styles."
+echo "Each version's source as written, for context: lines (\`wc -l\`) and brotli bytes (quality 11, node's node:zlib): its module, and its stylesheet, a CSS module script. The Lit and vanilla shadow versions share one stylesheet per element (pagination-shadow.css, entry-shadow.css), their layout alone; their controls' look is the foundation's baseline, which they adopt (layers/foundation/baseline.ts)."
 echo
 echo "| file | lines | brotli |"
 echo "| --- | ---: | ---: |"
@@ -1863,7 +1867,7 @@ for version in lit-shadow vanilla-shadow lit-light vanilla-light; do
   fi
 done
 component_sources+=(layers/components/pagination-shadow.css layers/components/entry-shadow.css)
-component_sources+=(layers/components/buttons.css)
+component_sources+=(layers/foundation/baseline.ts)
 while IFS=$'\t' read -r path bytes; do
   printf '| %s | %s | %s B |\n' "$path" "$(wc -l <"$root/$path")" "$bytes"
 done < <(cd "$root" && node scripts/components.js brotli "${component_sources[@]}")

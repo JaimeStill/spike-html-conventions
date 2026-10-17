@@ -1,11 +1,13 @@
 // Entry, Lit with a shadow root: one directory or one file of a document hierarchy, as a button
-// that opens it. Its styles are CSS module scripts in its shadow root's `static styles`: the
-// shared buttons.css for its button, and entry-shadow.css, which the vanilla version adopts too.
+// that opens it. The button is bare: `static styles` adopts the foundation's baseline sheets, the
+// reset and elements layers as CSS module scripts, which give it its look as the page's baseline
+// gives the light versions', then entry-shadow.css, its layout and its parts' type, which the
+// vanilla version adopts too.
 
 import { html, LitElement, nothing, type PropertyDeclarations } from "lit";
 
+import { baseline } from "../foundation/baseline.js";
 import { define, emit } from "../foundation/dom.js";
-import buttons from "./buttons.css" with { type: "css" };
 import styles from "./entry-shadow.css" with { type: "css" };
 
 /** The tag this version defines. */
@@ -66,7 +68,7 @@ function formatSize(bytes: number): string {
  * content type; and when it was last updated. Activating it sends `open` with its id and kind.
  */
 export class EntryLitShadow extends LitElement {
-  static styles = [buttons, styles];
+  static styles = [...baseline, styles];
 
   static properties = {
     item: { attribute: false },
@@ -91,7 +93,7 @@ export class EntryLitShadow extends LitElement {
     if (item === null) return nothing;
     const file = "content_type" in item ? item : null;
     return html`
-      <button type="button" class="btn entry" @click=${this.#open}>
+      <button type="button" class="entry" @click=${this.#open}>
         <span class="kind">${kindOf(item)}</span>
         <span class="name">${item.name}</span>
         <span class="status">${item.status}</span>

@@ -1,12 +1,14 @@
 // Pagination, Lit with a shadow root: a container for a page of entries, its controls around the
-// host's own children. Ported from herald's pagination-controls onto go-web-sdk's Page envelope,
-// with herald's folded control styles as CSS module scripts in `static styles`: the shared
-// buttons.css for its buttons, and pagination-shadow.css, which the vanilla version adopts too.
+// host's own children. Ported from herald's pagination-controls onto go-web-sdk's Page envelope.
+// Its controls are bare: `static styles` adopts the foundation's baseline sheets, the reset and
+// elements layers as CSS module scripts, which give them their look as the page's baseline gives
+// the light versions', then pagination-shadow.css, its layout alone, which the vanilla version
+// adopts too.
 
 import { html, LitElement, nothing, type PropertyDeclarations } from "lit";
 
+import { baseline } from "../foundation/baseline.js";
 import { define, emit } from "../foundation/dom.js";
-import buttons from "./buttons.css" with { type: "css" };
 import styles from "./pagination-shadow.css" with { type: "css" };
 
 /** The tag this version defines. */
@@ -33,7 +35,7 @@ export interface PageSizeChangeDetail {
  * it sends `page-change` and `page-size-change` and the host sets the next page's fields.
  */
 export class PaginationLitShadow extends LitElement {
-  static styles = [buttons, styles];
+  static styles = [...baseline, styles];
 
   // Lit reads the reactive properties from this static map, in place of decorators. Each field is
   // `declare`d, so the class emits no field to shadow Lit's accessor, and given its default in
@@ -142,7 +144,7 @@ export class PaginationLitShadow extends LitElement {
       <div class="pagination">
         <label class="page-size">
           <span class="page-size-label"><slot name="label">Page Size</slot></span>
-          <select class="input" ?disabled=${this.disabled} @change=${this.#handleSizeChange}>
+          <select ?disabled=${this.disabled} @change=${this.#handleSizeChange}>
             ${(this.pageSizes ?? []).map(
               (n) => html`<option value=${n} ?selected=${n === this.size}>${n}</option>`,
             )}
@@ -151,7 +153,7 @@ export class PaginationLitShadow extends LitElement {
         <div class="page-controls">
           <button
             type="button"
-            class="btn btn-page"
+            class="page-step"
             aria-label="Previous page"
             ?disabled=${this.disabled || !this.#hasPrev}
             @click=${this.#handlePrev}
@@ -160,7 +162,7 @@ export class PaginationLitShadow extends LitElement {
           </button>
           <span class="page-indicator">
             <input
-              class="input page-input"
+              class="page-input"
               type="number"
               min="1"
               max=${count ?? nothing}
@@ -175,7 +177,7 @@ export class PaginationLitShadow extends LitElement {
           </span>
           <button
             type="button"
-            class="btn btn-page"
+            class="page-step"
             aria-label="Next page"
             ?disabled=${this.disabled || !this.#hasNext}
             @click=${this.#handleNext}

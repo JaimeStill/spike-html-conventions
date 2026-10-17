@@ -209,6 +209,99 @@ function renderCases(report: Report, parts: Parts, { listing, filed, cursor }: C
   report.equal("label slotted", parts.sizeLabel(filed), "Files per page");
 }
 
+/** A control's painted look, as the report writes it, from its computed style. */
+function look(element: Element): string {
+  const style = getComputedStyle(element);
+  const border = `${style.borderTopWidth} ${style.borderTopStyle} ${style.borderTopColor}`;
+  const padding = [style.paddingTop, style.paddingRight, style.paddingBottom, style.paddingLeft];
+  return [
+    `background ${style.backgroundColor}`,
+    `color ${style.color}`,
+    `border ${border}`,
+    `padding ${padding.join(" ")}`,
+    `font ${style.fontFamily} ${style.fontSize}`,
+  ].join(", ");
+}
+
+/**
+ * The look the foundation's baseline gives a bare control, worked out on the page from its tokens:
+ * its elements layer's button rule or its field rule, and its reset's control font, the interface
+ * font at the size the control's parent computes. A swatch in the document resolves the tokens, as
+ * a shadow root inherits them, so a control that lost the baseline (a shadow root that didn't adopt
+ * it) or took a look from a sheet of its own doesn't match it.
+ */
+function baselineLook(control: FormControl): string {
+  const parent = control.parentElement ?? (control.getRootNode() as ShadowRoot).host;
+  const button = control instanceof HTMLButtonElement;
+  const swatch = document.createElement("div");
+  swatch.style.cssText = `
+    background-color: var(${button ? "--bg-2" : "--bg"});
+    color: var(--fg);
+    border: var(--line-s) solid var(--border-2);
+    padding: var(--space-3xs) var(${button ? "--space-s" : "--space-2xs"});
+    font-family: var(--font-ui);
+    font-size: ${getComputedStyle(parent).fontSize};
+  `;
+  document.body.append(swatch);
+  const expected = look(swatch);
+  swatch.remove();
+  return expected;
+}
+
+/**
+ * The look every version's controls are painted with: the pagination's Next button, page size
+ * select, and page input, and an entry's button, each bare and painted by the foundation's
+ * baseline alone, the page's in light DOM and the adopted sheets under a shadow root.
+ */
+function lookCase(report: Report, parts: Parts, { listing }: Compositions) {
+  const controls: [string, FormControl][] = [
+    ["next", parts.next(listing)],
+    ["select", parts.sizeSelect(listing)],
+    ["input", parts.pageInput(listing)],
+    ["entry", parts.opener(parts.entries(listing)[0])],
+  ];
+  const ok = controls.every(([, control]) => look(control) === baselineLook(control));
+  const actual = controls.map(([name, control]) => `${name} ${look(control)}`).join("; ");
+  report.cases.push({ name: "controls painted by the baseline", actual, ok });
+}
+
+/**
+ * The entry holding the fixture's longest content type stays inside its box: within the cursor
+ * composition, narrowed by `probe` to a preview column's width, the entry's button lies within the
+ * entry and the entry within the pagination, and no part of the button runs past it or overflows
+ * its own box.
+ */
+function overflowCase(report: Report, parts: Parts, { cursor }: Compositions) {
+  const typeOf = (entry: EntryElement) =>
+    entry.item !== null && "content_type" in entry.item ? entry.item.content_type : "";
+  const entry = parts
+    .entries(cursor)
+    .reduce((longest, e) => (typeOf(e).length > typeOf(longest).length ? e : longest));
+  const button = parts.opener(entry);
+  const within = (inner: Element, outer: Element) => {
+    const a = inner.getBoundingClientRect();
+    const b = outer.getBoundingClientRect();
+    return a.left >= b.left - 0.5 && a.right <= b.right + 0.5;
+  };
+  const fits = (element: Element) => element.scrollWidth <= element.clientWidth;
+  const overflowing = [
+    ...(within(entry, cursor) ? [] : ["the entry past the pagination"]),
+    ...(within(button, entry) ? [] : ["the button past the entry"]),
+    ...(fits(button)
+      ? []
+      : [`the button's content, ${button.scrollWidth} > ${button.clientWidth}`]),
+    ...Array.from(button.querySelectorAll("*"))
+      .filter((part) => !within(part, button) || !fits(part))
+      .map((part) => `its ${part.localName} "${renderedText(part)}"`),
+  ];
+  const actual = `${typeOf(entry)}: ${overflowing.length ? `overflows: ${overflowing.join(", ")}` : "fits"}`;
+  report.cases.push({
+    name: "longest content type inside its entry",
+    actual,
+    ok: !overflowing.length,
+  });
+}
+
 /** An event as the report writes it: its type and its detail as JSON, as the probe hears it. */
 const heard = (type: string, detail: unknown) => `${type} ${JSON.stringify(detail)}`;
 
@@ -316,6 +409,9 @@ async function probe(version: Version, host: HTMLElement): Promise<Case[]> {
     filed: compose(version, files, "Files per page"),
     cursor: compose(version, continued),
   };
+  // The cursor page holds the fixture's longest content type; narrowed to the preview's narrowest
+  // column, it shows whether that type wraps inside its entry.
+  compositions.cursor.style.maxInlineSize = "22rem";
   host.append(compositions.listing, compositions.filed, compositions.cursor);
   await version.load();
   await settle();
@@ -323,6 +419,8 @@ async function probe(version: Version, host: HTMLElement): Promise<Case[]> {
   const report = new Report();
   const parts = new Parts(version.entry);
   renderCases(report, parts, compositions);
+  lookCase(report, parts, compositions);
+  overflowCase(report, parts, compositions);
   await eventCases(report, parts, compositions);
   contractCases(report, parts, version, compositions);
   await stateCases(report, parts, compositions);

@@ -3,11 +3,12 @@
 // conversion, the accessors, `disabled`'s reflection, properties set before the definition, and
 // rendering. It forgoes batching and binding-level updates: every property change re-renders at
 // once, in place, except the page input's value, which only `page` writes, so typing survives
-// other changes. Its shadow root adopts the Lit version's two CSS module scripts, the shared
-// buttons.css and pagination-shadow.css, so its controls style alike.
+// other changes. Its shadow root adopts what the Lit version's `static styles` holds: the
+// foundation's baseline sheets, which give its bare controls their look, then
+// pagination-shadow.css, its layout alone, so its controls style alike.
 
+import { baseline } from "../foundation/baseline.js";
 import { define, emit, required } from "../foundation/dom.js";
-import buttons from "./buttons.css" with { type: "css" };
 import styles from "./pagination-shadow.css" with { type: "css" };
 
 /** The tag this version defines. */
@@ -34,20 +35,20 @@ template.innerHTML = `
   <div class="pagination">
     <label class="page-size">
       <span class="page-size-label"><slot name="label">Page Size</slot></span>
-      <select class="input"></select>
+      <select></select>
     </label>
     <div class="page-controls">
-      <button type="button" class="btn btn-page prev" aria-label="Previous page">‹</button>
+      <button type="button" class="page-step prev" aria-label="Previous page">‹</button>
       <span class="page-indicator">
         <input
-          class="input page-input"
+          class="page-input"
           type="number"
           min="1"
           step="1"
           aria-label="Page number"
         />
       </span>
-      <button type="button" class="btn btn-page next" aria-label="Next page">›</button>
+      <button type="button" class="page-step next" aria-label="Next page">›</button>
     </div>
   </div>
 `;
@@ -95,7 +96,7 @@ export class PaginationVanillaShadow extends HTMLElement {
   constructor() {
     super();
     const root = this.attachShadow({ mode: "open" });
-    root.adoptedStyleSheets = [buttons, styles];
+    root.adoptedStyleSheets = [...baseline, styles];
     root.append(template.content.cloneNode(true));
     this.#summary.className = "summary";
     this.#count.setAttribute("aria-hidden", "true");

@@ -16,6 +16,7 @@
       gap: var(--space-3xs) var(--space-xs);
       inline-size: 100%;
       margin-block: var(--space-3xs);
+      text-align: start;
     }
     & :is(.kind, .meta) {
       color: var(--fg-2);
@@ -24,11 +25,15 @@
       font-size: var(--text-s);
       font-weight: 600;
     }
+    /* The meta row may shrink below its content, and a long content type, which has no space to
+       break at, wraps anywhere, so the entry never grows past its box. */
     & .meta {
       grid-column: 2 / -1;
       display: flex;
       flex-wrap: wrap;
       gap: var(--space-xs);
+      min-inline-size: 0;
+      overflow-wrap: anywhere;
     }
   }
 }
