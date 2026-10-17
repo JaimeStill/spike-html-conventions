@@ -13,9 +13,11 @@
 // test/layers.test.js runs this config over test/layers-tree.js's trees, and scripts/measure.sh
 // runs it as setup B; scripts/lint-compare.js reads the layer table for import-x's zones.
 //
-// A .css import is a CSS module script, `with { type: "css" }`, everywhere: core
-// no-restricted-syntax refuses one without that attribute, in an import, an export-from, or an
-// import() with a literal specifier, so no .css import leans on a bundler's own CSS handling.
+// A .css import is a static CSS module script, `with { type: "css" }`, everywhere: core
+// no-restricted-syntax refuses an import or an export-from without that attribute, so no .css
+// import leans on a bundler's own CSS handling, and refuses an import() of a .css file outright,
+// attribute or not: a component imports its sheet statically, and scripts/css-sheets.js handles
+// only the static forms.
 
 import js from "@eslint/js";
 import { defineConfig, globalIgnores } from "eslint/config";
@@ -26,21 +28,27 @@ import tseslint from "typescript-eslint";
 
 const code = ["**/*.js", "**/*.ts"];
 
-// The attribute a CSS module script carries, by its key's name or its quoted key, among a
-// declaration's attributes or the properties of import()'s options, under the options object's
-// own `with` key (`.options` anchors it there), matched the same two ways.
-const cssType = (node) =>
-  `:matches(${node}[key.name='type'], ${node}[key.value='type'])[value.value='css']`;
+// The attribute a CSS module script carries among a declaration's attributes, by its key's name
+// or its quoted key.
+const cssType = `:matches(ImportAttribute[key.name='type'], ImportAttribute[key.value='type'])[value.value='css']`;
 const cssSource = "[source.value=/\\.css$/]";
+// An import() whose specifier ends in .css: a string, or a template whose last part does, matched
+// at that part.
+const cssDynamic = [
+  `ImportExpression${cssSource}`,
+  "ImportExpression > TemplateLiteral.source > TemplateElement[tail=true][value.cooked=/\\.css$/]",
+];
 const cssImports = [
   ...["ImportDeclaration", "ExportNamedDeclaration", "ExportAllDeclaration"].map((type) => ({
-    selector: `${type}${cssSource}:not(:has(${cssType("ImportAttribute")}))`,
+    selector: `${type}${cssSource}:not(:has(${cssType}))`,
     message: "A .css import is a CSS module script: add with { type: 'css' }.",
   })),
-  {
-    selector: `ImportExpression${cssSource}:not(:has(ObjectExpression.options > :matches(Property[key.name='with'], Property[key.value='with']) > ObjectExpression > ${cssType("Property")}))`,
-    message: "A .css import() is a CSS module script: pass { with: { type: 'css' } }.",
-  },
+  ...cssDynamic.map((selector) => ({
+    selector,
+    message:
+      "A .css file is imported statically, as a CSS module script with { type: 'css' }, never by " +
+      "import(): scripts/css-sheets.js handles only the static forms.",
+  })),
 ];
 
 // The layer table: each layer's directory and the layers it may import, "own" an app's own

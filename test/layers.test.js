@@ -8,9 +8,10 @@
 // they do in layers/; the violations are held to the dependencies rule itself, so no case passes
 // on no-unresolved because its target went unwritten. A case that doesn't parse fails both tests.
 //
-// The same runs hold eslint.config.js's other import rule, that a .css import is a CSS module
-// script: a tree of components importing a stylesheet in each form, with and without
-// `with { type: "css" }`, passes only when no-restricted-syntax flags exactly the files without it.
+// The same runs hold eslint.config.js's other import rule, that a .css import is a static CSS
+// module script: a tree of components importing a stylesheet in each form, static and dynamic,
+// with and without `with { type: "css" }`, passes only when no-restricted-syntax flags exactly the
+// static files without it and every import(), with it or not.
 
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
@@ -83,7 +84,7 @@ describe("layer import direction", () => {
 // Each file imports the stylesheet beside it in one form; layers-tree.js's targets() reads a .css
 // specifier as a directory, so this tree is written as it stands, the stylesheet with it.
 const sheet = "layers/components/x.css";
-const bareCss = {
+const refusedCss = {
   "layers/components/side-effect.ts": `import "./x.css";`,
   "layers/components/default.ts": `import sheet from "./x.css";`,
   "layers/components/json.ts": `import sheet from "./x.css" with { type: "json" };`,
@@ -91,15 +92,15 @@ const bareCss = {
   "layers/components/export-all.ts": `export * from "./x.css";`,
   "layers/components/dynamic.ts": `await import("./x.css");`,
   "layers/components/dynamic-json.ts": `await import("./x.css", { with: { type: "json" } });`,
-  "layers/components/dynamic-elsewhere.ts": `await import("./x.css", { with: {}, other: { type: "css" } });`,
-  "layers/components/dynamic-nested.ts": `await import("./x.css", { other: { with: { type: "css" } } });`,
+  "layers/components/dynamic-module.ts": `await import("./x.css", { with: { type: "css" } });`,
+  "layers/components/dynamic-quoted.ts": `await import("./x.css", { "with": { "type": "css" } });`,
+  "layers/components/dynamic-template.ts": "await import(`./x.css`, { with: { type: 'css' } });",
+  "layers/components/dynamic-computed.ts": "const name = 'x'; await import(`./${name}.css`);",
 };
 const cssModules = {
   "layers/components/module.ts": `import sheet from "./x.css" with { type: "css" };`,
   "layers/components/quoted.ts": `import sheet from "./x.css" with { "type": "css" };`,
   "layers/components/export-module.ts": `export { default } from "./x.css" with { type: "css" };`,
-  "layers/components/dynamic-module.ts": `await import("./x.css", { with: { type: "css" } });`,
-  "layers/components/dynamic-quoted.ts": `await import("./x.css", { "with": { "type": "css" } });`,
 };
 
 /** Writes `files` under `dir` as they stand, with the stylesheet they import; returns the paths. */
@@ -112,12 +113,12 @@ function writeSheets(dir, files) {
   return Object.keys(written);
 }
 
-describe("a .css import is a CSS module script", () => {
-  test("each .css import without the css type draws no-restricted-syntax, and only those", () => {
-    const files = { ...bareCss, ...cssModules };
+describe("a .css import is a static CSS module script", () => {
+  test("each import() of a .css file, and each static .css import without the css type, draws no-restricted-syntax, and only those", () => {
+    const files = { ...refusedCss, ...cssModules };
     assert.deepEqual(
       [...flagged(files, ["no-restricted-syntax"], writeSheets)].sort(),
-      Object.keys(bareCss).sort(),
+      Object.keys(refusedCss).sort(),
     );
   });
 });
