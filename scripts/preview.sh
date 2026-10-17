@@ -5,11 +5,11 @@
 # Ctrl-C. Reads no network and writes nothing to the working tree.
 #
 # Everything the run writes is one scratch directory, removed on exit: the page, Vite's config and
-# its cache (cacheDir, node_modules/.vite by default), and spike-html-design v0.7.0's baseline,
-# extracted from its tag as scripts/demo.sh extracts it, from $SPIKE_HTML_DESIGN or by default the
-# sibling ../spike-html-design. The scratch directory is Vite's root; the page loads
-# demo/preview.ts from the working tree itself through Vite's /@fs/ prefix, which server.fs.allow
-# opens to the repository, so an edit to a component or its stylesheet reaches the open page.
+# its cache (cacheDir, node_modules/.vite by default). The scratch directory is Vite's root; the
+# page loads demo/preview.ts and the foundation's baseline, its page entry
+# (layers/foundation/baseline.css, the port of spike-html-design v0.7.0), from the working tree
+# itself through Vite's /@fs/ prefix, which server.fs.allow opens to the repository, so an edit to
+# a component, its stylesheet, or the baseline reaches the open page.
 #
 # The page links the baseline in every column, the light versions' control styles and the tokens
 # every version reads, so the columns compare on one page. It sets no TZ or language: the entries
@@ -22,12 +22,6 @@ root=$(cd "$(dirname "$0")/.." && pwd)
 
 if [[ ! -d "$root/node_modules/lit" ]]; then
   echo "preview: lit isn't installed; run mise run install first" >&2
-  exit 1
-fi
-design=${SPIKE_HTML_DESIGN:-$root/../spike-html-design}
-design_tag=v0.7.0
-if ! git -C "$design" rev-parse --verify --quiet "$design_tag^{commit}" >/dev/null; then
-  echo "preview: no $design_tag in $design; set SPIKE_HTML_DESIGN to a spike-html-design checkout" >&2
   exit 1
 fi
 
@@ -47,9 +41,6 @@ trap cleanup EXIT
 # Ctrl-C is how the preview ends, so it ends the run cleanly, as a TERM does.
 trap 'exit 0' INT TERM
 
-mkdir -p "$scratch/spike-html-design"
-git -C "$design" archive "$design_tag" baseline.css layers | tar -x -C "$scratch/spike-html-design"
-
 port=${PORT:-$(node -e '
   const server = require("node:net").createServer();
   server.listen(0, "127.0.0.1", () => { console.log(server.address().port); server.close(); });')}
@@ -62,7 +53,7 @@ cat >"$scratch/index.html" <<EOF
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Components preview</title>
-<link rel="stylesheet" href="/spike-html-design/baseline.css">
+<link rel="stylesheet" href="/@fs$root/layers/foundation/baseline.css">
 <style>
   @layer preview {
     body { margin: 0; padding: var(--space-m); }

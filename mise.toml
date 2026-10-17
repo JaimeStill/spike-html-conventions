@@ -57,7 +57,7 @@ run = ["pnpm install --frozen-lockfile", "scripts/consumers.sh warm"]
 dir = "{{config_root}}"
 
 [tasks."build:tsc"]
-description = "Emit the .ts and JSDoc forms as unbundled ESM with declarations, and the components layer and the demo's modules with each .css copied beside them, to dist/tsc"
+description = "Emit the .ts and JSDoc forms as unbundled ESM with declarations, and the components layer and the demo's modules, with every .css in layers/ copied to its path beside them (the components' stylesheets and the foundation's baseline), to dist/tsc"
 run = "scripts/build.sh tsc"
 dir = "{{config_root}}"
 

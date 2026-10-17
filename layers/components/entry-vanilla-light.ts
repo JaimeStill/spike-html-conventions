@@ -9,8 +9,8 @@
 // connection renders it. It costs encapsulation too: its styles sit in the document, so it
 // imports its sheet, entry-vanilla-light.css, as a CSS module script and adopts it there, once, in
 // the cascade layer spike-html-conventions.entry, every rule nested under its tag. The button is
-// bare: the page's spike-html-design baseline styles it, so the sheet gives it layout alone, and
-// its parts their type, reading only that baseline's tokens.
+// bare: the foundation's baseline, which the page links, styles it, so the sheet gives it layout
+// alone, and its parts their type, reading only that baseline's tokens.
 
 import { define, emit, required } from "../foundation/dom.js";
 import sheet from "./entry-vanilla-light.css" with { type: "css" };

@@ -3,10 +3,10 @@
 // both elements' buttons. A shadow root's source is buttons.css, one CSSStyleSheet per document as
 // a CSS module script, adopted into every shadow version's root, and the edit rewrites the
 // background its `.btn` rule declares, on the very sheet this module imports. Light DOM's
-// source is the page's spike-html-design baseline, its elements layer, which no light version's
-// sheet overrides for a button, and the edit is one rule added to that layer. scripts/demo.sh runs
-// one page per version; each passes when both buttons painted from the source before the edit and
-// both take the edit after it.
+// source is the foundation's baseline, which the page links: its elements layer, which no light
+// version's sheet overrides for a button, and the edit is one rule added to that layer.
+// scripts/demo.sh runs one page per version; each passes when both buttons painted from the source
+// before the edit and both take the edit after it.
 
 import buttonSheet from "../layers/components/buttons.css" with { type: "css" };
 import type { EntryItem } from "../layers/components/entry-lit-shadow.js";
@@ -35,14 +35,15 @@ const shadowSource: Source = {
   },
 };
 
-// The baseline's button rule reads --bg-2 (spike-html-design v0.7.0, layers/elements.css). The
-// edit adds a rule to the same layer, after the baseline's own and of the same zero specificity.
+// The baseline's button rule reads --bg-2 (layers/foundation/baseline/elements.css, the port of
+// spike-html-design v0.7.0's). The edit adds a rule to the same layer, foundation.elements, after
+// the baseline's own and of the same zero specificity.
 const lightSource: Source = {
-  name: "spike-html-design.elements button",
+  name: "foundation.elements button",
   background: "var(--bg-2)",
   edit() {
     const style = document.createElement("style");
-    style.textContent = `@layer spike-html-design.elements {
+    style.textContent = `@layer foundation.elements {
       :where(button) { background-color: ${edited}; }
     }`;
     document.head.append(style);

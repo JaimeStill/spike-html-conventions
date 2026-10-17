@@ -1595,8 +1595,9 @@ fi
 # alone, and the composition, the pagination holding one entry per item of the fixture's
 # directories page. Both run on a scratch copy of the project, layers/ and demo/, with Lit's
 # packages copied into its own node_modules (pnpm list's closure of the dependencies), so Vite's
-# cache, node_modules/.vite by default, is scratch too, and spike-html-design's baseline extracted
-# from its tag as scripts/demo.sh extracts it. The section reads no network: Chromium's host
+# cache, node_modules/.vite by default, is scratch too. Every page links the foundation's baseline,
+# its page entry (layers/foundation/baseline.css, the port of spike-html-design v0.7.0), from the
+# copy, and the baseline share counts the port's CSS. The section reads no network: Chromium's host
 # resolver maps every name but the dev server's address to nothing. Both list scripts/css-sheets.js,
 # which gives each component's CSS module script (`with { type: "css" }`) the module a browser
 # gives it, one constructed sheet as its default export, where Vite would inject the CSS into the
@@ -1612,11 +1613,11 @@ fi
 # Production: one vite build per page, minified as Vite builds by default, into scratch, every
 # emitted file raw and brotli; Lit's share is the chunk the config's codeSplitting group puts every
 # lit, lit-html, lit-element, and @lit/* module in, under lit/, and the baseline's is the CSS Vite
-# emits for the linked stylesheet.
+# emits for the linked entry.
 echo "measure: components" >&2
 components="$scratch/components"
 project="$components/project"
-mkdir -p "$project/node_modules" "$project/spike-html-design"
+mkdir -p "$project/node_modules"
 cp -r "$root/layers" "$root/demo" "$root/package.json" "$root/tsconfig.json" "$project/"
 while IFS= read -r dir; do
   if [[ "$dir" == "$root" ]]; then continue; fi
@@ -1624,7 +1625,6 @@ while IFS= read -r dir; do
   mkdir -p "$project/node_modules/$(dirname "$name")"
   cp -rL "$dir" "$project/node_modules/$name"
 done < <(cd "$root" && pnpm list --prod --parseable --depth Infinity)
-git -C "$design" archive "$design_tag" baseline.css layers | tar -x -C "$project/spike-html-design"
 mapfile -t component_pages < <(node "$root/scripts/components.js" pages "$project")
 ((${#component_pages[@]} == 8)) || fail "components.js wrote ${#component_pages[@]} pages, not 8"
 # component_page PAGE: the version, its entry tag, and whether it is a composition,
@@ -1691,7 +1691,7 @@ marked() {
 
 echo "## Components"
 echo
-echo "What each version of the components layer serves, for two pages per version: the pagination element alone (pagination-*), and the composition, the pagination holding the fixture's three directories (composition-*). The light versions' pages link spike-html-design $design_tag's baseline, its own share, so the element and runtime figures compare across versions."
+echo "What each version of the components layer serves, for two pages per version: the pagination element alone (pagination-*), and the composition, the pagination holding the fixture's three directories (composition-*). Every page links the foundation's baseline, the port of spike-html-design $design_tag, its own share, so the element and runtime figures compare across versions."
 echo
 echo "### Development (Vite dev server)"
 echo
@@ -1709,7 +1709,8 @@ echo
 for page in "${component_pages[@]}"; do
   component_page "$page"
   tsv="$components/$page.responses.tsv"
-  component_modules=("/layers/components/pagination-$page_version.ts")
+  # The baseline's page entry, which every page links, and the version's own modules.
+  component_modules=(/layers/foundation/baseline.css "/layers/components/pagination-$page_version.ts")
   # Each stylesheet the version imports, as the virtual sheet module scripts/css-sheets.js serves.
   sheet="/@id/__x00__css-sheet:$project/layers/components"
   if [[ "$page_version" == *-shadow ]]; then
@@ -1766,7 +1767,7 @@ done
 
 echo "### Production (vite build)"
 echo
-echo "One vite build per page, as Vite builds by default (minified, Lit's production build), every emitted file raw and brotli (quality 11, node's node:zlib). Lit's share is the chunk a codeSplitting group puts every lit, lit-html, lit-element, and @lit/* module in; the baseline's is the CSS Vite emits for the linked stylesheet."
+echo "One vite build per page, as Vite builds by default (minified, Lit's production build), every emitted file raw and brotli (quality 11, node's node:zlib). Lit's share is the chunk a codeSplitting group puts every lit, lit-html, lit-element, and @lit/* module in; the baseline's is the CSS Vite emits for the linked entry, the foundation's baseline."
 echo
 echo "| page | files | total | total, brotli | Lit | Lit, brotli | baseline CSS | baseline CSS, brotli | page and elements | page and elements, brotli |"
 echo "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |"

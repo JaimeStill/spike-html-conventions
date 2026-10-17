@@ -15,9 +15,9 @@
 // Light DOM costs it encapsulation too, and Lit's `static styles`, which Lit adopts into a shadow
 // root alone. It imports its sheet, pagination-lit-light.css, as a CSS module script and adopts it
 // into the document instead, once, in the cascade layer spike-html-conventions.pagination, every
-// rule nested under its tag. The controls are bare: the page's spike-html-design baseline styles
-// them, buttons included, so the sheet gives them layout alone and reads only that baseline's
-// tokens.
+// rule nested under its tag. The controls are bare: the foundation's baseline, which the page
+// links, styles them, buttons included, so the sheet gives them layout alone and reads only that
+// baseline's tokens.
 
 import { html, LitElement, nothing, type PropertyDeclarations } from "lit";
 import { createRef, ref } from "lit/directives/ref.js";

@@ -9,9 +9,10 @@
 //       alone, its state in attributes from the directories page of the fixture and its module the
 //       page's one script; and composition-<version>.html, the pagination holding one entry per
 //       item of that page, built by composition-<version>.ts as demo/probe.ts builds it, every
-//       property set before the modules define the elements. A light version's pages link
-//       spike-html-design's baseline from /spike-html-design/, which the light versions take their
-//       control styles from; a shadow version's pages link nothing.
+//       property set before the modules define the elements. Every page links the foundation's
+//       baseline, its page entry (layers/foundation/baseline.css, the port of spike-html-design
+//       v0.7.0): the light versions take their control styles from it, and every version its
+//       tokens.
 //   components.js responses <netlog.json> <origin>
 //       prints each response from origin with a 2xx status that Chromium's NetLog recorded, from
 //       the bytes it logged (--net-log-capture-mode=Everything), one per line: its share, its body
@@ -28,12 +29,13 @@
 //
 // The shares: lit, Lit's own code (under Vite's dev server, its pre-bundled dependencies in
 // /node_modules/.vite/deps/; in a build, the chunk measure's config puts every lit, lit-html,
-// lit-element, and @lit/* module in, under lit/); baseline, spike-html-design's baseline CSS (the
-// stylesheet the light pages link; in a build, the CSS asset Vite emits for it); client, the Vite
-// dev server's client, which it injects into every page it serves (/@vite/client and the env
-// module it imports); and page, the rest: the page's HTML, its script, the elements' and the
-// fixture's modules, and the elements' stylesheets, as the sheet modules scripts/css-sheets.js
-// makes of them.
+// lit-element, and @lit/* module in, under lit/); baseline, the foundation's baseline, the port's
+// CSS (under Vite's dev server, the page entry every page links, its imports inlined, and any of
+// the port's sheets a module imports, as scripts/css-sheets.js serves them; in a build, the CSS
+// asset Vite emits for the linked entry); client, the Vite dev server's client, which it injects
+// into every page it serves (/@vite/client and the env module it imports); and page, the rest: the
+// page's HTML, its script, the elements' and the fixture's modules, and the elements' stylesheets,
+// as the sheet modules scripts/css-sheets.js makes of them.
 
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
@@ -87,14 +89,21 @@ function walk(dir) {
     .sort();
 }
 
-/** Where a light version's pages link spike-html-design's baseline from. */
-const baseline = "/spike-html-design/baseline.css";
+/** Where every page links the foundation's baseline from: its page entry, in the scratch copy. */
+const baseline = "/layers/foundation/baseline.css";
 
-/** A page's HTML: its title, the baseline link for a light version, and the body given. */
-function html(name, light, body) {
-  const link = light ? `\n<link rel="stylesheet" href="${baseline}">` : "";
+/**
+ * A dev-server path in the baseline share: a .css file of the foundation's, the entry or a ported
+ * file, by its own path or as the sheet module scripts/css-sheets.js makes of it (its id, which
+ * ends in .css.js, after /@id/).
+ */
+const baselinePath = /\/layers\/foundation\/.*\.css(\.js)?$/;
+
+/** A page's HTML: its title, the baseline link, and the body given. */
+function html(name, body) {
   return `<!doctype html>
-<html><head><meta charset="utf-8"><title>${name}</title>${link}
+<html><head><meta charset="utf-8"><title>${name}</title>
+<link rel="stylesheet" href="${baseline}">
 </head><body>
 ${body}
 </body></html>
@@ -104,7 +113,6 @@ ${body}
 if (command === "pages") {
   const [dir] = args;
   for (const [name, version] of Object.entries(versions)) {
-    const light = name.endsWith("-light");
     const pagination = module(version.pagination);
     const entry = module(version.entry);
     const attributes = [
@@ -119,7 +127,6 @@ if (command === "pages") {
       join(dir, `${alone}.html`),
       html(
         alone,
-        light,
         `<${version.pagination} ${attributes}></${version.pagination}>
 <script type="module" src="/${pagination}"></script>`,
       ),
@@ -128,7 +135,7 @@ if (command === "pages") {
     const composition = `composition-${name}`;
     writeFileSync(
       join(dir, `${composition}.html`),
-      html(composition, light, `<script type="module" src="/${composition}.ts"></script>`),
+      html(composition, `<script type="module" src="/${composition}.ts"></script>`),
     );
     writeFileSync(
       join(dir, `${composition}.ts`),
@@ -181,7 +188,7 @@ document.body.append(pagination);
     if (pathname.startsWith("/node_modules/")) share = "lit";
     else if (pathname.startsWith("/@vite/") || pathname.includes("/vite/dist/client/")) {
       share = "client";
-    } else if (pathname.startsWith("/spike-html-design/")) share = "baseline";
+    } else if (baselinePath.test(pathname)) share = "baseline";
     console.log([share, data.length, ...markers(data), pathname].join("\t"));
   }
 } else if (command === "emitted") {

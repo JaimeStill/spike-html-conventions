@@ -2,7 +2,7 @@
  * sl-pagination-lit-light's layout, which the element adopts into the document once. Its layer
  * comes after the baseline's, as the sheet is adopted after the page links it; a page that declares
  * its own layers names spike-html-conventions before its own to keep this one under them. Every
- * rule is nested under the tag, and reads only spike-html-design's baseline tokens.
+ * rule is nested under the tag, and reads only the foundation's baseline tokens.
  */
 
 @layer spike-html-conventions.pagination {

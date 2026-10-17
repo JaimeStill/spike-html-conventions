@@ -22,10 +22,10 @@
 # button styles must repaint both elements' buttons. Both load tsc's emit (dist/tsc/demo/ and
 # dist/tsc/layers/components/, each .css beside its module) unbundled, as the tsc pages do: each
 # component imports its styles as CSS module scripts, which Chromium loads natively from file://
-# under the same flag. Every composition page links spike-html-design v0.7.0's baseline, which
-# the light-DOM versions take their control styles from, from the tag's own files: extracted into
-# dist/demo/ from its checkout, $SPIKE_HTML_DESIGN or by default the sibling ../spike-html-design,
-# as scripts/consumers.sh reads it, so the demo reads no network.
+# under the same flag. Every composition page links the foundation's baseline, its page entry
+# (layers/foundation/baseline.css, the port of spike-html-design v0.7.0), from tsc's emit beside
+# the components, dist/tsc/layers/foundation/: the light-DOM versions take their control styles
+# from it, and every version its tokens, so the demo reads no network.
 set -euo pipefail
 
 root=$(cd "$(dirname "$0")/.." && pwd)
@@ -176,18 +176,10 @@ done
 # until the module script removes the frame once the run is done, verdict written or not, or
 # fails to load.
 versions=(lit-shadow vanilla-shadow lit-light vanilla-light)
-design=${SPIKE_HTML_DESIGN:-$root/../spike-html-design}
-design_tag=v0.7.0
-if ! git -C "$design" rev-parse --verify --quiet "$design_tag^{commit}" >/dev/null; then
-  echo "demo: no $design_tag in $design; set SPIKE_HTML_DESIGN to a spike-html-design checkout" >&2
-  exit 1
-fi
-mkdir -p "$out/spike-html-design"
-git -C "$design" archive "$design_tag" baseline.css layers | tar -x -C "$out/spike-html-design"
-baseline='<link rel="stylesheet" href="spike-html-design/baseline.css">'
-for module in probe restyle; do
-  if [[ ! -f "$root/dist/tsc/demo/$module.js" ]]; then
-    echo "demo: no dist/tsc/demo/$module.js; run mise run build" >&2
+baseline="<link rel=\"stylesheet\" href=\"file://$root/dist/tsc/layers/foundation/baseline.css\">"
+for file in demo/probe.js demo/restyle.js layers/foundation/baseline.css; do
+  if [[ ! -f "$root/dist/tsc/$file" ]]; then
+    echo "demo: no dist/tsc/$file; run mise run build" >&2
     exit 1
   fi
 done

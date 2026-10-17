@@ -1,10 +1,10 @@
 /*
  * The pagination's own styles in a shadow root, beside buttons.css's: the Lit and vanilla versions
  * import this one sheet and adopt it into each element's root, so both style their controls alike.
- * It keeps herald's rules and reads spike-html-design v0.7.0's baseline tokens in place of
- * herald's, each with a fallback for a page that defines none. Herald's divider becomes --border
- * for the rule above the controls and --border-2, the control boundary, for the field's border;
- * its --font-mono becomes --font-ui, the interface controls' font.
+ * It keeps herald's rules and reads the foundation's baseline tokens in place of herald's, each
+ * with a fallback for a page that defines none. Herald's divider becomes --border for the rule
+ * above the controls and --border-2, the control boundary, for the field's border; its --font-mono
+ * becomes --font-ui, the interface controls' font.
  */
 
 :host {

@@ -15,8 +15,8 @@
 // Light DOM costs it encapsulation too: its styles sit in the document, so it imports its sheet,
 // pagination-vanilla-light.css, as a CSS module script and adopts it there, once, in the cascade
 // layer spike-html-conventions.pagination, every rule nested under its tag. The controls are bare:
-// the page's spike-html-design baseline styles them, buttons included, so the sheet gives them
-// layout alone and reads only that baseline's tokens.
+// the foundation's baseline, which the page links, styles them, buttons included, so the sheet
+// gives them layout alone and reads only that baseline's tokens.
 
 import { define, emit, required } from "../foundation/dom.js";
 import sheet from "./pagination-vanilla-light.css" with { type: "css" };

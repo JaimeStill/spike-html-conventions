@@ -6,9 +6,11 @@
 #                              JSDoc forms (tsconfig.build.json); `lit` stays a bare import.
 #                              Then the components layer and the demo's modules, for
 #                              scripts/demo.sh, without declarations (tsconfig.demo.json), to
-#                              dist/tsc/layers/ and dist/tsc/demo/, and every .css in
-#                              layers/components/ copied beside its emitted modules: tsc leaves
-#                              an import's `with { type: "css" }` as written and copies no .css
+#                              dist/tsc/layers/ and dist/tsc/demo/, and every .css in layers/
+#                              copied to the same path under dist/tsc/: the components'
+#                              stylesheets beside their emitted modules, and the foundation's
+#                              baseline, its page entry and the port it imports. tsc leaves an
+#                              import's `with { type: "css" }` as written and copies no .css
 #                              itself.
 #   scripts/build.sh esbuild   one ESM bundle, Lit included, per element in each form
 #   scripts/build.sh bun       the same bundles by `bun build`
@@ -31,7 +33,7 @@ rm -rf "$out"
 if [[ "$tool" == tsc ]]; then
   tsc -p "$root/tsconfig.build.json"
   tsc -p "$root/tsconfig.demo.json"
-  (cd "$root" && find layers/components -name '*.css') | while IFS= read -r css; do
+  (cd "$root" && find layers -name '*.css') | while IFS= read -r css; do
     mkdir -p "$out/$(dirname "$css")"
     cp "$root/$css" "$out/$css"
   done

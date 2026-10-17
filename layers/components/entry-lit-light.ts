@@ -4,8 +4,8 @@
 // Light DOM costs it encapsulation, and Lit's `static styles`, which Lit adopts into a shadow
 // root alone. It imports its sheet, entry-lit-light.css, as a CSS module script and adopts it into
 // the document instead, once, in the cascade layer spike-html-conventions.entry, every rule nested
-// under its tag. The button is bare: the page's spike-html-design baseline styles it, so the sheet
-// gives it layout alone, and its parts their type, reading only that baseline's tokens.
+// under its tag. The button is bare: the foundation's baseline, which the page links, styles it, so
+// the sheet gives it layout alone, and its parts their type, reading only that baseline's tokens.
 
 import { html, LitElement, nothing, type PropertyDeclarations } from "lit";
 
