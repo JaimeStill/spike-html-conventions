@@ -152,9 +152,10 @@
 #                   another, counted with the linked baseline, passing when the build succeeds, no
 #                   file holds the dev-mode warning, Lit is all in its chunk or, for vanilla,
 #                   nowhere, and a shadow version's page has the foundation's chunk, reset and
-#                   elements in it as well as linked, and a light version's none. The section
-#                   prints its figures under its own heading, the element sources' lines and
-#                   brotli bytes beside them as context, and reads no network.
+#                   elements in it as well as linked, and a light version's none, and no file
+#                   outside Lit's chunk holds a comment: every sheet, adopted or linked, minified.
+#                   The section prints its figures under its own heading, the element sources'
+#                   lines and brotli bytes beside them as context, and reads no network.
 #                   See "Components" below.
 #   lint and format per setup: footprint, each tool's installed size, B's devDependencies and D's
 #                   scratch packages included, passing when every tool and package is at its pin;
@@ -1783,7 +1784,7 @@ done
 
 echo "### Production (vite build)"
 echo
-echo "One vite build per page, as Vite builds by default (minified, Lit's production build), every emitted file raw and brotli (quality 11, node's node:zlib). Lit's share is the chunk a codeSplitting group puts every lit, lit-html, lit-element, and @lit/* module in; the baseline's is the CSS Vite emits for the linked entry, the foundation's baseline, and, on a shadow version's page, the chunk a second group puts the foundation's sheet modules in: the reset and elements sheets its shadow roots adopt, which it so loads twice, linked and adopted. In a build, scripts/css-sheets.js takes each sheet's text from Vite's own ?inline import of the file, so the adopted sheets, and every component's, are minified as the linked CSS is."
+echo "One vite build per page, as Vite builds by default (minified, Lit's production build), every emitted file raw and brotli (quality 11, node's node:zlib). Lit's share is the chunk a codeSplitting group puts every lit, lit-html, lit-element, and @lit/* module in; the baseline's is the CSS Vite emits for the linked entry, the foundation's baseline, and, on a shadow version's page, the chunk a second group puts the foundation's sheet modules in: the reset and elements sheets its shadow roots adopt, which it so loads twice, linked and adopted. In a build, scripts/css-sheets.js takes each sheet's text from Vite's own ?inline import of the file, so the adopted sheets, and every component's, are minified as the linked CSS is; each row requires that no file outside Lit's chunk holds a comment."
 echo
 echo "| page | files | total | total, brotli | Lit | Lit, brotli | baseline | baseline, brotli | page and elements | page and elements, brotli |"
 echo "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |"
@@ -1849,6 +1850,17 @@ EOF
     fact+="; Lit's dev-mode warning in $dev"
   else
     fact+="; no file holds Lit's dev-mode warning"
+  fi
+  # Every sheet minified: scripts/css-sheets.js builds each sheet module, the foundation's and the
+  # components', from Vite's ?inline import, which strips the sources' comments, so no emitted
+  # file outside Lit's chunk, the sheet modules' chunks and the linked CSS among them, holds `/*`.
+  commented=$(cd "$components/build/$page" && awk -F'\t' '$1 != "lit" && $NF !~ /\.html$/ { print $NF }' "$tsv" |
+    while IFS= read -r file; do if grep -qF '/*' "$file"; then printf '%s ' "$file"; fi; done)
+  if [[ -n "$commented" ]]; then
+    ok=0
+    fact+="; a CSS comment survives in ${commented% }"
+  else
+    fact+="; no file outside Lit's chunk holds a comment, every sheet minified"
   fi
   # The baseline's files: the entry's CSS, and a shadow version's chunk of the foundation's sheet
   # modules, which must hold both adopted layers; a light version adopts none, so has no chunk.
