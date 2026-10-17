@@ -9,6 +9,7 @@
 // the same layer on the page, which links the foundation's entry, and the edit is one rule added
 // to that layer. Either rule follows the baseline's own in its layer, with the same zero
 // specificity, so it wins.
+//
 // scripts/demo.sh runs one page per version; each passes when both buttons painted from the source
 // before the edit and both take the edit after it.
 

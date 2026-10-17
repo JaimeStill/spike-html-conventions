@@ -6,12 +6,12 @@
  *
  * The layer statements come first and fix the order of the foundation's layers, as upstream's
  * baseline.css fixes its own, in two statements rather than upstream's one so that no formatter
- * measure compares joins or breaks the list its own way; a page that then declares `@layer app { ... }` gets a layer after
- * them, so its rules win over every baseline rule whatever their specificity. Each ported file
- * wraps its rules in its own layer block, so the imports below take no layer(): a constructed
- * sheet or a CSS module script loads no @import, so the ported files hold none, and this entry,
- * which only a page links, is the one place an @import is written. A facet's profile follows the
- * facet's own file in the same layer, as upstream imports them.
+ * measure compares joins or breaks the list its own way; a page that then declares
+ * `@layer app { ... }` gets a layer after them, so its rules win over every baseline rule whatever
+ * their specificity. Each ported file wraps its rules in its own layer block, so the imports below
+ * take no layer(): a constructed sheet or a CSS module script loads no @import, so the ported files
+ * hold none, and this entry, which only a page links, is the one place an @import is written. A
+ * facet's profile follows the facet's own file in the same layer, as upstream imports them.
  */
 
 @layer foundation.tokens.color, foundation.tokens.space, foundation.tokens.type;

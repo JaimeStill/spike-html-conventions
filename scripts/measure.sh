@@ -152,8 +152,9 @@
 #                   another, counted with the linked baseline, passing when the build succeeds, no
 #                   file holds the dev-mode warning, Lit is all in its chunk or, for vanilla,
 #                   nowhere, and a shadow version's page has the foundation's chunk, reset and
-#                   elements in it as well as linked, and a light version's none. The section prints its figures under its own heading, the element
-#                   sources' lines and brotli bytes beside them as context, and reads no network.
+#                   elements in it as well as linked, and a light version's none. The section
+#                   prints its figures under its own heading, the element sources' lines and
+#                   brotli bytes beside them as context, and reads no network.
 #                   See "Components" below.
 #   lint and format per setup: footprint, each tool's installed size, B's devDependencies and D's
 #                   scratch packages included, passing when every tool and package is at its pin;

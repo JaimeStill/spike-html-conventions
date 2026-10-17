@@ -35,10 +35,10 @@
 // asset Vite emits for the linked entry, and the chunk measure's config puts the port's sheet
 // modules in, under foundation/, which a shadow version's page alone has: it adopts the reset and
 // elements sheets as modules beside the entry it links, so it loads those two layers twice);
-// client, the Vite dev server's client, which it injects
-// into every page it serves (/@vite/client and the env module it imports); and page, the rest: the
-// page's HTML, its script, the elements' and the fixture's modules, and the elements' stylesheets,
-// as the sheet modules scripts/css-sheets.js makes of them.
+// client, the Vite dev server's client, which it injects into every page it serves (/@vite/client
+// and the env module it imports); and page, the rest: the page's HTML, its script, the elements'
+// and the fixture's modules, and the elements' stylesheets, as the sheet modules
+// scripts/css-sheets.js makes of them.
 
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
