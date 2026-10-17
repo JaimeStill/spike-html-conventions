@@ -34,7 +34,8 @@ if [ ! -x node_modules/.bin/eslint ] || [ ! -x node_modules/.bin/prettier ]; the
   exit 1
 fi
 # The project's own copies, by pnpm exec: eslint.config.js holds the lint rules and the layer
-# table, .prettierrc.json the format, and .prettierignore limits Prettier to the code and JSON.
+# table, .prettierrc.json the format, and .prettierignore limits Prettier to the code, the JSON,
+# and the CSS.
 pnpm exec eslint .
 pnpm exec prettier --check .
 find . -name '*.sh' -not -path './node_modules/*' -not -path './.git/*' -print0 \
@@ -78,6 +79,11 @@ depends = ["build:tsc", "build:esbuild", "build:bun"]
 description = "Render every build of the frozen pagination element, and the components layer's composition (pagination holding entries from the fixture) in each version, through the shared probe, in headless Chromium, from file://"
 depends = ["build"]
 run = "scripts/demo.sh"
+dir = "{{config_root}}"
+
+[tasks.preview]
+description = "Serve the components layer's four versions side by side on one page, each wired to the fixture as a host application would wire it (demo/preview.ts), under Vite's dev server with scripts/css-sheets.js, printing the URL and running until Ctrl-C; reads no network, writes nothing to the working tree"
+run = "scripts/preview.sh"
 dir = "{{config_root}}"
 
 [tasks.measure]

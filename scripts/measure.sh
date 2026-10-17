@@ -170,8 +170,9 @@
 #                   strips from any file it formats, so the files that change are the files it
 #                   touched: the default scope recorded, JSON counted, and the row passing when the
 #                   scope its configuration limits it to (Biome's files.includes, a .prettierignore
-#                   that Prettier and oxfmt both read, the files globs of D's config) is the code
-#                   and JSON files exactly; rewrites, the same unpadded, recording each file the
+#                   that Prettier and oxfmt both read, the files globs of D's config) is the
+#                   check's own, the code, JSON, and CSS files, exactly, less the CSS recorded
+#                   below for D, whose formatter formats no CSS; rewrites, the same unpadded, recording each file the
 #                   default run rewrites and its changed lines, every Markdown file named, passing
 #                   when no code file changes and the padded default run reached every code file;
 #                   direction, the layer rules over test/layers-tree.js's trees, which hold the
@@ -1951,9 +1952,9 @@ copy_json() {
   (cd "$root" && printf '%s\0' "${json_files[@]}" | xargs -0 cp --parents -t "$1")
 }
 # strip_css DIR: DIR's copy of src/, layers/, and test/ without the components' stylesheets. The
-# comparison's code is the .js and .ts files, as code_files counts them, and the check's Prettier
-# formats no CSS (.prettierignore), so the stylesheets are no setup's code here; the scope rows
-# below, over every tracked file, still show what each formatter does with them by default.
+# comparison's code is the .js and .ts files, as code_files counts them, so the stylesheets are no
+# setup's code here, though the check's Prettier formats them too (.prettierignore); the scope rows
+# below, over every tracked file, show what each formatter does with them.
 strip_css() { find "$1" -name '*.css' -delete; }
 # pad DIR: three trailing newlines on every file in DIR, which a formatter strips from any file it
 # formats, so a file it skips differs from the original and fails the row.
@@ -2156,25 +2157,28 @@ padded="$lint/scope-padded"
 copy_repo "$padded"
 for path in "${tracked[@]}"; do printf '\n\n\n' >>"$padded/$path"; done
 mapfile -t code < <(printf '%s\n' "${tracked[@]}" | grep -E '\.(js|ts)$')
-# The scope a setup formats: the code and the JSON.
-mapfile -t scoped < <(printf '%s\n' "${tracked[@]}" | grep -E '\.(js|ts|json)$')
-# Biome's limit: biome.json with files.includes naming the code and JSON files.
+# The scope a setup formats: the check's, the code, the JSON, and the components' stylesheets.
+mapfile -t scoped < <(printf '%s\n' "${tracked[@]}" | grep -E '\.(js|ts|json|css)$')
+# The files of that scope a formatter can't reach, a fact recorded here once a run showed it, as an
+# extension: ESLint Stylistic's rules are JavaScript's, so D formats no CSS.
+declare -A unreached=([stylistic]=css)
+# Biome's limit: biome.json with files.includes naming the code, JSON, and CSS files.
 mkdir -p "$lint/biome-code"
 node -e '
   const fs = require("node:fs");
   const config = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
-  config.files = { includes: ["**/*.js", "**/*.ts", "**/*.json"] };
+  config.files = { includes: ["**/*.js", "**/*.ts", "**/*.json", "**/*.css"] };
   fs.writeFileSync(process.argv[2], JSON.stringify(config, null, 2));
 ' "$root/biome.json" "$lint/biome-code/biome.json"
 declare -A limit_how=(
-  [biome]='files.includes ["**/*.js", "**/*.ts", "**/*.json"] in biome.json'
-  [prettier]="the repository's .prettierignore: *, !*/, !*.js, !*.ts, !*.json"
+  [biome]='files.includes ["**/*.js", "**/*.ts", "**/*.json", "**/*.css"] in biome.json'
+  [prettier]="the repository's .prettierignore: *, !*/, !*.js, !*.ts, !*.json, !*.css"
   [oxfmt]="the same .prettierignore, which oxfmt reads too"
   [stylistic]="its config's own files globs, the code and **/*.json, the same run as its default"
 )
 # format_repo FORMATTER DIR MODE: FORMATTER's default run over DIR, with the matched options, the
 # copied .prettierignore moved out of DIR for the run, since Prettier and oxfmt both read it; with
-# limited, as its configuration limits it to the code and JSON, Prettier and oxfmt by the
+# limited, as its configuration limits it to the scope above, Prettier and oxfmt by the
 # repository's .prettierignore, copied with the tracked files. ESLint, D's formatter, runs its
 # config over the files the config names in both modes.
 format_repo() {
@@ -2206,16 +2210,24 @@ for setup in "${setups[@]}"; do
   mapfile -t limited_files <<<"${scope_files[limited]}"
   default_json=$(grep -c '\.json$' <<<"${scope_files[default]}" || true)
   limited_json=$(grep -c '\.json$' <<<"${scope_files[limited]}" || true)
+  # The scope less the extension the formatter can't reach, if one is recorded.
+  expected=$(printf '%s\n' "${scoped[@]}")
+  if [[ -n "${unreached[$formatter]:-}" ]]; then
+    expected=$(grep -v -E "\\.${unreached[$formatter]}\$" <<<"$expected" || true)
+  fi
   ok=0
-  if ((scope_exit[limited] == 0)) && [[ "${scope_files[limited]}" == "$(printf '%s\n' "${scoped[@]}")" ]]; then ok=1; fi
+  if ((scope_exit[limited] == 0)) && [[ "${scope_files[limited]}" == "$expected" ]]; then ok=1; fi
   fact="the repository's ${#tracked[@]} tracked files: $(extensions "${tracked[@]}");
     by default $label touches $(extensions "${default_files[@]}") (exit ${scope_exit[default]}), JSON $default_json of ${#json_files[@]};
     limited by ${limit_how[$formatter]}, $(extensions "${limited_files[@]}") (exit ${scope_exit[limited]}), JSON $limited_json of ${#json_files[@]}"
-  if ((ok == 0)); then
-    fact+="; touched beside the code and JSON: $(LC_ALL=C comm -23 <(LC_ALL=C sort <<<"${scope_files[limited]}") <(printf '%s\n' "${scoped[@]}" | LC_ALL=C sort) | paste -s -d ' ' -);
-      code or JSON untouched: $(LC_ALL=C comm -13 <(LC_ALL=C sort <<<"${scope_files[limited]}") <(printf '%s\n' "${scoped[@]}" | LC_ALL=C sort) | paste -s -d ' ' -)"
+  if [[ -n "${unreached[$formatter]:-}" ]]; then
+    fact+="; recorded: it formats no ${unreached[$formatter]}"
   fi
-  row "$prefix: $label, its configuration limiting it to the code and JSON files" "$ok" "$fact"
+  if ((ok == 0)); then
+    fact+="; touched beside the scope: $(LC_ALL=C comm -23 <(LC_ALL=C sort <<<"${scope_files[limited]}") <(LC_ALL=C sort <<<"$expected") | paste -s -d ' ' -);
+      in the scope, untouched: $(LC_ALL=C comm -13 <(LC_ALL=C sort <<<"${scope_files[limited]}") <(LC_ALL=C sort <<<"$expected") | paste -s -d ' ' -)"
+  fi
+  row "$prefix: $label, its configuration limiting it to the code, JSON, and CSS files" "$ok" "$fact"
 
   # Rewrites: the default run over an unpadded copy, each file it changes with its lines removed
   # and added, every Markdown file named.
@@ -2381,8 +2393,8 @@ done
 declare -A surface_binaries=([A]="biome" [B]="eslint prettier node" [C]="oxlint oxfmt node" [D]="eslint node")
 declare -A surface_configs=(
   [A]="biome.json, the linter's and the formatter's options and the layer rules in one"
-  [B]="eslint.config.js, the lint rules and the layer table; .prettierrc.json, the formatter's options; .prettierignore, to limit Prettier to the code and JSON; pnpm-workspace.yaml, the pnpm settings the devDependencies' install needs (allowBuilds)"
-  [C]=".oxlintrc.json, the lint rules and the layer rules; .oxfmtrc.json, the formatter's options; .prettierignore, which oxfmt reads too, to limit it to the code and JSON"
+  [B]="eslint.config.js, the lint rules and the layer table; .prettierrc.json, the formatter's options; .prettierignore, to limit Prettier to the code, JSON, and CSS; pnpm-workspace.yaml, the pnpm settings the devDependencies' install needs (allowBuilds)"
+  [C]=".oxlintrc.json, the lint rules and the layer rules; .oxfmtrc.json, the formatter's options; .prettierignore, which oxfmt reads too, to limit it to the code, JSON, and CSS"
   [D]="eslint.config.js, the lint rules, the layer table, and Stylistic's and jsonc's formatting rules in one"
 )
 for setup in "${setups[@]}"; do
