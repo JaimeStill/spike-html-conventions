@@ -193,7 +193,7 @@ Door          two-way: no tag, nothing published; the pin upgrade is
 
 ## Progress
 
-slices 4/6 committed · review stop — · standards — · spec — · editor —
+slices 5/6 committed · review stop pending · standards — · spec — · editor —
 
 ## Decisions
 
