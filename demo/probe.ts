@@ -224,27 +224,22 @@ function look(element: Element): string {
 }
 
 /**
- * The look the foundation's baseline gives a bare control, worked out on the page from its tokens:
- * its elements layer's button rule or its field rule, and its reset's control font, the interface
- * font at the size the control's parent computes. A swatch in the document resolves the tokens, as
- * a shadow root inherits them, so a control that lost the baseline (a shadow root that didn't adopt
- * it) or took a look from a sheet of its own doesn't match it.
+ * The look the page's baseline gives a bare control of the same kind: a control with the same tag
+ * and type, placed in the document under a parent at the font size the control's parent computes,
+ * as its reset's `font: inherit` reads it. The page links the foundation's entry, so the reference
+ * is painted by the reset and elements layers alone, and a control that lost the baseline (a shadow
+ * root that didn't adopt it) or took a look from a sheet of its own doesn't match it.
  */
 function baselineLook(control: FormControl): string {
   const parent = control.parentElement ?? (control.getRootNode() as ShadowRoot).host;
-  const button = control instanceof HTMLButtonElement;
-  const swatch = document.createElement("div");
-  swatch.style.cssText = `
-    background-color: var(${button ? "--bg-2" : "--bg"});
-    color: var(--fg);
-    border: var(--line-s) solid var(--border-2);
-    padding: var(--space-3xs) var(${button ? "--space-s" : "--space-2xs"});
-    font-family: var(--font-ui);
-    font-size: ${getComputedStyle(parent).fontSize};
-  `;
-  document.body.append(swatch);
-  const expected = look(swatch);
-  swatch.remove();
+  const holder = document.createElement("div");
+  holder.style.fontSize = getComputedStyle(parent).fontSize;
+  const reference = document.createElement(control.localName);
+  if (control instanceof HTMLInputElement) reference.setAttribute("type", control.type);
+  holder.append(reference);
+  document.body.append(holder);
+  const expected = look(reference);
+  holder.remove();
   return expected;
 }
 
