@@ -174,8 +174,8 @@
 #                   check's own, the code, JSON, and CSS files, exactly, less the CSS recorded
 #                   below for D, whose formatter formats no CSS; rewrites, the same unpadded,
 #                   recording each file the default run rewrites and its changed lines, every
-#                   Markdown file named, passing
-#                   when no code file changes and the padded default run reached every code file;
+#                   Markdown file named, passing when no code file changes and the padded default
+#                   run reached every code file;
 #                   direction, the layer rules over test/layers-tree.js's trees, which hold the
 #                   files their imports name, passing when the flagged files are the violation files
 #                   less the edges the rule can't express or the misses recorded below, and the
