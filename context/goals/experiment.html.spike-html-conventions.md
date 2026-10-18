@@ -33,13 +33,6 @@ Behaviors
   1. The pinned tools are current: eslint is 10.13.0, mise run install
      succeeds from the frozen lockfile, mise run check passes, and
      currency prints nothing.
-- slice 2 committed (02c63b0): raw Chromium pipe over Vite in measure (`scripts/browser-cases.js`, `browser-pipe.js`, `browser.test.js`); 6 rows pass, measure 127/127. Decisions in the commit message: Vite started from JS, verdict promise awaited after load, 1280x720 viewport, Chromium profile in /tmp. Measure hit EDQUOT on /tmp; rerun with TMPDIR outside /tmp.
-- slice 3 committed (80a88fe): Playwright column (system Chromium, Headless Shell 156, Firefox 157 pass) and unbundled rows (Chromium, Firefox pass); measure 147/154, the 7 WebKit rows fail: Playwright WebKit r2370 won't launch on Arch (missing libicu*.so.74, libxml2.so.2, libflite). Escalation answered: WebKit excluded (amendment). Fixes owed: leftover WebKit profile dirs in TMPDIR; both drivers emulate the light scheme.
-- slice 4 committed (9a9f0fd): WebKit out, light scheme in both drivers, overhead rows; measure 2026-10-18T18:43:26Z 156/156. Review stop answered: Playwright on the system Chromium and Firefox.
-- slice 5 committed (9a1d80a): browser tier in the check (Playwright on system Chromium and Firefox over Vite, node --test only, ~6 s of a ~17 s check); a broken case fails it; measure 2026-10-18T19:09:47Z 156/156. 
-- slice 6 committed (e3d9958): demo trimmed to the 20 frozen pagination pages (esbuild, bun, tsc, src). 
-- slice 7 committed (93da1e6): build:tsc's demo emit dropped; Results 5, STANDARDS.md Tests and dependency rules, the html-artifacts.md pending edit; measure 2026-10-18T19:20:43Z 156/156. 
-- standards review committed (9b90c44); its follow-ups committed (997a494): exactly 27 cases, opaque restyle baseline, the pipe's missing-Chromium error; evidence re-cited to measure 2026-10-18T19:38:34Z 156/156. Next: spec review.
   2. mise run measure runs the probe's 27 cases in each of the four
      component versions, and the 4 restyle checks, through two drivers
      against pages Vite's dev server serves with the local CSS plugin:
@@ -155,6 +148,13 @@ in a container or install libraries on the host.
 ## Progress
 
 - slice 1 committed (c12c783): eslint 10.13.0; check passes, currency prints nothing.
+- slice 2 committed (02c63b0): raw Chromium pipe over Vite in measure (`scripts/browser-cases.js`, `browser-pipe.js`, `browser.test.js`); 6 rows pass, measure 127/127. Decisions in the commit message: Vite started from JS, verdict promise awaited after load, 1280x720 viewport, Chromium profile in /tmp. Measure hit EDQUOT on /tmp; rerun with TMPDIR outside /tmp.
+- slice 3 committed (80a88fe): Playwright column (system Chromium, Headless Shell 156, Firefox 157 pass) and unbundled rows (Chromium, Firefox pass); measure 147/154, the 7 WebKit rows fail: Playwright WebKit r2370 won't launch on Arch (missing libicu*.so.74, libxml2.so.2, libflite). Escalation answered: WebKit excluded (amendment). Fixes owed: leftover WebKit profile dirs in TMPDIR; both drivers emulate the light scheme.
+- slice 4 committed (9a9f0fd): WebKit out, light scheme in both drivers, overhead rows; measure 2026-10-18T18:43:26Z 156/156. Review stop answered: Playwright on the system Chromium and Firefox.
+- slice 5 committed (9a1d80a): browser tier in the check (Playwright on system Chromium and Firefox over Vite, node --test only, ~6 s of a ~17 s check); a broken case fails it; measure 2026-10-18T19:09:47Z 156/156. 
+- slice 6 committed (e3d9958): demo trimmed to the 20 frozen pagination pages (esbuild, bun, tsc, src). 
+- slice 7 committed (93da1e6): build:tsc's demo emit dropped; Results 5, STANDARDS.md Tests and dependency rules, the html-artifacts.md pending edit; measure 2026-10-18T19:20:43Z 156/156. 
+- standards review committed (9b90c44); its follow-ups committed (997a494): exactly 27 cases, opaque restyle baseline, the pipe's missing-Chromium error; evidence re-cited to measure 2026-10-18T19:38:34Z 156/156. Next: spec review.
 
 ## Decisions
 
