@@ -33,6 +33,7 @@ Behaviors
   1. The pinned tools are current: eslint is 10.13.0, mise run install
      succeeds from the frozen lockfile, mise run check passes, and
      currency prints nothing.
+- slice 2 committed (02c63b0): raw Chromium pipe over Vite in measure (`scripts/browser-cases.js`, `browser-pipe.js`, `browser.test.js`); 6 rows pass, measure 127/127. Decisions in the commit message: Vite started from JS, verdict promise awaited after load, 1280x720 viewport, Chromium profile in /tmp. Measure hit EDQUOT on /tmp; rerun with TMPDIR outside /tmp.
   2. mise run measure runs the probe's 27 cases in each of the four
      component versions, and the 4 restyle checks, through two drivers
      against pages Vite's dev server serves with the local CSS plugin:
