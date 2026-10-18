@@ -49,7 +49,7 @@ mkdirSync(scratch, { recursive: true });
  */
 const results = { driver, server: kind, browser: null, error: null, probe: {}, restyle: {} };
 
-// The suite's name carries the engine when one is named, so each of the check's runs says which.
+// The suite's name carries the engine when one is named, so each of measure's runs says which.
 const engine = process.env.BROWSER_ENGINE ? ` (${process.env.BROWSER_ENGINE})` : "";
 
 describe(`browser cases, ${driver} driver${engine}, ${kind} server`, () => {

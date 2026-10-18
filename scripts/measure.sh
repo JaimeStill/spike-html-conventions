@@ -160,32 +160,33 @@
 #   browser         the components' browser cases, demo/probe.ts's 27 in each of the four versions
 #                   and demo/restyle.ts's check in each, on pages Vite's dev server serves from
 #                   scratch with scripts/css-sheets.js, loading the working tree through /@fs/,
-#                   through each driver and engine: the raw Chromium debugging pipe (no package,
-#                   the check's driver, on mise.toml's chrome-headless-shell pin), and
-#                   playwright-core (playwright_packages, below) on that pin, its own Chromium
-#                   Headless Shell, and its Firefox, both drivers emulating the light color scheme. Per driver and engine, a row per version's
-#                   probe, passing when all 27 cases hold; one passing when all four versions'
-#                   reports match, within that engine; and one for the restyle check, passing when
-#                   it holds in all four. Then the unbundled form, tsc's emit with native CSS module
-#                   scripts over plain http, the probe in all four versions through Playwright on
-#                   the pin and Firefox, passing when all 27 hold. No WebKit: Playwright's WebKit
-#                   build doesn't launch off its Ubuntu. Each browser run has a TMPDIR of its own
-#                   in scratch, removed after. Reads the network only to install playwright-core
-#                   and download its browsers into scratch (PLAYWRIGHT_BROWSERS_PATH), never
-#                   Playwright's default ~/.cache/ms-playwright.
+#                   through each driver and engine: the raw Chromium debugging pipe (no package, the
+#                   check's driver, on mise.toml's chrome-headless-shell pin), and playwright-core
+#                   (playwright_packages, below) on that pin, its own Chromium Headless Shell, and
+#                   its Firefox, both drivers emulating the light color scheme. Per driver and
+#                   engine, a row per version's probe, passing when all 27 cases hold; one passing
+#                   when all four versions' reports match, within that engine; and one for the
+#                   restyle check, passing when it holds in all four. Then the unbundled form, tsc's
+#                   emit with native CSS module scripts over plain http, the probe in all four
+#                   versions through Playwright on the pin and Firefox, passing when all 27 hold. No
+#                   WebKit: Playwright's WebKit build doesn't launch off its Ubuntu. Each browser
+#                   run has a TMPDIR of its own in scratch, removed after. Reads the network only to
+#                   install playwright-core and download its browsers into scratch
+#                   (PLAYWRIGHT_BROWSERS_PATH), never Playwright's default ~/.cache/ms-playwright.
 #                   See "Browser" below.
-#   browser         Playwright's overhead over the raw pipe, a row each: footprint, playwright-core's
-#   overhead        installed bytes, and each browser install's download bytes (from its log) and
-#                   wall time, download and unpack, passing when the install succeeds with the
-#                   brief's majors (Headless Shell 156, Firefox 157); the pins and devDependencies
-#                   a Playwright pick would add, passing when playwright-core brings no other
-#                   package, neither driver imports one, and the raw pipe's one pin is mise.toml's
-#                   chrome-headless-shell; each driver's harness lines, those holding code;
-#                   cold and warm, hyperfine's times of the same cases on the pinned
-#                   chrome-headless-shell through each driver, cold emptying the run's scratch, Vite's dependency cache
-#                   with it, before every run, warm keeping it from a warmup run, passing when every
-#                   run passes (and, warm, Vite's cache was kept); and a repeat row per driver, 20
-#                   runs on the pin, each in fresh scratch, passing when none fails.
+#   browser         Playwright's overhead over the raw pipe, a row each: footprint,
+#   overhead        playwright-core's installed bytes, and each browser install's download bytes
+#                   (from its log) and wall time, download and unpack, passing when the install
+#                   succeeds with the brief's majors (Headless Shell 156, Firefox 157); the pins and
+#                   devDependencies a Playwright pick would add, passing when playwright-core brings
+#                   no other package, neither driver imports one, and the raw pipe's one pin is
+#                   mise.toml's chrome-headless-shell; each driver's harness lines, those holding
+#                   code; cold and warm, hyperfine's times of the same cases on the pinned
+#                   chrome-headless-shell through each driver, cold emptying the run's scratch,
+#                   Vite's dependency cache with it, before every run, warm keeping it from a warmup
+#                   run, passing when every run passes (and, warm, Vite's cache was kept); and a
+#                   repeat row per driver, 20 runs on the pin, each in fresh scratch, passing when
+#                   none fails.
 #   lint and format per setup: footprint, each tool's installed size, B's devDependencies and D's
 #                   scratch packages included, passing when every tool and package is at its pin;
 #                   time, the timings' means, passing when the lint, the format check, and both pass
@@ -2139,11 +2140,11 @@ if ((pipe_lines > 0 && playwright_lines > 0)) &&
 row "Browser, overhead: each driver's harness lines" "$ok" \
   "raw pipe (scripts/browser-pipe.js) $pipe_lines, Playwright (scripts/browser-playwright.js) $playwright_lines: lines that hold code, not blank and not wholly a comment; both keep scripts/browser-cases.js's driver interface, the harness they share with scripts/browser.test.js ($(harness_lines "$root/scripts/browser-cases.js") and $(harness_lines "$root/scripts/browser.test.js") lines)"
 
-# Cold and warm: the same cases on the pinned chrome-headless-shell through each driver, a hyperfine run of
-# scripts/browser.test.js over Vite each, as the timings use the words. Cold: the run's scratch,
-# Vite's dependency cache (its pre-bundled Lit) with it, emptied before every run. Warm: the
-# scratch kept from a warmup run, so Vite reuses its cache. Each driver launches its browser on a
-# fresh profile in both. Every run has an empty TMPDIR of its own.
+# Cold and warm: the same cases on the pinned chrome-headless-shell through each driver, a
+# hyperfine run of scripts/browser.test.js over Vite each, as the timings use the words. Cold: the
+# run's scratch, Vite's dependency cache (its pre-bundled Lit) with it, emptied before every run.
+# Warm: the scratch kept from a warmup run, so Vite reuses its cache. Each driver launches its
+# browser on a fresh profile in both. Every run has an empty TMPDIR of its own.
 # browser_timed DIR DRIVER: the command hyperfine times, run in DIR.
 browser_timed() {
   echo "env TMPDIR=$1/tmp BROWSER_DRIVER=$2 BROWSER_ENGINE=chromium-pin BROWSER_SCRATCH=$1/scratch node --test $root/scripts/browser.test.js"
@@ -2190,8 +2191,9 @@ for mode in cold warm; do
   row "Browser, overhead: $mode, every case on the pinned chrome-headless-shell, raw pipe against Playwright (hyperfine, over Vite)" "$ok" "$fact"
 done
 
-# Repeat: 20 runs per driver of the same cases on the pinned chrome-headless-shell, each in a fresh scratch and
-# TMPDIR, as a check's run would be; a run fails when node --test exits nonzero. Passes on none.
+# Repeat: 20 runs per driver of the same cases on the pinned chrome-headless-shell, each in a
+# fresh scratch and TMPDIR, as a check's run would be; a run fails when node --test exits nonzero.
+# Passes on none.
 repeats=20
 for driver in pipe playwright; do
   failures=0 first=""

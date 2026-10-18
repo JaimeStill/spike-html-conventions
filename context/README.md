@@ -1239,13 +1239,12 @@ during BUILD) and isn't what a CI runner has. Redirect 2 replaced that before it
 slice was discarded, with the repository's 588 MB Playwright cache outside the tree): Microsoft
 supports Playwright on Linux only on Ubuntu and Debian (Debian 12 and 13, Ubuntu 22.04, 24.04,
 and 26.04, [system requirements][pw-sysreq]), and the architect won't rely on unofficial support
-on Arch, where this spike runs. Google names no
-Arch for Chrome either (64-bit Ubuntu 18.04+, Debian 10+, openSUSE 15.5+, or Fedora Linux 39+,
-[Chrome system requirements][chrome-sysreq]), but Chrome for Testing's chrome-headless-shell is
-one generic linux64 zip that runs here, and one pin makes the check the same locally and in CI.
-Playwright's Chromium is itself a Chrome for Testing build: playwright-core 1.64.1 downloads it
-from `builds/cft/<version>/` on its CDN (`cftUrl` in its registry), so the pin drops the wrapper,
-not the browser.
+on Arch, where this spike runs. Google names no Arch for Chrome either (64-bit Ubuntu 18.04+,
+Debian 10+, openSUSE 15.5+, or Fedora Linux 39+, [Chrome system requirements][chrome-sysreq]),
+but Chrome for Testing's chrome-headless-shell is one generic linux64 zip that runs here, and one
+pin makes the check the same locally and in CI. Playwright's Chromium is itself a Chrome for
+Testing build: playwright-core 1.64.1 downloads it from `builds/cft/<version>/` on its CDN
+(`cftUrl` in its registry), so the pin drops the wrapper, not the browser.
 
 **The unit tier** is `test/`, the router suite and the layer test, under node --test and bun
 test. It holds DOM-free code only, with no DOM shim: happy-dom and jsdom load no CSS module
