@@ -27,9 +27,11 @@ The architecture pages that apply, in the architecture repository:
   `package.json`'s devDependencies and run from `node_modules`.
 - Every browser the check runs is a `mise.toml` pin: Chrome for Testing's chrome-headless-shell,
   through mise's `http:` backend, with a sha256 and size taken by hand at each bump, since Chrome
-  for Testing publishes no checksums. The system Chromium is the one browser outside `mise.toml`,
-  by the architect's decision, and only the demo's frozen `--dump-dom` pages and measure's
-  `file://` and components pages run it; `mise run measure` records its version.
+  for Testing publishes no checksums. Three browsers stay outside `mise.toml`, and the check runs
+  none of them. The system Chromium, by the architect's decision, runs only the demo's frozen
+  `--dump-dom` pages and measure's `file://` and components pages; `mise run measure` records its
+  version. Playwright's own Chromium Headless Shell and Firefox run only in measure's comparison
+  column, which downloads them into its scratch.
 - Lit is the only runtime dependency; the lint tooling is the only devDependencies.
   playwright-core is measure's comparison column alone, installed into measure's scratch.
 - Anything that reads the network runs in `measure`, `currency`, or `install`, never in the check.
@@ -93,8 +95,8 @@ The architecture pages that apply, in the architecture repository:
   and drives Chromium alone, the pinned chrome-headless-shell, over the raw DevTools pipe
   (`scripts/browser-pipe.js`, no package) from node:test.
 - The browser tier holds only what a browser alone can prove, each component's contract, events,
-  rendering, and styling, as a fixed set of cases run in every version. No test runner beyond
-  node:test, screenshot diffing, or tracing without a recorded need; Playwright stays in measure
+  rendering, and styling, as a fixed set of cases run in every version. It adds no test runner
+  beyond node:test, and no screenshot diffing or tracing, without a recorded need; Playwright stays in measure
   as the comparison column.
 - Firefox and WebKit are gaps the check doesn't cover: a failure only Firefox or Safari shows goes
   unseen.

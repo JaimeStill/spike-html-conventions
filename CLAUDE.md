@@ -26,6 +26,6 @@ The repository is managed with the marathon workflow; start from `context/README
   (ESLint, Prettier, and their plugins) is the only devDependencies, both pinned exactly in
   `package.json`. Every other tool is pinned in `mise.toml`, the check's browser
   (chrome-headless-shell) among them, and Biome, oxlint, and oxfmt for measure only; measure
-  installs playwright-core into its own scratch.
+  installs playwright-core and its browsers into its own scratch.
 - **References:** the repositories this spike reads are keys in the coordinator's
   `references.toml` and `references.local.toml`. The spike reads them and never writes to them.
