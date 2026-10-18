@@ -31,9 +31,11 @@ function check(files) {
     );
     const run = spawnSync(tsc, ["--noEmit", "-p", "."], { cwd: scratch, encoding: "utf8" });
     assert.equal(run.error, undefined, `tsc didn't run: ${run.error}`);
-    return [...run.stdout.matchAll(/^layers\/(\S+)\(\d+,\d+\): error (TS\d+)/gm)]
-      .map(([, path, code]) => `${path} ${code}`)
-      .sort();
+    const errors = [...run.stdout.matchAll(/^layers\/(\S+)\(\d+,\d+\): error (TS\d+)/gm)];
+    // An error outside the scratch layers/ (a config tsc can't read, say) would leave the list
+    // empty and pass the cases that expect none, so every error tsc reports must be one of these.
+    assert.equal(run.stdout.match(/error TS\d+/g)?.length ?? 0, errors.length, run.stdout);
+    return errors.map(([, path, code]) => `${path} ${code}`).sort();
   } finally {
     rmSync(scratch, { recursive: true, force: true });
   }
@@ -59,10 +61,13 @@ describe("SDK and formatter declarations", () => {
     );
   });
 
-  test("the foundation's formatters are a declaration file", () => {
-    const foundation = readdirSync(join(root, "layers", "foundation"));
-    assert.ok(foundation.includes("format.d.ts"));
-    assert.ok(!foundation.includes("format.ts"));
+  // A source beside format.d.ts (format.ts, format.js, ...) is what an import of format.js would
+  // resolve to, past the declaration and the check's type-import rule, so none may stand there.
+  test("the foundation's formatters are a declaration file alone", () => {
+    const formats = readdirSync(join(root, "layers", "foundation")).filter((name) =>
+      name.startsWith("format."),
+    );
+    assert.deepEqual(formats, ["format.d.ts"]);
   });
 
   test("tsc, under tsconfig.json, refuses runtime code in a declaration file", () => {

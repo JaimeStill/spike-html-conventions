@@ -160,12 +160,19 @@ function writeDeclarations(dir, files) {
   return Object.keys(written);
 }
 
+// The refused files are held to the dependencies rule alone, and the whole tree to no-unresolved
+// drawing nothing, so no case passes because its declaration went unresolved.
 describe("a declaration file is imported for its types alone", () => {
+  const files = { ...valueDeclarations, ...typeDeclarations };
+
   test("each value import of a .d.ts file draws the dependencies rule, and no type import does", () => {
-    const files = { ...valueDeclarations, ...typeDeclarations };
     assert.deepEqual(
-      [...flagged(files, [dependencies, unresolved], writeDeclarations)].sort(),
+      [...flagged(files, [dependencies], writeDeclarations)].sort(),
       Object.keys(valueDeclarations).sort(),
     );
+  });
+
+  test("every import of a .d.ts file resolves", () => {
+    assert.deepEqual([...flagged(files, [unresolved], writeDeclarations)], []);
   });
 });
