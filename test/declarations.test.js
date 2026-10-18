@@ -14,7 +14,9 @@ import { join } from "node:path";
 import { describe, test } from "node:test";
 
 const root = join(import.meta.dirname, "..");
-const tsc = join(root, "node_modules", ".bin", "tsc");
+// The check's own tsc, mise.toml's TypeScript-Go pin, never the typescript package
+// typescript-eslint brings into node_modules, so the guard is proven under the compiler the check runs.
+const tsc = "tsc";
 
 /** The files tsc reports errors in, each with an error code, sorted, when it checks `files`, a map of paths
  * under a scratch layers/ to sources, under the repository's tsconfig.json. */

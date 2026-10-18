@@ -78,7 +78,8 @@ The architecture pages that apply, in the architecture repository:
 - Both branches build through Vite with the local CSS plugin, to hashed filenames and a build
   manifest. A page that loads components unbundled fails in Safari, so no page ships unbuilt.
 - An application app holds its entry and route table at its root, plus four tiers:
-  - views are route-level: they take route params and load data;
+  - views are route-level: they take route params and load their route's data through
+    the modules they compose;
   - modules are features: they call domain services and the router's query;
   - app-internal elements are presentational, under the component rules;
   - domains hold the app's types and its stateless domain services, one per resource, each
