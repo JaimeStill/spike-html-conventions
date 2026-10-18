@@ -34,7 +34,7 @@ Behaviors
      succeeds from the frozen lockfile, mise run check passes, and
      currency prints nothing.
 - slice 2 committed (02c63b0): raw Chromium pipe over Vite in measure (`scripts/browser-cases.js`, `browser-pipe.js`, `browser.test.js`); 6 rows pass, measure 127/127. Decisions in the commit message: Vite started from JS, verdict promise awaited after load, 1280x720 viewport, Chromium profile in /tmp. Measure hit EDQUOT on /tmp; rerun with TMPDIR outside /tmp.
-- slice 3 committed (80a88fe): Playwright column (system Chromium, Headless Shell 156, Firefox 157 pass) and unbundled rows (Chromium, Firefox pass); measure 147/154, the 7 WebKit rows fail: Playwright WebKit r2370 won't launch on Arch (missing libicu*.so.74, libxml2.so.2, libflite). ESCALATION open: how WebKit runs. Fixes owed: leftover WebKit profile dirs in TMPDIR; both drivers emulate the light scheme.
+- slice 3 committed (80a88fe): Playwright column (system Chromium, Headless Shell 156, Firefox 157 pass) and unbundled rows (Chromium, Firefox pass); measure 147/154, the 7 WebKit rows fail: Playwright WebKit r2370 won't launch on Arch (missing libicu*.so.74, libxml2.so.2, libflite). Escalation answered: WebKit excluded (amendment). Fixes owed: leftover WebKit profile dirs in TMPDIR; both drivers emulate the light scheme.
   2. mise run measure runs the probe's 27 cases in each of the four
      component versions, and the 4 restyle checks, through two drivers
      against pages Vite's dev server serves with the local CSS plugin:
@@ -131,6 +131,21 @@ Door          two-way: no tag, nothing published; the eslint pin and any
               Playwright devDependency revert by restoring the pin and
               lockfile.
 ```
+
+Amendment (escalation at slice 3): WebKit is excluded.
+
+Playwright's WebKit r2370 is an ubuntu-24.04 build that won't launch on this Arch host (missing
+libicu*.so.74, libxml2.so.2, libflite). The architect: exclude WebKit entirely rather than run it
+in a container or install libraries on the host.
+
+  2. (rev) Playwright runs on the system Chromium, Headless Shell 156, and Firefox 157; no
+     WebKit rows.
+  3. (rev) The unbundled rows run in Chromium and Firefox only. The Safari gap is a sourced
+     fact (no Safari release ships CSS module scripts; WebKit landed them 2026-10-06), with the
+     launch failure on a non-Ubuntu host recorded as a fact.
+  4. (rev) Footprint covers playwright-core, Headless Shell, and Firefox; measure downloads no
+     WebKit. The cross-engine coverage weighed is Chromium and Firefox against Chromium alone.
+
 
 ## Progress
 
@@ -333,6 +348,10 @@ Door          two-way: no tag, nothing published; the eslint pin and any
 - testing: measure keeps one unbundled row per engine (tsc emit with native CSS module scripts over plain http), so the form the library ships stays measured and the Safari gap is recorded.
 - testing: the check spawns the mise-pinned vite binary with a scratch config, as `mise run preview` does. Rejected: vite as a devDependency, which breaks the devDependency rule and duplicates the pin.
 - testing: measure downloads Playwright's browsers into each run's scratch (PLAYWRIGHT_BROWSERS_PATH), never ~/.cache/ms-playwright; the download is part of the overhead.
+- testing: escalation at slice 3 (architect): WebKit is excluded entirely; "setting up a container image just to test WebKit feels like overkill". Rejected: Playwright's v1.64.1 Docker image for WebKit; host libraries (libxml2-legacy, flite, icu74 from the AUR). The Safari gap is a sourced fact.
+- testing: both drivers emulate the light color scheme, so their reports render the same; the raw pipe took the system's dark scheme, Playwright defaults to light.
+- testing: each measure browser run takes its own TMPDIR inside scratch, removed after, so no Playwright profile is left behind.
+- testing: engines differ by rounding in one report line (input font size 14.2224px in Chromium, 14.2188px in Firefox); no row compares across engines, and Results 5 records it as a fact.
 
 ## Pending edits
 
