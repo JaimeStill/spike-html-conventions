@@ -1,10 +1,12 @@
-// The static site's header, its own element: Lit with a shadow root, its styles site-header.css, a
-// CSS module script, as a component's are. A static-branch app's element imports the foundation,
-// the components, and lit, never the SDK.
+// The static site's header, its own element: Lit with a shadow root whose `static styles` adopts
+// the foundation's baseline sheets, then site-header.css, its layout alone, each a CSS module
+// script, as a component's are. A static-branch app's element imports the foundation, the
+// components, and lit, never the SDK.
 
 import { html, LitElement, type PropertyDeclarations } from "lit";
 
 import "../../../../components/status-badge.js";
+import { baseline } from "../../../../foundation/baseline.js";
 import { define } from "../../../../foundation/dom.js";
 import styles from "./site-header.css" with { type: "css" };
 
@@ -13,7 +15,7 @@ export const tagName = "site-header";
 
 /** The page's heading, with a badge for its status. */
 export class SiteHeader extends LitElement {
-  static styles = styles;
+  static styles = [...baseline, styles];
 
   static properties = {
     heading: { type: String },

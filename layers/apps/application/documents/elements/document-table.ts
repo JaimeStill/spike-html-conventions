@@ -1,10 +1,13 @@
 // The documents app's table, an app-internal element: presentational, props in and events out,
 // like a component, but the app's own. It imports no other tier and not the SDK, so it declares
 // the row it shows (a domains Document satisfies it) and takes the formatters as a property: they
-// are declarations (layers/foundation/format.d.ts), imported for their types alone.
+// are declarations (layers/foundation/format.d.ts), imported for their types alone. Its title
+// buttons are bare: `static styles` adopts the foundation's baseline sheets, which give them their
+// look, then document-table.css, its layout alone.
 
 import { html, LitElement, type PropertyDeclarations } from "lit";
 
+import { baseline } from "../../../../foundation/baseline.js";
 import { define, emit } from "../../../../foundation/dom.js";
 import type { formatBytes, formatDate } from "../../../../foundation/format.js";
 import styles from "./document-table.css" with { type: "css" };
@@ -34,7 +37,7 @@ export interface DocumentOpenDetail {
 /** Shows the rows, each title a button that dispatches `document-open` with the row's id. Until
  * `format` is set, the size and date cells show the raw values. */
 export class DocumentTable extends LitElement {
-  static styles = styles;
+  static styles = [...baseline, styles];
 
   static properties = {
     rows: { attribute: false },

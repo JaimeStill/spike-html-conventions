@@ -1,4 +1,5 @@
-/* The documents table's layout; Lit adopts this sheet into its shadow root. */
+/* The documents table's layout; Lit adopts this sheet into its shadow root after the foundation's
+   baseline sheets. */
 
 :host {
   display: block;
