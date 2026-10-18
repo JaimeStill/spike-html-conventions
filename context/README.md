@@ -432,7 +432,11 @@ the components' served bytes and source sizes, with pnpm at 12.14.0, after the s
 moved onto the foundation's port, measure gave its adopted sheets their own chunk,
 `scripts/css-sheets.js` minified the sheets it builds in production, and each production row
 required that no file outside Lit's chunk hold a comment; all 121 of its rows passed. Results 6's
-later CSS-scope figures keep the run of 2026-10-17T20:35:52Z they cite.
+later CSS-scope figures keep the run of 2026-10-17T20:35:52Z they cite. Results 5 cites the run
+of **2026-10-18T19:20:43Z (UTC)** as *(m 2026-10-18T19:20:43Z)*, for the browser cases through
+each driver and engine and Playwright's overhead, with the system Chromium at 154.0.8037.97 and
+playwright-core 1.64.1 from the devDependencies, after the check gained its browser tier; all 156
+of its rows passed.
 File counts from the offline installs are from `mise run check` the same day. Survey figures cite
 the Ecosystem survey's sources, and other facts from outside the spike carry their own source and
 date.
@@ -948,7 +952,8 @@ elements sheets they adopt (below).
   the edit after. Every source is the foundation's elements layer: for the shadow versions a
   button rule inserted at the end of the `foundation.elements` block of the adopted elements
   sheet, the very `CSSStyleSheet` every shadow root holds; for the light ones one rule added to
-  the page's `foundation.elements` layer. All four pass (the same run).
+  the page's `foundation.elements` layer. All four pass (the same run). The probe and the
+  restyle check have since moved out of the demo into the check's browser tier (Results 5).
 - **`mise run preview`** serves the four versions side by side under Vite's dev server, each wired
   to the fixture as a host would wire it (paging, page size, the cursor page, opening an entry),
   so the components can be seen and used in a browser. It sits outside the check and writes
@@ -1089,8 +1094,9 @@ constructed `CSSStyleSheet`, its default export, shared by every importer in a d
   web-features 3.43.0 marks `css-modules` `baseline: false`, from MDN's browser-compat-data 8.1.6
   (`javascript.statements.import.import_attributes.type_css`) ([web-features][reg-web-features],
   read 2026-10-17).
-- Tools: tsc emits the import unchanged, and `mise run build:tsc` copies each `.css` beside its
-  emitted `.js`, so the demo loads the components natively from `file://` in Chromium. Vite
+- Tools: tsc emits the import unchanged and copies no `.css`; with each `.css` copied beside its
+  emitted `.js`, the components load natively, as the demo then loaded them from `file://` in
+  Chromium and measure's unbundled rows now load them over plain http (Results 5). Vite
   8.3.4's dev server strips the attribute and injects the CSS into the document, and `vite build`
   fails on the missing default export; esbuild 0.28.2 refuses it ("Importing with a type
   attribute of "css" is not supported"); Node 26.12.0 refuses the `.css` extension
@@ -1211,6 +1217,176 @@ sheets hold layout alone and mirror the light ones.
 - To spike-html-apps: herald's pagination took `total_pages`, while go-web-sdk's envelope carries
   total and size and omits page and total under a cursor; this pagination is built on the
   envelope, and sends page null for Next on a cursor page.
+
+### 5. Testing tiers: unit under node --test, browser through Playwright on Chromium and Firefox
+
+**The architect's pick** (logged at the review stop, from the drafted rows of the run of
+2026-10-18T18:43:26Z, before this section was written): the check's browser tier runs Playwright,
+playwright-core 1.64.1 as a devDependency, on the system Chromium and on Playwright's Firefox 157.
+Rejected: the default, the raw Chromium debugging pipe on the system Chromium alone, and
+Playwright on Chromium alone. Every measured figure below is from the fresh run of
+2026-10-18T19:20:43Z, cited *(m 2026-10-18T19:20:43Z)*, unless it names another; all 156 of its
+rows passed.
+
+**The unit tier** is `test/`, the router suite and the layer test, under node --test and bun
+test. It holds DOM-free code only, with no DOM shim: happy-dom and jsdom load no CSS module
+script and compute no layout or style, so the components' cases (a control painted as the
+baseline paints a bare one, the entry that doesn't overflow at 22rem, one edit to an adopted
+sheet repainting every button) prove nothing under either. A component module doesn't load
+outside a browser at all: Node 26.12.0 refuses the `.css` extension and Bun 1.4.3 imports it as
+`{}` (Results 4).
+
+**The browser tier** is `scripts/browser.test.js` under node --test, run by the check once per
+engine: the probe's 27 cases in each of the four versions, every version's report matched line
+for line against lit-shadow's, and the restyle check in each version. The test spawns the
+mise-pinned Vite 8.3.4 with `scripts/css-sheets.js` in a scratch directory in TMPDIR (its root,
+config, and dependency cache), reaches the working tree through `/@fs/`, and stops and removes
+it after; vite is not a devDependency, which would break the devDependency rule and duplicate
+the pin. Playwright launches the system Chromium through `executablePath` and Playwright's
+Firefox, which `mise run install` downloads into `~/.cache/spike-html-conventions/playwright`
+(PLAYWRIGHT_BROWSERS_PATH, set once in `mise.toml`'s `[env]`), not Playwright's default
+`~/.cache/ms-playwright` on Linux ([docs][pw-browsers]), which holds other projects' browsers.
+A re-install with Firefox present downloads nothing, so the check reads no network; a missing
+engine fails it with the fix named. Each context is 1280x720, en-US, UTC, and the light color
+scheme. The test lives in `scripts/`, outside `test/`, so `bun test` never runs it. The tier
+takes about 6 s of a check of about 17 s, and a deliberately broken case fails it (the check,
+2026-10-18).
+
+**The comparison** *(m 2026-10-18T19:20:43Z)*. The same cases over Vite through each driver
+and engine, and the probe alone on the unbundled form, tsc's emit of the components with each
+`.css` beside its module, served by `node:http` with Lit through an import map:
+
+| driver, engine | probe, 4 versions × 27 cases | reports match | restyle, 4 versions | unbundled probe |
+| --- | --- | --- | --- | --- |
+| raw pipe, system Chromium 154.0.8037.97 | all hold | none differs | all repaint | not run |
+| Playwright, system Chromium 154.0.8037.97 | all hold | none differs | all repaint | all 27 hold in each of 4 |
+| Playwright, Chromium Headless Shell 156.0.8078.4 | all hold | none differs | all repaint | not run |
+| Playwright, Firefox 157.0 | all hold | none differs | all repaint | all 27 hold in each of 4 |
+| Playwright, WebKit r2370 | excluded | | | |
+
+The restyle rows record each button going from `rgb(230, 228, 217)` to the edit's
+`rgb(1, 2, 3)`, through the adopted `foundation.elements` sheet in the shadow versions and the
+page's layer in the light ones. Both drivers emulate the light color scheme, so their reports
+render the same: the raw pipe otherwise took the system's dark one, and Playwright defaults to
+light.
+
+**Playwright's overhead over the raw pipe** *(the same run)*:
+
+| row | raw pipe | Playwright |
+| --- | --- | --- |
+| footprint, the driver | no package | playwright-core 1.64.1, 13.5 MB in 116 files, no dependencies, alone in its pnpm store directory |
+| downloads, bytes and time | none: the system Chromium | Firefox 157.0: 111 MiB in 5.8 s, 324.5 MB unpacked. Measure only: Chromium Headless Shell 156.0.8078.4, 120 MiB and FFmpeg 2.2 MiB in 6.0 s, 285.1 MB and 5.3 MB unpacked |
+| pins and devDependencies added | none | one devDependency, playwright-core 1.64.1, pinned exactly in `package.json` and the lockfile, with none of its own; its browsers pinned by that release's `browsers.json` (Headless Shell r1248, Firefox r1555, FFmpeg r1013) |
+| harness lines | 131, `scripts/browser-pipe.js` | 63, `scripts/browser-playwright.js` |
+| cold, every case on the system Chromium | 1,385 ms ± 36 | 2,063 ms ± 26, 1.49x |
+| warm, the same | 1,400 ms ± 21 | 2,071 ms ± 37, 1.48x |
+| repeat, 20 runs | 0 failed | 0 failed |
+
+- Download bytes are the sizes Playwright's log reports at 100% for each download; the time is
+  the install's wall time, download and unpack; the unpacked bytes are `du` of each directory
+  the install added. Each install downloads into measure's scratch, never the check's directory.
+- Harness lines are the lines that hold code, not blank and not wholly a comment. Both drivers
+  keep one interface, `launch(settings)`, and share `scripts/browser-cases.js` and
+  `scripts/browser.test.js` (236 and 60 such lines), the pages, the servers, and the test.
+- Cold empties the run's scratch, Vite's dependency cache with it, before each of 5 runs; warm
+  keeps it from a warmup run, over 10 runs. Each driver launches its browser on a fresh profile
+  either way. The repeat runs each driver 20 times in fresh scratch, as a check's run would be.
+- The review stop read 57 Playwright lines and 13.7 MB from the run of 2026-10-18T18:43:26Z,
+  when measure installed playwright-core into its own scratch with npm. Since then the driver
+  checks each engine's executable before it launches (63 lines), and measure reads the
+  repository's own install from pnpm's store (13.5 MB). Neither moves the argument.
+
+**The order.** As in Results 1 and 6: first, industry standard and maintainability; second,
+footprint; third, speed, only on an order-of-magnitude gap.
+
+**First: industry standard and maintainability.** Playwright is the standard browser driver:
+50% use and 94% retention in SoJS 2025 ([s19][sj25-test]), `@playwright/test` at 76.2M npm
+downloads a week ([s55][npm-pw]), the test runner of FAST and Fluent and beside Jest in Ionic,
+and the driver both alternatives below run on. The raw pipe is this repository's own DevTools
+protocol client: 131 lines that nobody else maintains, against Playwright's 63, less than half
+*(m 2026-10-18T19:20:43Z)*.
+And Playwright buys the coverage the raw pipe can't: a second engine, Firefox, through the same
+63 lines. Its maintenance cost is one devDependency for `mise run currency` to track, and a
+Firefox download with each pin it moves to.
+
+**Second: footprint** *(m 2026-10-18T19:20:43Z)*. The raw pipe adds nothing. Playwright adds 13.5 MB
+in `node_modules` and Firefox's 324.5 MB, a 111 MiB download, outside the tree. That is the price of
+the second engine, and it doesn't overturn the first.
+
+**Third: speed** *(the same run)*. Playwright is 1.49 times the raw pipe cold and 1.48 times warm,
+about two seconds against under one and a half for every case on the system Chromium: no
+order-of-magnitude gap. Both drivers ran 20 times without a failure.
+
+**The pick: Playwright on the system Chromium and on Playwright's Firefox**, by the architect.
+The standard driver, less than half the harness code, and a second engine come first; a second
+engine for 13.5 MB plus Firefox's 324.5 MB comes second; 1.5 times slower, with no
+order-of-magnitude gap, comes third. Chromium Headless Shell stays a measure row: it passes
+everything the system Chromium does, so it would add a 120 MiB download and no engine.
+
+**WebKit: excluded.** Playwright's WebKit r2370 (WebKit 27.2 in playwright-core 1.64.1's
+`browsers.json`, rolled 2026-10-02, [microsoft/playwright#43084][pw-43084]) is a build for Ubuntu
+24.04 and doesn't launch on this host: it needs `libicu*.so.74`, `libxml2.so.2`, and
+`libflite*.so.1`, where Arch ships ICU 78, `libxml2.so.16`, and no flite, so all seven of its
+rows failed with that error (80a88fe). The architect excluded it rather than run Playwright's
+v1.64.1 Docker image or install those libraries on the host: "setting up a container image just
+to test WebKit feels like overkill". The Safari gap stands as a sourced fact: no Safari release
+ships CSS module scripts, and WebKit landed them on 2026-10-06, as 322887@main
+([bug 227967][webkit-css-modules]), four days after r2370 rolled. So the check covers no WebKit,
+a failure only Safari shows goes unseen, and a page that loads the components unbundled fails in
+Safari until a release ships the change; apps build through Vite and don't depend on it
+(Results 4).
+
+**Why Vite, not `file://`** (the architect: "so that we aren't limited by the restrictions of
+file-based rendering"). tsc's emit loaded from `file://` needs a file-access flag
+(`--allow-file-access-from-files`), an import map into pnpm's store, a copied `.css` beside each
+module, since tsc copies none, and it hides stylesheet rules. The demo's `--dump-dom` pages paid
+for it with a hidden-iframe load hold and a 60 s timeout. Vite serves the working tree through
+`/@fs/` with the local plugin, with no emit, map, or flag, and is the server apps already build
+on (Results 1). The unbundled form stays in measure, over plain http, as the form a library
+ships.
+
+**The engines round differently.** One report line differs between engines: the input's font
+size is 14.2224px in Chromium and 14.2188px in Firefox (recorded at 9a9f0fd). No row compares
+reports across engines; each engine's four versions match each other.
+
+**The runners not measured**, as sourced facts (registry documents read 2026-10-18):
+
+- `@playwright/test` 1.64.1 (2026-10-14) is Playwright's own test runner, in place of node:test.
+  It depends on `playwright` 1.64.1, which holds the runner (5,033,957 B unpacked) and depends on
+  `playwright-core` 1.64.1 (13,656,167 B): three packages and 18.7 MB unpacked against
+  playwright-core's one and 13.7 MB unpacked, with its own CLI
+  ([registry][reg-pw-test]). The same browsers, from the same `browsers.json`.
+- Web Test Runner, `@web/test-runner` 1.0.0 (2026-07-07), runs tests with mocha
+  (`@web/test-runner-mocha`) and launches Chrome through `@web/test-runner-chrome`, on
+  puppeteer-core 25; other engines take `@web/test-runner-playwright`, on `playwright`
+  ([registry][reg-wtr]). It serves `.ts` only through its esbuild plugin,
+  `@web/dev-server-esbuild` 2.0.0, which depends on esbuild 0.28 ([registry][reg-wds-esbuild]),
+  the tool Results 1 dropped. Lit calls it "specifically designed to test modern web libraries
+  like Lit" ([s23][lit-test]), and it runs in 8 of the 13 surveyed libraries (Ecosystem survey,
+  Test runner), at 0.17M npm downloads a week ([s54][npm-wtr]).
+- Vitest's browser mode, `vitest` 5.0.5 (2026-10-15), drives Playwright through
+  `@vitest/browser-playwright` 5.0.5, which takes `playwright` as a peer and depends on
+  `@vitest/browser` ([registry][reg-vitest-pw]). Vitest declares `vite` (`^6.4.0 || ^7.0.0 ||
+  ^8.0.0`) as a peer ([registry][reg-vitest]), so it needs vite in `node_modules`, which the
+  mise pin keeps out. Spectrum's gen2 runs it.
+
+**What would reverse it.** Toward the raw pipe alone: Firefox never catching what Chromium
+misses over the components' life, or playwright-core taking on dependencies or its downloads
+outgrowing the engine they buy. Toward `@playwright/test`: a browser suite that needs fixtures,
+parallel projects per engine, or traces, which node:test's loop over engines doesn't give, at two
+packages more. Toward WebKit: a Playwright WebKit build that launches on this host and carries
+322887@main, or a Safari release that ships CSS module scripts; either makes WebKit one more
+engine in the check's loop.
+
+**Handed on.**
+
+- To STANDARDS.md (this task): the unit tier is DOM-free code under node --test with no DOM
+  shim; anything touching the DOM is the browser tier, served through Vite with the local CSS
+  plugin, on Playwright with the system Chromium and Playwright's Firefox; playwright-core joins
+  the lint tooling as the only devDependencies, and Playwright's Firefox joins the system Chromium
+  as the browsers outside `mise.toml`.
+- To the intake: the tiers, the driver and its engines, the overhead that argued them, and
+  WebKit's exclusion with the Safari gap (the goal record's pending edit).
 
 ### 6. Lint and format: ESLint + Prettier, provisionally
 
@@ -1499,6 +1675,13 @@ Prettier's, reopens it too.
 [edge-shadow-css]: https://microsoftedge.github.io/MSEdgeExplainers/ShadowDOM/explainer.html
 [wc-2020-10-29]: https://www.w3.org/2020/10/29-components-minutes.html
 [webdev-css-modules]: https://web.dev/css-module-scripts/
+[pw-browsers]: https://playwright.dev/docs/browsers
+[pw-43084]: https://github.com/microsoft/playwright/pull/43084
+[reg-pw-test]: https://registry.npmjs.org/@playwright/test/1.64.1
+[reg-wtr]: https://registry.npmjs.org/@web/test-runner/1.0.0
+[reg-wds-esbuild]: https://registry.npmjs.org/@web/dev-server-esbuild/2.0.0
+[reg-vitest]: https://registry.npmjs.org/vitest/5.0.5
+[reg-vitest-pw]: https://registry.npmjs.org/@vitest/browser-playwright/5.0.5
 
 ## Capabilities
 
@@ -1513,7 +1696,9 @@ Prettier's, reopens it too.
   foundation's baseline sheets before a layout-only sheet of its own, each component's CSS a
   `.css` file imported as a CSS module script, compared in four versions
   (Lit and vanilla, shadow and light DOM), with `mise run preview` to see them side by side.
-- **Testing:** the unit and browser tiers in the check.
+- **Testing:** the unit tier (DOM-free, under node --test and bun test) and the browser tier
+  (Playwright on the system Chromium and Firefox, over Vite, under node --test) in the check,
+  compared in `mise run measure` against the raw Chromium debugging pipe.
 - **Consumption:** installing and loading tagged releases, from git and jsDelivr.
 - **Branches:** the static and application layouts and the application SDK spec.
 

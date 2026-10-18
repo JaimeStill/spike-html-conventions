@@ -13,10 +13,10 @@
 // before the first request, and no page reloads mid-run.
 //
 // The unbundled server (serveUnbundled) is the form a page loads with no tool between: tsc's emit
-// of the components layer and the demo's modules (tsconfig.demo.json, as mise run build:tsc emits
-// it) into scratch, with each .css in layers/ copied beside its module, served by node:http with
-// each .css as text/css, so each component's import of it is a native CSS module script, and
-// Lit mapped by the page's import map onto the installed packages, which the server serves too.
+// of the components layer and the demo's modules (tsconfig.demo.json) into scratch, with each
+// .css in layers/ copied beside its module, served by node:http with each .css as text/css, so
+// each component's import of it is a native CSS module script, and Lit mapped by the page's
+// import map onto the installed packages, which the server serves too.
 // Only the probe runs there: the restyle check's module imports the foundation's sheets itself,
 // so in a browser without CSS module scripts it never loads at all.
 //

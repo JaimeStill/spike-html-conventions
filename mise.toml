@@ -78,7 +78,7 @@ run = [
 dir = "{{config_root}}"
 
 [tasks."build:tsc"]
-description = "Emit the .ts and JSDoc forms as unbundled ESM with declarations, and the components layer and the demo's modules, with every .css in layers/ copied to its path beside them (the components' stylesheets and the foundation's baseline), to dist/tsc"
+description = "Emit the pagination element's .ts and JSDoc forms as unbundled ESM with declarations, to dist/tsc"
 run = "scripts/build.sh tsc"
 dir = "{{config_root}}"
 
@@ -93,7 +93,7 @@ run = "scripts/build.sh bun"
 dir = "{{config_root}}"
 
 [tasks.build]
-description = "Every build: tsc emit (the pagination element's forms, the components layer, and the demo's modules), and the pagination element bundled by esbuild and by bun build"
+description = "Every build of the pagination element: tsc emit of its typed forms, and its bundles by esbuild and by bun build"
 depends = ["build:tsc", "build:esbuild", "build:bun"]
 
 [tasks.demo]
