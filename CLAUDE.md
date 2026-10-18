@@ -12,9 +12,9 @@ The repository is managed with the marathon workflow; start from `context/README
   `tsc --noEmit`; the tests in `test/`, the router suite and the layer test, under `node --test`
   and `bun test`; and the three consumer fixtures (pnpm, npm, and bun) installed offline, failing
   unless the npm that runs is the version `mise.toml` pins. Run `mise run install` once first.
-- **Tasks:** `mise run install`, `build`, `demo`, `measure` (the evidence's dated figures,
-  including the four-way lint and format comparison; reads the network), and `currency`. Each
-  task's description in `mise.toml` says what it does.
+- **Tasks:** `mise run install`, `build`, `demo`, `preview`, `measure` (the evidence's dated
+  figures, including the four-way lint and format comparison; reads the network), and
+  `currency`. Each task's description in `mise.toml` says what it does.
 - **Goals:** this spike's tasks live in the coordinator's roadmap,
   `standards-lab/context/roadmap.toml`, under `experiment.html.spike-html-conventions`. Its goal
   record is `context/goals/experiment.html.spike-html-conventions.md`.

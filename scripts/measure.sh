@@ -141,6 +141,22 @@
 #                   spike-html-design v0.7.0 from jsDelivr, Lit through an import map to jsDelivr,
 #                   and the JS forms of the element; each page reports the design's registry and
 #                   a token, and the element defined and rendering page 3 of 7.
+#   components      what each version of the components layer serves, for two pages per version
+#                   (the pagination alone, and the composition with the fixture's entries), from
+#                   a scratch copy of the project: under Vite's dev server, every response
+#                   headless Chromium's NetLog records, passing when a Lit version's bytes hold
+#                   Lit's dev-mode warning (its development build) and a vanilla version's hold
+#                   no Lit, and each stylesheet arrives as scripts/css-sheets.js's sheet module,
+#                   none injected into the document; and from vite build, every emitted file raw
+#                   and brotli, Lit in a chunk of its own and the foundation's adopted sheets in
+#                   another, counted with the linked baseline, passing when the build succeeds, no
+#                   file holds the dev-mode warning, Lit is all in its chunk or, for vanilla,
+#                   nowhere, and a shadow version's page has the foundation's chunk, reset and
+#                   elements in it as well as linked, and a light version's none, and no file
+#                   outside Lit's chunk holds a comment: every sheet, adopted or linked, minified.
+#                   The section prints its figures under its own heading, the element sources'
+#                   lines and brotli bytes beside them as context, and reads no network.
+#                   See "Components" below.
 #   lint and format per setup: footprint, each tool's installed size, B's devDependencies and D's
 #                   scratch packages included, passing when every tool and package is at its pin;
 #                   time, the timings' means, passing when the lint, the format check, and both pass
@@ -158,10 +174,12 @@
 #                   strips from any file it formats, so the files that change are the files it
 #                   touched: the default scope recorded, JSON counted, and the row passing when the
 #                   scope its configuration limits it to (Biome's files.includes, a .prettierignore
-#                   that Prettier and oxfmt both read, the files globs of D's config) is the code
-#                   and JSON files exactly; rewrites, the same unpadded, recording each file the
-#                   default run rewrites and its changed lines, every Markdown file named, passing
-#                   when no code file changes and the padded default run reached every code file;
+#                   that Prettier and oxfmt both read, the files globs of D's config) is the
+#                   check's own, the code, JSON, and CSS files, exactly, less the CSS recorded
+#                   below for D, whose formatter formats no CSS; rewrites, the same unpadded,
+#                   recording each file the default run rewrites and its changed lines, every
+#                   Markdown file named, passing when no code file changes and the padded default
+#                   run reached every code file;
 #                   direction, the layer rules over test/layers-tree.js's trees, which hold the
 #                   files their imports name, passing when the flagged files are the violation files
 #                   less the edges the rule can't express or the misses recorded below, and the
@@ -1576,6 +1594,337 @@ if ((!own_released)); then
   unreleased "file:// page: spike-html-design $design_tag, Lit $lit, and each JS form of the element from jsDelivr at $own_tag"
 fi
 
+# ---- Components: what each version of the components layer serves, under Vite's dev server and
+# from vite build, for two pages per version (scripts/components.js pages): the pagination element
+# alone, and the composition, the pagination holding one entry per item of the fixture's
+# directories page. Both run on a scratch copy of the project, layers/ and demo/, with Lit's
+# packages copied into its own node_modules (pnpm list's closure of the dependencies), so Vite's
+# cache, node_modules/.vite by default, is scratch too. Every page links the foundation's baseline,
+# its page entry (layers/foundation/baseline.css, the port of spike-html-design v0.7.0), from the
+# copy, and the baseline share counts the port's CSS. The section reads no network: Chromium's host
+# resolver maps every name but the dev server's address to nothing. Both list scripts/css-sheets.js,
+# which gives each component's CSS module script (`with { type: "css" }`) the module a browser
+# gives it, one constructed sheet as its default export, where Vite would inject the CSS into the
+# document in dev and fail the build on the missing export.
+#
+# Development: one dev server over the copy, each page loaded once to let Vite pre-bundle Lit, then
+# again in headless Chromium with a fresh profile and its NetLog capturing every byte; a page's
+# figures are the bodies of every 2xx response from the dev server the browser read, as Vite sends
+# them, uncompressed (scripts/components.js responses). The dev server resolves Lit's development
+# builds, its development export condition, which the rows check for in the very bytes the browser
+# read: Lit's dev-mode warning.
+#
+# Production: one vite build per page, minified as Vite builds by default, into scratch, every
+# emitted file raw and brotli; Lit's share is the chunk the config's codeSplitting group puts every
+# lit, lit-html, lit-element, and @lit/* module in, under lit/, and the baseline's is the CSS Vite
+# emits for the linked entry and, for a shadow version, the chunk a second group puts the port's
+# sheet modules in, under foundation/, as Lit has its own: the reset and elements sheets the
+# version adopts through layers/foundation/baseline.ts, which a light version never imports. A
+# shadow page so loads those two layers twice, linked in the entry's CSS and adopted from the
+# chunk, and its rows record both files. scripts/css-sheets.js builds each sheet in a build from
+# Vite's ?inline import of the file, minified as the linked CSS is, so the group takes those
+# modules too.
+echo "measure: components" >&2
+components="$scratch/components"
+project="$components/project"
+mkdir -p "$project/node_modules"
+cp -r "$root/layers" "$root/demo" "$root/package.json" "$root/tsconfig.json" "$project/"
+while IFS= read -r dir; do
+  if [[ "$dir" == "$root" ]]; then continue; fi
+  name=${dir##*/node_modules/}
+  mkdir -p "$project/node_modules/$(dirname "$name")"
+  cp -rL "$dir" "$project/node_modules/$name"
+done < <(cd "$root" && pnpm list --prod --parseable --depth Infinity)
+mapfile -t component_pages < <(node "$root/scripts/components.js" pages "$project")
+((${#component_pages[@]} == 8)) || fail "components.js wrote ${#component_pages[@]} pages, not 8"
+# component_page PAGE: the version, its entry tag, and whether it is a composition,
+# from the page's name, as components.js names it: pagination-<version> or composition-<version>.
+component_page() {
+  page_version=${1#*-}
+  page_kind=${1%%-*}
+  page_entry=sl-entry-$page_version
+}
+
+# The dev server, on a free port of the loopback address.
+port=$(node -e '
+  const server = require("node:net").createServer();
+  server.listen(0, "127.0.0.1", () => { console.log(server.address().port); server.close(); });')
+origin="http://127.0.0.1:$port"
+cat >"$components/dev.config.mjs" <<EOF
+import { cssSheets } from "$root/scripts/css-sheets.js";
+export default {
+  root: "$project",
+  plugins: [cssSheets()],
+  publicDir: false,
+  logLevel: "warn",
+  clearScreen: false,
+  server: { host: "127.0.0.1", port: $port, strictPort: true },
+};
+EOF
+vite --configLoader native --config "$components/dev.config.mjs" >"$components/dev.log" 2>&1 &
+dev_server=$!
+watchers+=("$dev_server")
+for ((i = 0; i < 300; i++)); do
+  curl -fs -o /dev/null "$origin/${component_pages[0]}.html" && break
+  sleep 0.1
+done
+curl -fs -o /dev/null "$origin/${component_pages[0]}.html" ||
+  fail "Vite's dev server didn't answer at $origin: $(tail -n3 "$components/dev.log")"
+# component_chromium PROFILE ARGS...: headless Chromium with a profile of its own and no name
+# resolved but the dev server's address, so its background requests never leave the machine.
+component_chromium() {
+  local profile=$1
+  shift
+  chromium --headless --user-data-dir="$profile" --no-first-run --disable-background-networking \
+    --disable-component-update --host-resolver-rules="MAP * ~NOTFOUND, EXCLUDE 127.0.0.1" \
+    "$@" 2>/dev/null
+}
+for page in "${component_pages[@]}"; do
+  component_chromium "$components/warm-profile" --dump-dom "$origin/$page.html" >/dev/null
+done
+for page in "${component_pages[@]}"; do
+  component_chromium "$components/profile-$page" --log-net-log="$components/$page.netlog.json" \
+    --net-log-capture-mode=Everything --dump-dom "$origin/$page.html" >"$components/$page.dom.html"
+  node "$root/scripts/components.js" responses "$components/$page.netlog.json" "$origin" \
+    >"$components/$page.responses.tsv"
+done
+kill "$dev_server" 2>/dev/null || true
+
+# share_sum TSV SHARE COLUMN: the sum of COLUMN over TSV's lines of SHARE, or every line's with all.
+share_sum() {
+  awk -F'\t' -v share="$2" -v col="$3" 'share == "all" || $1 == share { s += $col } END { print s + 0 }' "$1"
+}
+# marked TSV COLUMN: the paths of TSV's lines whose COLUMN is 1, on one line.
+marked() {
+  awk -F'\t' -v col="$2" '$col == 1 { printf "%s%s", sep, $NF; sep = " " }' "$1"
+}
+
+echo "## Components"
+echo
+echo "What each version of the components layer serves, for two pages per version: the pagination element alone (pagination-*), and the composition, the pagination holding the fixture's three directories (composition-*). Every page links the foundation's baseline, the port of spike-html-design $design_tag, its own share, so the element and runtime figures compare across versions."
+echo
+echo "### Development (Vite dev server)"
+echo
+echo "Every 2xx response from Vite's dev server headless Chromium read for the page, from its NetLog (--net-log-capture-mode=Everything), with a fresh profile after a warm-up load that let Vite pre-bundle Lit; bytes as the dev server sends them, uncompressed. Vite's client is the HMR client the dev server injects into every page."
+echo
+echo "| page | responses | total | Lit | baseline | Vite client | page and elements |"
+echo "| --- | ---: | ---: | ---: | ---: | ---: | ---: |"
+for page in "${component_pages[@]}"; do
+  tsv="$components/$page.responses.tsv"
+  printf '| %s | %s | %s B | %s B | %s B | %s B | %s B |\n' "$page" "$(wc -l <"$tsv")" \
+    "$(share_sum "$tsv" all 2)" "$(share_sum "$tsv" lit 2)" "$(share_sum "$tsv" baseline 2)" \
+    "$(share_sum "$tsv" client 2)" "$(share_sum "$tsv" page 2)"
+done
+echo
+for page in "${component_pages[@]}"; do
+  component_page "$page"
+  tsv="$components/$page.responses.tsv"
+  # The baseline's page entry, which every page links, and the version's own modules.
+  component_modules=(/layers/foundation/baseline.css "/layers/components/pagination-$page_version.ts")
+  # Each stylesheet the version imports, as the virtual sheet module scripts/css-sheets.js serves.
+  # A shadow version adopts the foundation's baseline sheets too, through its baseline module,
+  # beside the page entry it links: the reset and elements layers load twice, linked and adopted.
+  sheet="/@id/__x00__css-sheet:$project/layers/components"
+  foundation_sheet="/@id/__x00__css-sheet:$project/layers/foundation/baseline"
+  if [[ "$page_version" == *-shadow ]]; then
+    component_modules+=(/layers/foundation/baseline.ts "$foundation_sheet/reset.css.js"
+      "$foundation_sheet/elements.css.js" "$sheet/pagination-shadow.css.js")
+  else
+    component_modules+=("$sheet/pagination-$page_version.css.js")
+  fi
+  if [[ "$page_kind" == composition ]]; then
+    component_modules+=("/layers/components/entry-$page_version.ts" /demo/documents.ts)
+    if [[ "$page_version" == *-shadow ]]; then
+      component_modules+=("$sheet/entry-shadow.css.js")
+    else
+      component_modules+=("$sheet/entry-$page_version.css.js")
+    fi
+  fi
+  missing=()
+  for path in "${component_modules[@]}"; do
+    awk -F'\t' -v path="$path" '$NF == path { found = 1 } END { exit !found }' "$tsv" || missing+=("$path")
+  done
+  fact="$(wc -l <"$tsv") responses, $(share_sum "$tsv" all 2) B: Lit $(share_sum "$tsv" lit 2) B, baseline $(share_sum "$tsv" baseline 2) B, Vite client $(share_sum "$tsv" client 2) B, page and elements $(share_sum "$tsv" page 2) B"
+  if [[ "$page_version" == *-shadow ]]; then
+    fact+="; reset and elements load twice: linked in /layers/foundation/baseline.css and adopted as the sheet modules of layers/foundation/baseline/reset.css and elements.css"
+  fi
+  ok=1
+  if ((${#missing[@]} > 0)); then
+    ok=0
+    fact+="; never fetched: ${missing[*]}"
+  fi
+  # Vite's own CSS handling would inject a stylesheet it took into a <style> in the document.
+  injected=$({ grep -o '<style[^>]*data-vite-dev-id' "$components/$page.dom.html" || true; } | wc -l)
+  fact+="; the dumped DOM holds $injected style Vite injected"
+  if ((injected != 0)); then ok=0; fi
+  # The composition's script appends the pagination with its entries, which the dumped DOM holds.
+  if [[ "$page_kind" == composition ]]; then
+    entries=$(grep -o "<${page_entry}[ >]" "$components/$page.dom.html" | wc -l)
+    fact+="; the dumped DOM holds $entries $page_entry"
+    if ((entries != 3)); then ok=0; fi
+  fi
+  dev=$(marked "$tsv" 3) any=$(marked "$tsv" 4)
+  if [[ "$page_version" == lit-* ]]; then
+    name="Components, development: $page loads Lit's development build"
+    if [[ -n "$dev" ]]; then fact+="; Lit's dev-mode warning in $dev"; else
+      ok=0
+      fact+="; no response holds Lit's dev-mode warning${any:+, though Lit is in $any}"
+    fi
+  else
+    name="Components, development: $page loads no Lit"
+    if [[ -n "$any" || "$(share_sum "$tsv" lit 2)" != 0 ]]; then
+      ok=0
+      fact+="; Lit in ${any:-the pre-bundled dependencies}"
+    else
+      fact+="; no response holds Lit"
+    fi
+  fi
+  row "$name" "$ok" "$fact"
+done
+
+echo "### Production (vite build)"
+echo
+echo "One vite build per page, as Vite builds by default (minified, Lit's production build), every emitted file raw and brotli (quality 11, node's node:zlib). Lit's share is the chunk a codeSplitting group puts every lit, lit-html, lit-element, and @lit/* module in; the baseline's is the CSS Vite emits for the linked entry, the foundation's baseline, and, on a shadow version's page, the chunk a second group puts the foundation's sheet modules in: the reset and elements sheets its shadow roots adopt, which it so loads twice, linked and adopted. In a build, scripts/css-sheets.js takes each sheet's text from Vite's own ?inline import of the file, so the adopted sheets, and every component's, are minified as the linked CSS is; each row requires that no file outside Lit's chunk holds a comment."
+echo
+echo "| page | files | total | total, brotli | Lit | Lit, brotli | baseline | baseline, brotli | page and elements | page and elements, brotli |"
+echo "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |"
+for page in "${component_pages[@]}"; do
+  cat >"$components/build-$page.config.mjs" <<EOF
+import { cssSheets } from "$root/scripts/css-sheets.js";
+export default {
+  root: "$project",
+  plugins: [cssSheets()],
+  publicDir: false,
+  logLevel: "warn",
+  build: {
+    outDir: "$components/build/$page",
+    emptyOutDir: true,
+    reportCompressedSize: false,
+    rolldownOptions: {
+      input: "$project/$page.html",
+      output: {
+        codeSplitting: {
+          groups: [
+            { name: "lit", test: /[\\\\/]node_modules[\\\\/](lit|lit-html|lit-element|@lit)[\\\\/]/ },
+            { name: "foundation", test: /[\\\\/]layers[\\\\/]foundation[\\\\/].*\\.css(\\.js|\\?inline)\$/ },
+          ],
+        },
+        chunkFileNames: (chunk) =>
+          chunk.name === "lit" || chunk.name === "foundation"
+            ? chunk.name + "/[name]-[hash].js"
+            : "assets/[name]-[hash].js",
+      },
+    },
+  },
+};
+EOF
+  status=0
+  vite build --configLoader native --config "$components/build-$page.config.mjs" \
+    >"$components/build-$page.log" 2>&1 || status=$?
+  tsv="$components/$page.emitted.tsv"
+  if ((status == 0)); then
+    node "$root/scripts/components.js" emitted "$components/build/$page" >"$tsv"
+  else
+    : >"$tsv"
+  fi
+  printf '| %s | %s | %s B | %s B | %s B | %s B | %s B | %s B | %s B | %s B |\n' "$page" "$(wc -l <"$tsv")" \
+    "$(share_sum "$tsv" all 2)" "$(share_sum "$tsv" all 3)" "$(share_sum "$tsv" lit 2)" \
+    "$(share_sum "$tsv" lit 3)" "$(share_sum "$tsv" baseline 2)" "$(share_sum "$tsv" baseline 3)" \
+    "$(share_sum "$tsv" page 2)" "$(share_sum "$tsv" page 3)"
+
+  component_page "$page"
+  fact="exit $status"
+  ok=1
+  if ((status != 0)); then
+    ok=0
+    fact+=": $(tail -n3 "$components/build-$page.log")"
+  else
+    fact+="; $(wc -l <"$tsv") files: $(awk -F'\t' '{ printf "%s%s", sep, $NF; sep = " " }' "$tsv"); $(share_sum "$tsv" all 2) B, $(share_sum "$tsv" all 3) B brotli"
+  fi
+  dev=$(marked "$tsv" 4) any=$(marked "$tsv" 5)
+  lit_files=$(awk -F'\t' '$1 == "lit" { printf "%s%s", sep, $NF; sep = " " }' "$tsv")
+  # Lit wholly in its chunk: no other file holds Lit's version registries.
+  outside=$(awk -F'\t' '$1 != "lit" && $5 == 1 { printf "%s%s", sep, $NF; sep = " " }' "$tsv")
+  if [[ -n "$dev" ]]; then
+    ok=0
+    fact+="; Lit's dev-mode warning in $dev"
+  else
+    fact+="; no file holds Lit's dev-mode warning"
+  fi
+  # Every sheet minified: scripts/css-sheets.js builds each sheet module, the foundation's and the
+  # components', from Vite's ?inline import, which strips the sources' comments, so no emitted
+  # file outside Lit's chunk, the sheet modules' chunks and the linked CSS among them, holds `/*`.
+  commented=$(cd "$components/build/$page" && awk -F'\t' '$1 != "lit" && $NF !~ /\.html$/ { print $NF }' "$tsv" |
+    while IFS= read -r file; do if grep -qF '/*' "$file"; then printf '%s ' "$file"; fi; done)
+  if [[ -n "$commented" ]]; then
+    ok=0
+    fact+="; a CSS comment survives in ${commented% }"
+  else
+    fact+="; no file outside Lit's chunk holds a comment, every sheet minified"
+  fi
+  # The baseline's files: the entry's CSS, and a shadow version's chunk of the foundation's sheet
+  # modules, which must hold both adopted layers; a light version adopts none, so has no chunk.
+  baseline_css=$(awk -F'\t' '$1 == "baseline" && $NF ~ /\.css$/ { printf "%s%s", sep, $NF; sep = " " }' "$tsv")
+  foundation_files=$(awk -F'\t' '$NF ~ /^foundation\// { printf "%s%s", sep, $NF; sep = " " }' "$tsv")
+  if [[ "$page_version" == *-shadow ]]; then
+    adopted=0
+    if [[ -n "$foundation_files" ]]; then
+      read -ra chunk <<<"$foundation_files"
+      layers=$(cd "$components/build/$page" && cat "${chunk[@]}" | grep -oE '@layer foundation\.(reset|elements) ?\{' | tr -d ' {' | sort -u | wc -l)
+      if ((layers == 2)); then adopted=1; fi
+    fi
+    if [[ -n "$baseline_css" ]] && ((adopted == 1)); then
+      fact+="; reset and elements load twice: linked in $baseline_css and adopted from $foundation_files"
+    else
+      ok=0
+      fact+="; the baseline's CSS: ${baseline_css:-none}; the foundation's chunk, which must hold reset and elements: ${foundation_files:-none}"
+    fi
+  elif [[ -n "$foundation_files" || -z "$baseline_css" ]]; then
+    ok=0
+    fact+="; the baseline's CSS: ${baseline_css:-none}; a foundation chunk a light version shouldn't have: ${foundation_files:-none}"
+  else
+    fact+="; the baseline linked in $baseline_css, no sheet adopted"
+  fi
+  if [[ "$page_version" == lit-* ]]; then
+    name="Components, production: $page builds, with Lit's production build in a chunk of its own"
+    if [[ -n "$lit_files" && -z "$outside" ]]; then
+      fact+="; Lit $(share_sum "$tsv" lit 2) B, $(share_sum "$tsv" lit 3) B brotli, all in $lit_files"
+    else
+      ok=0
+      fact+="; Lit's chunk: ${lit_files:-none}; Lit outside it: ${outside:-none}"
+    fi
+  else
+    name="Components, production: $page builds, with no Lit"
+    if [[ -n "$any" || -n "$lit_files" ]]; then
+      ok=0
+      fact+="; Lit in ${any:-$lit_files}"
+    else
+      fact+="; no file holds Lit"
+    fi
+  fi
+  row "$name" "$ok" "$fact"
+done
+echo
+echo "### Context: the element sources"
+echo
+echo "Each version's source as written, for context: lines (\`wc -l\`) and brotli bytes (quality 11, node's node:zlib): its module, and its stylesheet, a CSS module script. The Lit and vanilla shadow versions share one stylesheet per element (pagination-shadow.css, entry-shadow.css), their layout alone; their controls' look is the foundation's baseline, which they adopt (layers/foundation/baseline.ts)."
+echo
+echo "| file | lines | brotli |"
+echo "| --- | ---: | ---: |"
+component_sources=()
+for version in lit-shadow vanilla-shadow lit-light vanilla-light; do
+  component_sources+=("layers/components/pagination-$version.ts" "layers/components/entry-$version.ts")
+  if [[ "$version" == *-light ]]; then
+    component_sources+=("layers/components/pagination-$version.css" "layers/components/entry-$version.css")
+  fi
+done
+component_sources+=(layers/components/pagination-shadow.css layers/components/entry-shadow.css)
+component_sources+=(layers/foundation/baseline.ts)
+while IFS=$'\t' read -r path bytes; do
+  printf '| %s | %s | %s B |\n' "$path" "$(wc -l <"$root/$path")" "$bytes"
+done < <(cd "$root" && node scripts/components.js brotli "${component_sources[@]}")
+echo
+
 echo "measure: lint and format rows" >&2
 # pin TOOL: TOOL's version in mise.toml.
 pin() { sed -nE "s/^\"?$1\"? = \"([^\"]+)\"$/\1/p" "$root/mise.toml"; }
@@ -1660,6 +2009,11 @@ copy_json() {
   mkdir -p "$1"
   (cd "$root" && printf '%s\0' "${json_files[@]}" | xargs -0 cp --parents -t "$1")
 }
+# strip_css DIR: DIR's copy of src/, layers/, and test/ without the components' stylesheets. The
+# comparison's code is the .js and .ts files, as code_files counts them, so the stylesheets are no
+# setup's code here, though the check's Prettier formats them too (.prettierignore); the scope rows
+# below, over every tracked file, show what each formatter does with them.
+strip_css() { find "$1" -name '*.css' -delete; }
 # pad DIR: three trailing newlines on every file in DIR, which a formatter strips from any file it
 # formats, so a file it skips differs from the original and fails the row.
 pad() {
@@ -1678,8 +2032,8 @@ pad() {
 declare -A changed_json=([C]="package.json")
 declare -A unrestored=(
   [C json]="package.json"
-  [D code]="layers/apps/application/documents/main.ts layers/apps/application/documents/views/list.ts layers/apps/application/prompts/main.ts layers/apps/static/site/main.ts layers/components/status-badge.ts layers/foundation/dom.ts layers/sdk/session.ts src/js/pagination-lit.js src/js/pagination-vanilla.js src/js/router.js src/jsdoc/pagination-lit.js src/jsdoc/pagination-vanilla.js src/jsdoc/router.js src/ts/pagination-lit.ts src/ts/pagination-vanilla.ts src/ts/router.ts test/layers-tree.js test/layers.test.js test/router.test.js"
-  [D json]=".claude/settings.json fixtures/consumer-bun/tsconfig.json fixtures/consumer-npm/tsconfig.json fixtures/consumer-pnpm/tsconfig.json package.json scripts/biome-layers.json tsconfig.build.json tsconfig.json"
+  [D code]="layers/apps/application/documents/main.ts layers/apps/application/documents/views/list.ts layers/apps/application/prompts/main.ts layers/apps/static/site/main.ts layers/components/entry-lit-light.ts layers/components/entry-lit-shadow.ts layers/components/entry-vanilla-light.ts layers/components/entry-vanilla-shadow.ts layers/components/pagination-lit-light.ts layers/components/pagination-lit-shadow.ts layers/components/pagination-vanilla-light.ts layers/components/pagination-vanilla-shadow.ts layers/components/status-badge.ts layers/foundation/dom.ts layers/sdk/session.ts src/js/pagination-lit.js src/js/pagination-vanilla.js src/js/router.js src/jsdoc/pagination-lit.js src/jsdoc/pagination-vanilla.js src/jsdoc/router.js src/ts/pagination-lit.ts src/ts/pagination-vanilla.ts src/ts/router.ts test/layers-tree.js test/layers.test.js test/router.test.js"
+  [D json]=".claude/settings.json fixtures/consumer-bun/tsconfig.json fixtures/consumer-npm/tsconfig.json fixtures/consumer-pnpm/tsconfig.json package.json scripts/biome-layers.json tsconfig.build.json tsconfig.demo.json tsconfig.json"
 )
 
 for setup in "${setups[@]}"; do
@@ -1747,6 +2101,7 @@ for setup in "${setups[@]}"; do
     dir="$lint/format-$setup-$variant"
     mkdir -p "$dir"
     cp -r "$root/src" "$root/layers" "$root/test" "$dir/"
+    strip_css "$dir"
     pad "$dir"
     status=0
     format_with "$setup" "$dir" "$variant" src layers test >"$dir.log" 2>&1 || status=$?
@@ -1797,6 +2152,7 @@ for setup in "${setups[@]}"; do
     if [[ "$kind" == code ]]; then
       mkdir -p "$dir"
       cp -r "$root/src" "$root/layers" "$root/test" "$dir/"
+      strip_css "$dir"
       paths=(src layers test)
       what="the $code_files code files" kind_label=code
     else
@@ -1859,25 +2215,28 @@ padded="$lint/scope-padded"
 copy_repo "$padded"
 for path in "${tracked[@]}"; do printf '\n\n\n' >>"$padded/$path"; done
 mapfile -t code < <(printf '%s\n' "${tracked[@]}" | grep -E '\.(js|ts)$')
-# The scope a setup formats: the code and the JSON.
-mapfile -t scoped < <(printf '%s\n' "${tracked[@]}" | grep -E '\.(js|ts|json)$')
-# Biome's limit: biome.json with files.includes naming the code and JSON files.
+# The scope a setup formats: the check's, the code, the JSON, and the components' stylesheets.
+mapfile -t scoped < <(printf '%s\n' "${tracked[@]}" | grep -E '\.(js|ts|json|css)$')
+# The files of that scope a formatter can't reach, a fact recorded here once a run showed it, as an
+# extension: ESLint Stylistic's rules are JavaScript's, so D formats no CSS.
+declare -A unreached=([stylistic]=css)
+# Biome's limit: biome.json with files.includes naming the code, JSON, and CSS files.
 mkdir -p "$lint/biome-code"
 node -e '
   const fs = require("node:fs");
   const config = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
-  config.files = { includes: ["**/*.js", "**/*.ts", "**/*.json"] };
+  config.files = { includes: ["**/*.js", "**/*.ts", "**/*.json", "**/*.css"] };
   fs.writeFileSync(process.argv[2], JSON.stringify(config, null, 2));
 ' "$root/biome.json" "$lint/biome-code/biome.json"
 declare -A limit_how=(
-  [biome]='files.includes ["**/*.js", "**/*.ts", "**/*.json"] in biome.json'
-  [prettier]="the repository's .prettierignore: *, !*/, !*.js, !*.ts, !*.json"
+  [biome]='files.includes ["**/*.js", "**/*.ts", "**/*.json", "**/*.css"] in biome.json'
+  [prettier]="the repository's .prettierignore: *, !*/, !*.js, !*.ts, !*.json, !*.css"
   [oxfmt]="the same .prettierignore, which oxfmt reads too"
   [stylistic]="its config's own files globs, the code and **/*.json, the same run as its default"
 )
 # format_repo FORMATTER DIR MODE: FORMATTER's default run over DIR, with the matched options, the
 # copied .prettierignore moved out of DIR for the run, since Prettier and oxfmt both read it; with
-# limited, as its configuration limits it to the code and JSON, Prettier and oxfmt by the
+# limited, as its configuration limits it to the scope above, Prettier and oxfmt by the
 # repository's .prettierignore, copied with the tracked files. ESLint, D's formatter, runs its
 # config over the files the config names in both modes.
 format_repo() {
@@ -1909,16 +2268,24 @@ for setup in "${setups[@]}"; do
   mapfile -t limited_files <<<"${scope_files[limited]}"
   default_json=$(grep -c '\.json$' <<<"${scope_files[default]}" || true)
   limited_json=$(grep -c '\.json$' <<<"${scope_files[limited]}" || true)
+  # The scope less the extension the formatter can't reach, if one is recorded.
+  expected=$(printf '%s\n' "${scoped[@]}")
+  if [[ -n "${unreached[$formatter]:-}" ]]; then
+    expected=$(grep -v -E "\\.${unreached[$formatter]}\$" <<<"$expected" || true)
+  fi
   ok=0
-  if ((scope_exit[limited] == 0)) && [[ "${scope_files[limited]}" == "$(printf '%s\n' "${scoped[@]}")" ]]; then ok=1; fi
+  if ((scope_exit[limited] == 0)) && [[ "${scope_files[limited]}" == "$expected" ]]; then ok=1; fi
   fact="the repository's ${#tracked[@]} tracked files: $(extensions "${tracked[@]}");
     by default $label touches $(extensions "${default_files[@]}") (exit ${scope_exit[default]}), JSON $default_json of ${#json_files[@]};
     limited by ${limit_how[$formatter]}, $(extensions "${limited_files[@]}") (exit ${scope_exit[limited]}), JSON $limited_json of ${#json_files[@]}"
-  if ((ok == 0)); then
-    fact+="; touched beside the code and JSON: $(LC_ALL=C comm -23 <(LC_ALL=C sort <<<"${scope_files[limited]}") <(printf '%s\n' "${scoped[@]}" | LC_ALL=C sort) | paste -s -d ' ' -);
-      code or JSON untouched: $(LC_ALL=C comm -13 <(LC_ALL=C sort <<<"${scope_files[limited]}") <(printf '%s\n' "${scoped[@]}" | LC_ALL=C sort) | paste -s -d ' ' -)"
+  if [[ -n "${unreached[$formatter]:-}" ]]; then
+    fact+="; recorded: it formats no ${unreached[$formatter]}"
   fi
-  row "$prefix: $label, its configuration limiting it to the code and JSON files" "$ok" "$fact"
+  if ((ok == 0)); then
+    fact+="; touched beside the scope: $(LC_ALL=C comm -23 <(LC_ALL=C sort <<<"${scope_files[limited]}") <(LC_ALL=C sort <<<"$expected") | paste -s -d ' ' -);
+      in the scope, untouched: $(LC_ALL=C comm -13 <(LC_ALL=C sort <<<"${scope_files[limited]}") <(LC_ALL=C sort <<<"$expected") | paste -s -d ' ' -)"
+  fi
+  row "$prefix: $label, its configuration limiting it to the code, JSON, and CSS files" "$ok" "$fact"
 
   # Rewrites: the default run over an unpadded copy, each file it changes with its lines removed
   # and added, every Markdown file named.
@@ -2084,8 +2451,8 @@ done
 declare -A surface_binaries=([A]="biome" [B]="eslint prettier node" [C]="oxlint oxfmt node" [D]="eslint node")
 declare -A surface_configs=(
   [A]="biome.json, the linter's and the formatter's options and the layer rules in one"
-  [B]="eslint.config.js, the lint rules and the layer table; .prettierrc.json, the formatter's options; .prettierignore, to limit Prettier to the code and JSON; pnpm-workspace.yaml, the pnpm settings the devDependencies' install needs (allowBuilds)"
-  [C]=".oxlintrc.json, the lint rules and the layer rules; .oxfmtrc.json, the formatter's options; .prettierignore, which oxfmt reads too, to limit it to the code and JSON"
+  [B]="eslint.config.js, the lint rules and the layer table; .prettierrc.json, the formatter's options; .prettierignore, to limit Prettier to the code, JSON, and CSS; pnpm-workspace.yaml, the pnpm settings the devDependencies' install needs (allowBuilds)"
+  [C]=".oxlintrc.json, the lint rules and the layer rules; .oxfmtrc.json, the formatter's options; .prettierignore, which oxfmt reads too, to limit it to the code, JSON, and CSS"
   [D]="eslint.config.js, the lint rules, the layer table, and Stylistic's and jsonc's formatting rules in one"
 )
 for setup in "${setups[@]}"; do

@@ -5,7 +5,7 @@ bun = "1.4.3"
 node = "26.12.0"
 # npm 12, its own pin: node 26.12.0 bundles npm 11.20.0, from before npm 12 refused git dependencies by default.
 npm = "12.2.1"
-pnpm = "12.11.2"
+pnpm = "12.14.0"
 shellcheck = "0.11.0"
 "github:microsoft/typescript-go" = { version = "7.0.2", version_prefix = "typescript/v", bin_path = "package/lib" }
 "npm:esbuild" = "0.28.2"
@@ -34,7 +34,8 @@ if [ ! -x node_modules/.bin/eslint ] || [ ! -x node_modules/.bin/prettier ]; the
   exit 1
 fi
 # The project's own copies, by pnpm exec: eslint.config.js holds the lint rules and the layer
-# table, .prettierrc.json the format, and .prettierignore limits Prettier to the code and JSON.
+# table, .prettierrc.json the format, and .prettierignore limits Prettier to the code, the JSON,
+# and the CSS.
 pnpm exec eslint .
 pnpm exec prettier --check .
 find . -name '*.sh' -not -path './node_modules/*' -not -path './.git/*' -print0 \
@@ -56,7 +57,7 @@ run = ["pnpm install --frozen-lockfile", "scripts/consumers.sh warm"]
 dir = "{{config_root}}"
 
 [tasks."build:tsc"]
-description = "Emit the .ts and JSDoc forms as unbundled ESM with declarations, to dist/tsc"
+description = "Emit the .ts and JSDoc forms as unbundled ESM with declarations, and the components layer and the demo's modules, with every .css in layers/ copied to its path beside them (the components' stylesheets and the foundation's baseline), to dist/tsc"
 run = "scripts/build.sh tsc"
 dir = "{{config_root}}"
 
@@ -71,17 +72,22 @@ run = "scripts/build.sh bun"
 dir = "{{config_root}}"
 
 [tasks.build]
-description = "Every build of the pagination element: tsc emit, esbuild, and bun build"
+description = "Every build: tsc emit (the pagination element's forms, the components layer, and the demo's modules), and the pagination element bundled by esbuild and by bun build"
 depends = ["build:tsc", "build:esbuild", "build:bun"]
 
 [tasks.demo]
-description = "Render every build of the pagination element in headless Chromium, from file://"
+description = "Render every build of the frozen pagination element, and, from tsc's emit loaded unbundled, the components layer's composition (pagination holding entries from the fixture) in each version through the shared probe and the button-style restyle check, in headless Chromium from file://; reads no network"
 depends = ["build"]
 run = "scripts/demo.sh"
 dir = "{{config_root}}"
 
+[tasks.preview]
+description = "Serve the components layer's four versions side by side on one page, each wired to the fixture as a host application would wire it (demo/preview.ts), under Vite's dev server with scripts/css-sheets.js, printing the URL and running until Ctrl-C; reads no network, writes nothing to the working tree"
+run = "scripts/preview.sh"
+dir = "{{config_root}}"
+
 [tasks.measure]
-description = "Record each mise tool's installed size and each TypeScript form's lines and brotli bytes, time each toolchain with hyperfine (Node: pnpm installs and npm installs in its hoisted and linked layouts, tsc, esbuild, and Vite; Bun: bun install and bun build), and record every row, the layout rows (phantom dependencies, lockfile determinism, and disk sharing under npm, pnpm, and bun) and the GitHub and jsDelivr ones for v0.1.0 once it is released, and compare four lint and format setups over the code and JSON (Biome; the check's own, ESLint with typescript-eslint and eslint-plugin-boundaries and Prettier, from the devDependencies; oxlint and oxfmt; ESLint with ESLint Stylistic and eslint-plugin-jsonc: footprint, timings, leaving the formatting unchanged and restoring it from a disturbed copy, content scope, the layer rules, and surface), as a dated markdown report on stdout; reads the network, writes nothing to the working tree"
+description = "Record each mise tool's installed size and each TypeScript form's lines and brotli bytes, time each toolchain with hyperfine (Node: pnpm installs and npm installs in its hoisted and linked layouts, tsc, esbuild, and Vite; Bun: bun install and bun build), and record every row, the layout rows (phantom dependencies, lockfile determinism, and disk sharing under npm, pnpm, and bun) and the GitHub and jsDelivr ones for v0.1.0 once it is released, record what each version of the components layer serves (the pagination alone and the composition, under Vite's dev server and from vite build, Lit's share apart), and compare four lint and format setups over the code and JSON, their content scope against the check's code, JSON, and CSS (Biome; the check's own, ESLint with typescript-eslint and eslint-plugin-boundaries and Prettier, from the devDependencies; oxlint and oxfmt; ESLint with ESLint Stylistic and eslint-plugin-jsonc: footprint, timings, leaving the formatting unchanged and restoring it from a disturbed copy, content scope, the layer rules, and surface), as a dated markdown report on stdout; reads the network, writes nothing to the working tree"
 run = "scripts/measure.sh"
 dir = "{{config_root}}"
 

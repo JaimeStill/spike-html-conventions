@@ -12,6 +12,12 @@
 //
 // test/layers.test.js runs this config over test/layers-tree.js's trees, and scripts/measure.sh
 // runs it as setup B; scripts/lint-compare.js reads the layer table for import-x's zones.
+//
+// A .css import is a static CSS module script, `with { type: "css" }`, everywhere: core
+// no-restricted-syntax refuses an import or an export-from without that attribute, so no .css
+// import leans on a bundler's own CSS handling, and refuses an import() of a .css file outright,
+// attribute or not: a component imports its sheet statically, and scripts/css-sheets.js handles
+// only the static forms.
 
 import js from "@eslint/js";
 import { defineConfig, globalIgnores } from "eslint/config";
@@ -21,6 +27,29 @@ import globals from "globals";
 import tseslint from "typescript-eslint";
 
 const code = ["**/*.js", "**/*.ts"];
+
+// The attribute a CSS module script carries among a declaration's attributes, by its key's name
+// or its quoted key.
+const cssType = `:matches(ImportAttribute[key.name='type'], ImportAttribute[key.value='type'])[value.value='css']`;
+const cssSource = "[source.value=/\\.css$/]";
+// An import() whose specifier ends in .css: a string, or a template whose last part does, matched
+// at that part.
+const cssDynamic = [
+  `ImportExpression${cssSource}`,
+  "ImportExpression > TemplateLiteral.source > TemplateElement[tail=true][value.cooked=/\\.css$/]",
+];
+const cssImports = [
+  ...["ImportDeclaration", "ExportNamedDeclaration", "ExportAllDeclaration"].map((type) => ({
+    selector: `${type}${cssSource}:not(:has(${cssType}))`,
+    message: "A .css import is a CSS module script: add with { type: 'css' }.",
+  })),
+  ...cssDynamic.map((selector) => ({
+    selector,
+    message:
+      "A .css file is imported statically, as a CSS module script with { type: 'css' }, never by " +
+      "import(): scripts/css-sheets.js handles only the static forms.",
+  })),
+];
 
 // The layer table: each layer's directory and the layers it may import, "own" an app's own
 // directory and "lit" the one package. No app imports another, and a file directly in layers/,
@@ -72,6 +101,7 @@ export default defineConfig([
   globalIgnores(["dist/"]),
   { files: code, extends: [js.configs.recommended, tseslint.configs.recommended] },
   { files: code, languageOptions: { globals: globals.browser } },
+  { files: code, rules: { "no-restricted-syntax": ["error", ...cssImports] } },
   // The suite, the scripts, and the consumer fixtures run on node or bun.
   { files: ["test/**", "scripts/**", "fixtures/**"], languageOptions: { globals: globals.node } },
   {

@@ -26,7 +26,8 @@ components, and apps) be built on, over the spike-html-design v0.7.0 baseline?
   Libraries build with tsc emit and apps with Vite; esbuild doesn't earn its place.
 - **Components:** vanilla for the foundation and the static branch; Lit from components up.
   Results 3 keeps the foundation free of every package and lets a static-branch app import Lit;
-  whether static pages use it is the `branches` task's call.
+  whether static pages use it is the `branches` task's call. Results 4 makes Lit with a shadow
+  root the default for components, each component's styles in its own `.css` file.
 - **Stack:** foundation (native only, no framework: the design system plus `.ts` modules shipped
   through a release build, per Results 2; its tools split into utilities, structure/layout, and
   meta components/variants, with layouts folded into structure); components (the element tier:
@@ -45,8 +46,10 @@ components, and apps) be built on, over the spike-html-design v0.7.0 baseline?
    Svelte/JSDoc are positions to weigh, not answers.
 3. The directory, module, and layer layout and the import direction per stack layer, as
    STANDARDS.md judgement calls plus a check that enforces the direction.
-4. One element-tier component, built in vanilla and in Lit, compared on lines, brotli bytes, and
-   hand-built features.
+4. Two element-tier components, a pagination container and the entry it holds, each built in
+   vanilla and in Lit, with a shadow root and in light DOM, compared on the features vanilla
+   builds by hand, what each serves in development and production, and the architect's reading
+   of the files, with source lines and brotli bytes as context.
 5. Unit and browser test tiers inside the one check.
 6. A lint/format tool in the check.
 7. A fixture that consumes spike-html-design v0.7.0 by tag, both installed and from `file://`
@@ -424,6 +427,12 @@ where it cites a run, cite the run of **2026-10-16T21:11:09Z (UTC)** as
 after the check moved to ESLint + Prettier, with eslint pinned at 10.12.0, and after measure
 gained ESLint Stylistic, the resolved-file direction plugins on trees whose imports name real
 files, the split formatting rows, and the surface rows, and all 105 of its rows passed.
+Results 4 cites the run of **2026-10-17T23:45:28Z (UTC)** as *(m 2026-10-17T23:45:28Z)*, for
+the components' served bytes and source sizes, with pnpm at 12.14.0, after the shadow versions
+moved onto the foundation's port, measure gave its adopted sheets their own chunk,
+`scripts/css-sheets.js` minified the sheets it builds in production, and each production row
+required that no file outside Lit's chunk hold a comment; all 121 of its rows passed. Results 6's
+later CSS-scope figures keep the run of 2026-10-17T20:35:52Z they cite.
 File counts from the offline installs are from `mise run check` the same day. Survey figures cite
 the Ecosystem survey's sources, and other facts from outside the spike carry their own source and
 date.
@@ -472,13 +481,13 @@ ships JS, so bun's `.ts` support under node_modules buys a consumer nothing. The
   names ([README][pnpm-readme]). It keeps three lines, with 122 stable releases in the 12 months
   to 2026-10-16 (30 on 12, 55 on 11, 37 on 10), and 56 prereleases beside them, counted as npm's
   are below ([releases][pnpm-rel], `gh api --paginate`, read 2026-10-16). This repository's
-  12.11.2 pin is what mise resolves natively: `mise latest pnpm` answers 12.11.2, since mise
+  12.14.0 pin is what mise resolves natively: `mise latest pnpm` answers 12.14.0, since mise
   resolves pnpm through `aqua:pnpm/pnpm` (`mise registry pnpm`), which reads the release pnpm
-  marks latest on GitHub (v12.11.2, 2026-10-09; [latest release][pnpm-gh-latest]). The pin
-  follows the tool manager's own resolution, so `mise use pnpm` and `mise run currency` agree on
-  it, and currency reports it current. The registry is ahead: pnpm hasn't marked any 12.12 or
-  later release latest on GitHub, while npm's `latest` dist-tag was 12.14.0 on 2026-10-16,
-  released 2026-10-15 ([dist-tags][pnpm-tags]). Its lead maintainer wrote 65 of its 100 most recent commits
+  marks latest on GitHub (v12.14.0, released 2026-10-15; [latest release][pnpm-gh-latest], read
+  2026-10-17). The pin follows the tool manager's own resolution, so `mise use pnpm` and
+  `mise run currency` agree on it, and currency reports it current. The registry agrees: npm's
+  `latest` dist-tag is also 12.14.0 ([dist-tags][pnpm-tags], read 2026-10-17). The measurements
+  below ran on the earlier pin, 12.11.2, and keep it. pnpm's lead maintainer wrote 65 of its 100 most recent commits
   ([commits][pnpm-commits]), and 2,716 of the 4,201 on its main branch in the year to 2026-10-16
   (`gh api`). vuejs/core, vitejs/vite, and nuxt/nuxt each declare `pnpm@12.11.2` in their
   `packageManager` field, vercel/next.js `pnpm@12.9.1`, withastro/astro `pnpm@11.28.4`, and
@@ -636,6 +645,12 @@ lists esbuild only as optional ([migration guide][vite8]), so an app doesn't nee
 303.5M weekly downloads ([s14][npm-build]) are mostly transitive. It is 0.x, and one maintainer
 wrote 93 of its 100 most recent commits ([commits][esb-commits], read 2026-10-16). Its pin stays
 in `mise.toml` only for the measure task's comparison.
+
+**Native CSS doesn't reopen it** (Results 4, 2026-10-17). Herald's "native CSS" under Bun was a
+33-line `BunPlugin` turning a `.module.css` import into a constructed sheet, and Bun 1.4.3 itself
+imports a standard CSS module script (`with { type: "css" }`) as `{}`. The components' `.css`
+files load through a local Vite plugin of about 30 lines for apps and natively in the browser
+from tsc's emit, so Bun's CSS gives it no edge the pick missed.
 
 **What would reverse it.** Toward npm: npm installing a subdirectory with `::path:`, or npm
 closing its multi-package gaps, with the `workspace:` protocol, graph-ordered workspace runs, and
@@ -883,6 +898,320 @@ without, and `biome format` 59.1 ms against 28.8 ms (hyperfine, 30 runs, 2026-10
 - To branches: the app-internal tiers (modules and views), and whether static pages use Lit.
   STANDARDS.md records the second as undecided.
 
+### 4. Components: Lit with a shadow root, styles in `.css` files
+
+**The architect's judgement** (logged at the review stop, after reading the final files of all 8
+versions, before this section was written): Lit with a shadow root is the default for
+components, and light DOM's hand-placed composition costs more than it gives. The one complaint
+was the styles, written as strings in `.ts` rather than natively in `.css` files. An amendment
+to the task answered it: every component's CSS lives in a `.css` file beside its module, imported
+as a CSS module script. Readability, maintainability, and scalability are that reading
+of the files, not a metric; there is no rubric score, and the figures below are context for it.
+
+**What was built.** Two element-tier components in `layers/components/`, each in four versions,
+Lit and vanilla, each with a shadow root and in light DOM: 8 files, each with its own tag,
+`sl-{pagination,entry}-{lit,vanilla}-{shadow,light}`. Each imports only its stylesheets, the
+foundation's `define`, `emit`, and `required`, and, for Lit, `lit`; no vanilla version has a base
+class. The shadow versions also import the foundation's `baseline` module, the reset and
+elements sheets they adopt (below).
+
+- **The pagination** is a container: its controls sit around the entries the host places inside
+  it. Its properties are go-web-sdk's Page envelope (`response.go`: `items`, `page`, `size`,
+  `total`, `more`, `next`), not herald's `total-pages`: page, size, total, and more, plus the page
+  sizes offered. It works out the page count from total and size; without a total, Next follows
+  `more`; without a page, the page input is disabled. It sends `page-change {page}`, with page
+  null for Next on a page continued by cursor, and `page-size-change {size}`, and never changes
+  its own page. It also has a `disabled` property reflected to the attribute, a "Showing X–Y of
+  N" summary only while a total above zero is known, and author content in place of the "Page
+  Size" label.
+- **The entry** shows one directory or one file of a document hierarchy: kind, name, status, a
+  file's size and content type (no size for a pending file whose size is null), and the updated
+  time, with size and time formatted by `Intl`. It types its `item` with its own interface of
+  those fields, so go-web-service's Directory and File fit it with no import, and opening it
+  sends `open {id, kind}`.
+- **The fixture**, `demo/documents.ts`, is written by hand in go-web-service's wire shape at
+  15e0bc3: a directories page and a files page in the envelope, a pending file with a null size,
+  and a page continued by cursor with no page or total. Nothing fetches.
+- **The probe**, `demo/probe.ts`, which `mise run demo` runs in headless Chromium with
+  `--dump-dom` and no driver, renders the composition in each version from tsc's emit, loaded
+  natively from `file://`, and drives it: rendered text, the events for prev, next, both clamps, a
+  size change, and an entry's open, the contract cases (a removed number attribute is null,
+  invalid JSON in `page-sizes` is null, a property set before the definition is kept), `disabled`
+  in both directions, the summary present and absent, the cursor page's disabled input, and the
+  slotted label, then two cases on the look: the Next button, the page-size select, the page
+  input, and the entry's button paint as the baseline paints a bare control in the document
+  (background, color, border, padding, font family and size), and the entry holding the
+  fixture's longest content type, narrowed to 22rem, doesn't overflow its box. All four versions
+  hold all 27 cases, with reports identical line for line (`mise run demo`, 2026-10-17).
+- **The restyle check**, `demo/restyle.ts`, makes one edit to the source a render root takes its
+  button styles from and passes only when both elements' buttons paint from it before and take
+  the edit after. Every source is the foundation's elements layer: for the shadow versions a
+  button rule inserted at the end of the `foundation.elements` block of the adopted elements
+  sheet, the very `CSSStyleSheet` every shadow root holds; for the light ones one rule added to
+  the page's `foundation.elements` layer. All four pass (the same run).
+- **`mise run preview`** serves the four versions side by side under Vite's dev server, each wired
+  to the fixture as a host would wire it (paging, page size, the cursor page, opening an entry),
+  so the components can be seen and used in a browser. It sits outside the check and writes
+  nothing to the tree.
+
+**The features, Lit against vanilla**, read from the files:
+
+| feature | mark | how |
+| --- | --- | --- |
+| reactive properties | Lit provides; vanilla builds by hand | Lit: `static properties` with `declare`d fields (`pagination-lit-shadow.ts`). Vanilla: a private field and a get/set accessor per property, each setter guarded by equality in place of `hasChanged` (`pagination-vanilla-shadow.ts`, `entry-vanilla-shadow.ts`) |
+| batched updates | Lit provides; vanilla forgoes | Lit commits one update per microtask, however many properties change. Every vanilla setter re-renders at once |
+| attribute conversion | Lit provides; vanilla builds by hand | Lit: `type: Number`, `Boolean`, and `Array`. Vanilla: `observedAttributes`, `attributeChangedCallback`, and its own `toNumber` and `toArray`, giving null for a removed number attribute and for invalid JSON, as Lit's converters do |
+| reflection | Lit provides; vanilla builds by hand | Lit: `reflect: true` on `disabled`. Vanilla: `toggleAttribute` in the setter, whose echo through the attribute callback stops at the equality guard |
+| templates with binding-level updates | Lit provides; vanilla forgoes | Lit's `html` updates only the bindings that changed. Vanilla clones a `<template>` once per element and its `#render` rewrites every part on every change, in place: the select's options are rebuilt each time, the parts that come and go (the summary, the "/ N" count, a file's size and type) are placed or removed, and nothing focusable is moved, so focus survives. Only the `page` setter writes the input's value, as Lit's `.value` binding commits only when `page` changes, so typing survives other changes |
+| event binding | Lit provides; vanilla builds by hand | Lit: `@click` and `@change` in the template. Vanilla: `addEventListener` per control in the constructor. Both send their events through the foundation's `emit` |
+| shadow root and adopted styles | Lit provides; vanilla builds by hand | Lit: `static styles = [...baseline, styles]`, the foundation's reset and elements sheets then the element's layout sheet, adopted into the root it attaches. Vanilla: `attachShadow` and `root.adoptedStyleSheets = [...baseline, styles]`, two lines. In light DOM neither has it: both versions adopt their sheet into the document by hand (`adopt()` in each `-light.ts`), since Lit adopts `static styles` into a shadow root alone |
+| pre-upgrade properties | Lit provides; vanilla builds by hand | Vanilla: in the constructor, each property found as an own field is taken off the instance and set again through its setter (`Object.hasOwn`, `Reflect`), as Lit does |
+| lifecycle hooks | Lit provides; vanilla builds by hand | Lit light: `firstUpdated` starts the child placement, and `connectedCallback` and `disconnectedCallback`, calling `super`, adopt the sheet and start and stop the observer (`pagination-lit-light.ts`). Vanilla light: the platform's `connectedCallback` and `disconnectedCallback` (`pagination-vanilla-light.ts`); with no update cycle there is nothing for `willUpdate` or `updated` to hook |
+| reactive controllers | not exercised | no component uses one; the SDK's `session.ts` (Results 3) is the repository's one controller |
+| keyed lists | not exercised | the entries are the host's children, and the size options are mapped without `repeat` |
+| slots | not exercised | the platform's `<slot>`, under a shadow root in both: both shadow versions use `<slot>` and `<slot name="label">`, in Lit's template and in vanilla's `<template>` alike. Light DOM has no slots, Lit or vanilla: both light versions place the host's children by hand with a `MutationObserver` (`#place` in each `pagination-*-light.ts`) |
+| form association | not exercised; neither provides it | `ElementInternals` is a platform API: an element sets `static formAssociated = true` and calls `attachInternals()` ([MDN][mdn-internals]). Lit 3.3.3 adds nothing for it: none of `lit`, `lit-element`, `lit-html`, or `@lit/reactive-element` names `formAssociated` or `attachInternals`, only the server DOM shim `@lit-labs/ssr-dom-shim` (installed tree, read 2026-10-17). Either version writes it by hand |
+| SSR | not exercised | Lit's server rendering is `@lit-labs/ssr` (4.1.0, a Labs package, [overview][lit-ssr], [registry][reg-lit-ssr], read 2026-10-17), not a dependency here; a vanilla element has no counterpart beyond declarative shadow DOM written by hand |
+
+**What each render root costs and gives.**
+
+- **Light DOM** loses the slots. Each light pagination places the host's children by hand: on
+  connection (Lit: after the first render) and on every change to its children, a
+  `MutationObserver` moves each entry into the entries region and each `slot="label"` child into
+  the label, and puts its own parts back when a host replaces the element's children. Because an
+  entry is moved, a host can't `insertBefore` an entry on the element; it inserts by the entry's
+  own parent, a limit written into each header. It loses `static styles` and encapsulation: each
+  light version adopts its sheet into `document.adoptedStyleSheets` once, in a named cascade
+  layer (`spike-html-conventions.pagination`, `.entry`) with every rule nested under its tag,
+  and that layer ranks above the baseline only because the sheet is adopted after the page links
+  the baseline; a page that declares its own layers must name `spike-html-conventions` first.
+  Nesting under the tag is the scoping chosen. `@scope` with a lower boundary at author content
+  is the recorded alternative, and would matter for author content placed inside the element; it
+  is Baseline newly available since 2026-03-24, in Chrome and Edge 143, Firefox 146, and Safari
+  26.4 (web-features 3.43.0, feature `scope` [web-features][reg-web-features], read 2026-10-17). Page
+  styles reach the controls, the wanted ones and any other. What it gives is the baseline itself:
+  the page's elements layer styles the bare controls with nothing adopted for them, so the light
+  sheets give layout alone and drop herald's folded control styles, and one rule in the baseline
+  restyles both elements' buttons (the restyle check).
+- **A shadow root** gives the slots, encapsulation, and `static styles`, and takes the same
+  baseline by adopting it. The page's reset and elements layers style by element selector, and
+  an element selector doesn't cross a shadow boundary; only custom properties and inherited
+  properties do, so the page's tokens reach inside and its control rules don't. Herald's shadow
+  roots answered that by folding control styles into shared modules every element re-imported
+  (`pagination-controls.ts` imports `buttons.module.css` and `inputs.module.css`,
+  `document-card.ts` four, [herald][herald-elements], 6fc22b3). Here the shadow-root default
+  adopts the foundation's reset and elements sheets by reference, then a layout-only sheet of its
+  own: `layers/foundation/baseline.ts` imports the two ported files as CSS module scripts, each
+  one `CSSStyleSheet` per document, and exports them as `baseline`, which every shadow version,
+  Lit and vanilla, adopts before its own sheet. No component styles a control's look, so the
+  shadow versions' buttons, select, and input are as bare as the light versions', take their look
+  from the same rules, and one edit to the adopted elements sheet reaches every shadow root (the
+  restyle check). Each element's layout sheet is shared by its Lit and vanilla versions
+  (`pagination-shadow.css`, `entry-shadow.css`) and mirrors the light sheets. A page with shadow
+  components still links the foundation's entry, for the tokens a shadow root inherits, so it
+  loads the reset and elements layers twice: linked in the entry and adopted as modules (the
+  served bytes below). `::part` hooks, which would let a page style named parts from outside, are
+  recorded, not built.
+
+The architect's verdict weighs these: the shadow root's slots and encapsulation over light DOM's
+hand placement, layer ordering, and leaks. The cost the verdict accepted, a shared sheet each
+shadow element imports, is the foundation's own baseline, adopted by reference.
+
+**No shipped mechanism lets a shadow root inherit page styles** (survey, 2026-10-17). Open-stylable
+shadow roots, an `adoptStyles` capability for a root to take the page's styles, have been asked
+for since 2020 (WICG webcomponents #909) and are an open CSSWG issue since 2024-04-04 with no
+resolution ([csswg-drafts#10176][csswg-10176]). Declarative CSS Modules, a declarative way to share one stylesheet into shadow roots, are an open pull request
+against HTML ([whatwg/html#11687][whatwg-11687]), experimental in Chromium behind a flag and an
+origin trial only; its explainer ([MSEdgeExplainers][edge-shadow-css]) shares one `CSSStyleSheet`
+by module specifier, the same model as adopting a CSS module script, so this convention carries
+over to it unchanged if it ships. The conventional answer for a layered design system is the one
+built here: the root adopts the system's lower layers by reference as constructed sheets, then its
+own.
+
+**Why no `@import` outside the page entry.** A constructed sheet loads no `@import`:
+`replace()` and `replaceSync()` drop it, as WPT's `css/cssom/CSSStyleSheet-constructable-disallow-import`
+tests. CSS module scripts shipped with the same limit, because the Web Components group didn't
+settle whether an imported sheet becomes a module of its own ([minutes, 2020-10-29][wc-2020-10-29];
+[web.dev][webdev-css-modules]), and the declarative proposal keeps it. So every ported file layers
+itself and imports nothing, and the one `@import` is in `layers/foundation/baseline.css`, the page
+entry, which only a page links.
+
+**The foundation's port of spike-html-design.** spike-html-design v0.7.0 (commit fe75220) didn't
+fit this convention: its one entry builds the layers with `@import ... layer()`, which neither a
+constructed sheet nor a CSS module script loads, and it exports no layer file a shadow root could
+adopt. So the foundation owns a port of it, by the architect's decision, rather than depending on
+it or changing it: in `layers/foundation/baseline/`, one plain `.css` per upstream file of the
+tokens (the color, space, and type facets, with the Flexoki, regular, and mono profiles upstream's
+`baseline.css` picks), the reset, and the elements layer, each wrapped in its own
+`@layer foundation.<layer>` block (upstream's `spike-html-design.*` names renamed `foundation.*`)
+and headed by its provenance: the tag, the commit, and the upstream path. The page entry,
+`layers/foundation/baseline.css`, states the layer order and imports the files, and every page
+links it: the demo, the preview, and measure's pages, shadow and light alike. The port is this
+repository's own code from here on: Prettier formats it, and no test holds it to upstream. Two
+spellings differ from upstream beyond the renaming, each saying the same thing: the rule for a
+block after a block nests `& + &` under the blocks' `:where()` (zero specificity still), and the
+entry states the layer order in two statements, because Prettier, Biome, and oxfmt each broke
+upstream's over-long lines their own way and measure's comparison checks the tree with all
+three. The tools layer and the other profiles aren't ported, since nothing uses them.
+
+**The platform gaps the foundation absorbs**, each with the work that would retire it:
+
+- No shared page styles in a shadow root: every shadow component adopts the baseline sheets
+  itself, and a page loads the reset and elements layers twice. Retired by open-stylable shadow
+  roots ([csswg-drafts#10176][csswg-10176]) resolving and shipping, or by Declarative CSS Modules
+  ([whatwg/html#11687][whatwg-11687]) shipping, which would share the same sheets by specifier
+  with no change to the files.
+- No `@import` in a constructed sheet or a CSS module script: each ported file layers itself, and
+  the entry alone composes them. Retired by the CSS module scripts specification defining how an
+  imported sheet loads, which the 2020 discussion left open.
+- No CSS module scripts in any Safari release: an unbundled page fails there, and apps build
+  through Vite with `scripts/css-sheets.js`. Retired by a Safari release shipping WebKit's
+  322887@main ([bug][webkit-css-modules]).
+- Upstream ships no adoptable layer file: the port stands in for it. Retired by spike-html-design
+  shipping each layer as a self-layered, `@import`-free, exported sheet, for which the port is the
+  reference (handed on below).
+
+**No build removes Lit's runtime.** `@lit-labs/compiler` 1.1.2, a Labs package, is a TypeScript
+transformer that optimizes away lit-html's prepare phase; the templates it emits are still
+rendered by lit-html, a dependency it declares ([README][lit-compiler],
+[registry][reg-lit-compiler], read 2026-10-17). The compile-to-custom-element alternatives each ship a runtime of their own:
+Svelte 5.57.2's `customElement` option compiles a component that imports Svelte's client runtime
+([custom elements][svelte-ce]); Stencil 4.45.2 compiles to elements that load Stencil's runtime
+([output targets][stencil-ot]); solid-element 1.9.2 wraps a Solid component and depends on
+`component-register` with `solid-js` as its peer ([registry][reg-solid-element]) (versions from
+each registry's `latest`, read 2026-10-17). None is measured here: facts only, no column.
+
+**CSS module scripts.** `import sheet from "./x.css" with { type: "css" }` gives the file as one
+constructed `CSSStyleSheet`, its default export, shared by every importer in a document.
+
+- Support: Chrome and Edge 123+, Firefox 147+, and no Safari release; WebKit implemented it in
+  bug 227967, landed 2026-10-06 as 322887@main ([bug][webkit-css-modules]). It isn't Baseline:
+  web-features 3.43.0 marks `css-modules` `baseline: false`, from MDN's browser-compat-data 8.1.6
+  (`javascript.statements.import.import_attributes.type_css`) ([web-features][reg-web-features],
+  read 2026-10-17).
+- Tools: tsc emits the import unchanged, and `mise run build:tsc` copies each `.css` beside its
+  emitted `.js`, so the demo loads the components natively from `file://` in Chromium. Vite
+  8.3.4's dev server strips the attribute and injects the CSS into the document, and `vite build`
+  fails on the missing default export; esbuild 0.28.2 refuses it ("Importing with a type
+  attribute of "css" is not supported"); Node 26.12.0 refuses the `.css` extension
+  (`ERR_UNKNOWN_FILE_EXTENSION`); Bun 1.4.3 imports it as `{}` (reproduced 2026-10-17).
+- `scripts/css-sheets.js`, a local Vite plugin of about 30 lines of code and no package, closes
+  the gap for apps: a pre transform reads the attribute from each importer's syntax tree, since
+  Vite passes import attributes to no `resolveId` or `load` hook, and rewrites the import to a
+  virtual module that builds and default-exports the sheet, in dev and build; in a build it
+  takes the sheet's text from Vite's own `?inline` import of the file, so the sheet is minified
+  as linked CSS is. Measure's pages and
+  `mise run preview` use it, and measure's development rows pass only when every stylesheet
+  arrives as that module and no style is injected.
+- Herald's "native CSS" was the same thing in Bun's bundler: a 33-line `BunPlugin` that turns a
+  `.module.css` import into a constructed sheet ([herald `app/plugins/css-modules.ts`][herald-css],
+  6fc22b3). Bun loads no CSS module script itself, so native CSS gives Bun no edge, and Results 1's
+  pick stands.
+- The gap that remains is Safari for unbundled loading: a page that loads the emitted modules
+  without a build fails there until a Safari release ships WebKit's change. Apps build through
+  Vite, so their production pages don't depend on it; no shim ships. The release consequence (each
+  `.css` beside its `.js`, served as `text/css`) is spike-html-packages'.
+
+**Served bytes** *(m 2026-10-17T23:45:28Z)*, for each version's pagination alone and its
+composition (the pagination holding the fixture's three directories). Every page links the
+foundation's baseline entry, given as its own share so the rest compares across versions. The
+baseline share also holds the reset and elements sheets a shadow version adopts: a shadow page
+loads those two layers twice, linked in the entry and adopted as modules, and the rows record
+both.
+
+Development, Vite 8.3.4's dev server on a scratch copy: every 2xx response headless Chromium read,
+uncompressed, with Lit's development builds. Vite's client is the HMR client the dev server
+injects into every page:
+
+| page | responses | total | Lit | baseline | Vite client | page and elements |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| pagination, Lit shadow | 12 | 716,703 B | 290,750 B | 165,414 B | 226,061 B | 34,478 B |
+| pagination, vanilla shadow | 10 | 437,130 B | — | 165,414 B | 226,061 B | 45,655 B |
+| pagination, Lit light | 10 | 650,594 B | 339,770 B | 40,965 B | 226,061 B | 43,798 B |
+| pagination, vanilla light | 7 | 319,657 B | — | 40,965 B | 226,061 B | 52,631 B |
+| composition, Lit shadow | 16 | 748,850 B | 290,750 B | 165,414 B | 226,061 B | 66,625 B |
+| composition, vanilla shadow | 14 | 475,216 B | — | 165,414 B | 226,061 B | 83,741 B |
+| composition, Lit light | 14 | 684,398 B | 339,770 B | 40,965 B | 226,061 B | 77,602 B |
+| composition, vanilla light | 11 | 359,465 B | — | 40,965 B | 226,061 B | 92,439 B |
+
+Production, `vite build` of the same pages, minified as Vite builds by default, every emitted
+file raw and brotli (quality 11, `node:zlib`), Lit in a chunk of its own and the foundation's
+adopted sheets in another, counted in the baseline share beside the entry's CSS. In a build,
+`scripts/css-sheets.js` takes each sheet's text from Vite's own `?inline` import of the file, so
+every adopted sheet, the foundation's and each component's, is minified as Vite minifies the
+linked CSS (`build.cssMinify`, Lightning CSS by default in Vite 8), with no package added; the
+dev server still serves each file as written:
+
+| page | total | Lit | baseline | page and elements |
+| --- | ---: | ---: | ---: | ---: |
+| pagination, Lit shadow | 36,320 B; 10,334 B br | 14,550 B; 5,031 B br | 16,720 B; 3,582 B br | 5,050 B; 1,721 B br |
+| pagination, vanilla shadow | 22,907 B; 5,683 B br | — | 16,720 B; 3,582 B br | 6,187 B; 2,101 B br |
+| pagination, Lit light | 33,046 B; 10,041 B br | 16,708 B; 5,742 B br | 10,124 B; 2,200 B br | 6,214 B; 2,099 B br |
+| pagination, vanilla light | 17,249 B; 4,526 B br | — | 10,124 B; 2,200 B br | 7,125 B; 2,326 B br |
+| composition, Lit shadow | 38,731 B; 11,199 B br | 14,550 B; 5,031 B br | 16,720 B; 3,582 B br | 7,461 B; 2,586 B br |
+| composition, vanilla shadow | 26,062 B; 6,700 B br | — | 16,720 B; 3,582 B br | 9,342 B; 3,118 B br |
+| composition, Lit light | 35,768 B; 10,927 B br | 16,708 B; 5,742 B br | 10,124 B; 2,200 B br | 8,936 B; 2,985 B br |
+| composition, vanilla light | 20,626 B; 5,550 B br | — | 10,124 B; 2,200 B br | 10,502 B; 3,350 B br |
+
+Every row passed on its expected shape: each Lit page in development loads Lit's development
+build and each vanilla page no Lit, every stylesheet arrives as the plugin's sheet module, each
+composition's dumped DOM holds its three entries, no production file holds Lit's development
+build, and each shadow page loads the reset and elements layers both linked and adopted, from
+`foundation/` in production, while no light page has that chunk, and no production file outside
+Lit's chunk holds a comment, so every sheet, adopted or linked, is minified; all 121 of the run's
+rows passed.
+
+The adopted sheets' chunk adds 6,596 B, 1,382 B brotli, to a shadow page's baseline share, beside
+the entry's CSS, the same 10,124 B, 2,200 B brotli, on every page. The chunk holds both the
+`@layer foundation.reset` and `foundation.elements` blocks, minified (Lightning CSS writes the
+port's nested `& + &` back as upstream's `:where(...) + :where(...)`), and is smaller than the
+linked entry because it leaves out the tokens, which a shadow root inherits. In development the
+shadow pages' baseline share is 165,414 B against the light pages' 40,965 B, the adopted sheets
+served as source, comments included. The double load is the price of the gap the foundation
+absorbs (the platform gaps, above), not of either base: the shadow composition's own elements
+are 2,586 B brotli in Lit and 3,118 B in vanilla.
+
+Lit's share is the same for every page of a render root, since every Lit element on a page shares
+one runtime; the light versions' is larger, 339,770 B against 290,750 B in development and 5,742 B
+against 5,031 B brotli in production, because they also load Lit's `ref` directive to find the
+parts they place children among. In production, the vanilla elements are larger than the Lit ones
+and the Lit runtime outweighs the difference: the shadow composition's elements are 3,118 B brotli
+in vanilla against 2,586 B in Lit, and the whole page 6,700 B against 11,199 B. In development,
+Vite's client is the largest single share of every vanilla page.
+
+**Source sizes, as context only** *(the same run)*: lines (`wc -l`) and brotli bytes (quality 11)
+of each file as written. Line count is a poor metric (the architect's decision), and these figures
+argue nothing:
+
+| version | pagination `.ts` | entry `.ts` | its own `.css` |
+| --- | --- | --- | --- |
+| Lit shadow | 199 lines, 2,142 B | 120, 1,392 B | shared with vanilla shadow |
+| vanilla shadow | 311, 2,942 B | 174, 1,897 B | `pagination-shadow.css` 52, 506 B; `entry-shadow.css` 40, 501 B |
+| Lit light | 299, 3,371 B | 137, 1,606 B | 50, 456 B; 39, 444 B |
+| vanilla light | 382, 3,895 B | 188, 2,143 B | 50, 459 B; 39, 459 B |
+
+`layers/foundation/baseline.ts`, the module every shadow version adopts the reset and elements
+sheets through, is 20 lines and 531 B. No component sheet gives a control its look; the shadow
+sheets hold layout alone and mirror the light ones.
+
+**Handed on.**
+
+- To STANDARDS.md (this task): components are Lit with a shadow root by default; a
+  component's CSS lives in its own `.css` file, imported as a CSS module script, never written in
+  `.ts`; a shadow-root component adopts the foundation's baseline sheets, then a layout-only sheet
+  of its own, and never styles a control's look; and the foundation holds the design-system port
+  as native CSS, with no `@import` but in the page entry.
+- To spike-html-packages: a release ships each component's `.css` beside its emitted `.js`, with
+  `exports` and `files` naming them, since tsc's emit copies no `.css`; a CSS module script loads
+  only when served as `text/css`; and Safari's gap for consumers that load the modules unbundled.
+- To spike-html-design: ship each layer as a self-layered, `@import`-free, exported sheet, so a
+  shadow root can adopt it as a CSS module script; this repository's port in
+  `layers/foundation/baseline/` is the interim and the reference. Its theme-menu also builds its
+  sheet from a string.
+- To spike-html-apps: herald's pagination took `total_pages`, while go-web-sdk's envelope carries
+  total and size and omits page and total under a cursor; this pagination is built on the
+  envelope, and sends page null for Next on a cursor page.
+
 ### 6. Lint and format: ESLint + Prettier, provisionally
 
 Measure runs four setups over one copy of `src/`, `layers/`, and `test/` (21 files), and over the
@@ -920,6 +1249,17 @@ convention of the superseded text rules (`scripts/biome-layers.json`), which a r
 makes moot. eslint-plugin-import-x's `no-restricted-paths` flags the same 60, 8 of them by
 `no-unresolved` alone, and 2 of the allowed files, a false positive on directory names that start
 with dots (Results 3).
+
+The check's Prettier also formats the components' stylesheets, so measure's scope rows limit
+each setup to the code, JSON, and CSS, the check's own scope: `.prettierignore` lets `*.css` back
+in, Biome's `files.includes` adds `**/*.css`, and the row records that D's Stylistic formats no
+CSS. The code rows still compare the `.js` and `.ts` files alone, and the table above keeps the
+run it cites. In the later run
+*(m 2026-10-17T20:35:52Z)*, over 85 tracked files in 11 types, A, B, and C each limit to the 8
+stylesheets, 17 `.js`, 29 `.ts`, and 14 JSON files, and D to the same less the CSS; by default
+Prettier rewrites `context/README.md` (226 of 1,438 lines), the goal record (47 of 423), and
+`pnpm-lock.yaml` as before, oxfmt the same two Markdown files and `package.json`'s one key, and
+Biome and D nothing beside the code. The argument below doesn't turn on the CSS.
 
 **The order.** As in Results 1: first, industry standard and maintainability, where
 maintainability holds stewardship and surface (binaries, config files, and packages to keep
@@ -977,8 +1317,8 @@ default limited to code and JSON, don't make up for a formatter that can't resto
   moves a key in `package.json`, and D can't restore.
 - **Content scope.** Biome's by default: it touches only js, json, and ts, where Prettier also
   formats Markdown and YAML, and rewrites 174 of this README's 1,173 lines and 565 of the pnpm
-  lockfile's 1,615. A `.prettierignore` of five lines limits it to code and JSON, so the cost is
-  a default to undo, not a limit.
+  lockfile's 1,615. A `.prettierignore` of five lines limited it to code and JSON (six with the CSS
+  let back in), so the cost is a default to undo, not a limit.
 - **Direction.** B's now. The gap that decided the superseded pick, ESLint's rule never
   checking `import()`, is closed: boundaries flags all five dynamic edges. It judges the resolved
   file, so the layer table is its whole configuration: no override per file depth, no
@@ -1143,6 +1483,22 @@ Prettier's, reopens it too.
 [ts-refs]: https://www.typescriptlang.org/docs/handbook/project-references.html
 [eslint-nri]: https://eslint.org/docs/latest/rules/no-restricted-imports
 [herald-elements]: https://github.com/JaimeStill/herald/tree/6fc22b3cb492/app/client/ui/elements
+[herald-css]: https://github.com/JaimeStill/herald/blob/6fc22b3cb492/app/plugins/css-modules.ts
+[mdn-internals]: https://developer.mozilla.org/en-US/docs/Web/API/ElementInternals
+[lit-ssr]: https://lit.dev/docs/ssr/overview/
+[reg-lit-ssr]: https://registry.npmjs.org/@lit-labs/ssr/4.1.0
+[lit-compiler]: https://github.com/lit/lit/tree/main/packages/labs/compiler
+[reg-lit-compiler]: https://registry.npmjs.org/@lit-labs/compiler/1.1.2
+[svelte-ce]: https://svelte.dev/docs/svelte/custom-elements
+[stencil-ot]: https://stenciljs.com/docs/output-targets
+[reg-solid-element]: https://registry.npmjs.org/solid-element/1.9.2
+[webkit-css-modules]: https://bugs.webkit.org/show_bug.cgi?id=227967
+[reg-web-features]: https://registry.npmjs.org/web-features/3.43.0
+[csswg-10176]: https://github.com/w3c/csswg-drafts/issues/10176
+[whatwg-11687]: https://github.com/whatwg/html/pull/11687
+[edge-shadow-css]: https://microsoftedge.github.io/MSEdgeExplainers/ShadowDOM/explainer.html
+[wc-2020-10-29]: https://www.w3.org/2020/10/29-components-minutes.html
+[webdev-css-modules]: https://web.dev/css-module-scripts/
 
 ## Capabilities
 
@@ -1153,7 +1509,10 @@ Prettier's, reopens it too.
   `test/layers.test.js` proves against a tree of violations and a tree of allowed imports.
 - **Lint and format:** ESLint + Prettier in the check, provisionally, from the devDependencies,
   compared in `mise run measure` against Biome, oxlint + oxfmt, and ESLint + ESLint Stylistic.
-- **Components:** the element-tier convention, vanilla and Lit.
+- **Components:** the element-tier convention: Lit with a shadow root by default, adopting the
+  foundation's baseline sheets before a layout-only sheet of its own, each component's CSS a
+  `.css` file imported as a CSS module script, compared in four versions
+  (Lit and vanilla, shadow and light DOM), with `mise run preview` to see them side by side.
 - **Testing:** the unit and browser tiers in the check.
 - **Consumption:** installing and loading tagged releases, from git and jsDelivr.
 - **Branches:** the static and application layouts and the application SDK spec.
@@ -1166,7 +1525,7 @@ The tasks, in the order they run; each cites the evidence it proves.
    (evidence 1, 2, 7).
 2. `structure`: the layout, the import direction and its check, the lint/format tool
    (evidence 3, 6).
-3. `components`: the element in vanilla and in Lit (evidence 4).
+3. `components`: the two elements in vanilla and in Lit, shadow and light DOM (evidence 4).
 4. `testing`: the unit and browser tiers (evidence 5).
 5. `branches`: the branch layouts, the SDK spec, and the answer (evidence 8).
 
@@ -1181,7 +1540,8 @@ spike-html-packages.
 The spike reads these repositories and never writes to them. Each is a key in the coordinator's
 `references.toml`, with its local checkout in `references.local.toml`:
 
-- `spike-html-design`, at v0.7.0: the baseline the fixtures consume.
+- `spike-html-design`, at v0.7.0: the baseline the fixtures consume, and the source of the
+  foundation's port (`layers/foundation/baseline/`), which no page reads from the checkout.
 - `herald`: its app client (TS, Lit 3, bun build) and its elements.
 
 ## The answer
