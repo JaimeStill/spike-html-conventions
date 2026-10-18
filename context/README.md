@@ -25,9 +25,9 @@ components, and apps) be built on, over the spike-html-design v0.7.0 baseline?
   decides how the layers release (a registry release reopens the choice between npm and pnpm).
   Libraries build with tsc emit and apps with Vite; esbuild doesn't earn its place.
 - **Components:** vanilla for the foundation and the static branch; Lit from components up.
-  Results 3 keeps the foundation free of every package and lets a static-branch app import Lit;
-  whether static pages use it is the `branches` task's call. Results 4 makes Lit with a shadow
-  root the default for components, each component's styles in its own `.css` file.
+  Results 3 keeps the foundation free of every package and lets a static-branch app import Lit,
+  and Results 8 makes a static app's own elements Lit with a shadow root. Results 4 makes Lit
+  with a shadow root the default for components, each component's styles in its own `.css` file.
 - **Stack:** foundation (native only, no framework: the design system plus `.ts` modules shipped
   through a release build, per Results 2; its tools split into utilities, structure/layout, and
   meta components/variants, with layouts folded into structure); components (the element tier:
@@ -766,7 +766,7 @@ layers/
   sdk/session.ts                    a Lit reactive controller, standing in for the auth hook
                                     (replaced by the SDK's declarations, Results 8)
   apps/static/site/main.ts          a static-branch app
-  apps/application/documents/       an application-branch app: main.ts, model.ts, views/list.ts
+  apps/application/documents/       an application-branch app, its tiers in Results 8's tree
   apps/application/prompts/main.ts  a second application-branch app, the sibling the rules refuse
 ```
 
@@ -1745,8 +1745,9 @@ value imports and none of the 4 type imports.
 - Vite's default hashed filenames, so every emitted file can be cached for good.
 - `build.manifest: true`, which writes `.vite/manifest.json` in the output, mapping each entry's
   source path to its hashed file ([backend integration][vite-backend]); the Go shell reads it.
-  A scratch build of the static site under the pin wrote `assets/main-BRYe5p6W.js` and a manifest
-  whose `layers/apps/static/site/main.ts` entry names it, `isEntry: true` (reproduced
+  A scratch build of the static site under the pin wrote a hashed entry, such as
+  `assets/main-BRYe5p6W.js` (the hash changes with the content and the build options), and a
+  manifest whose `layers/apps/static/site/main.ts` entry names it, `isEntry: true` (reproduced
   2026-10-18). Herald's shell named fixed files (`dist/app.js`), the rejected alternative.
 
 **The SDK spec.** Four parts, each a declaration file whose signatures tsc checks
