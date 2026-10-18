@@ -68,7 +68,7 @@ scripts/consumers.sh
 '''
 
 [tasks.install]
-description = "Install lit and the devDependencies (the lint tooling, ESLint, Prettier, and their plugins, and playwright-core) from the lockfile with pnpm, download Playwright's Firefox into PLAYWRIGHT_BROWSERS_PATH for the check's browser tier (skipped when it's already there), and warm pnpm's, npm's, and bun's caches with lit for the check's offline fixture installs; reads the network"
+description = "Install lit and the devDependencies (playwright-core and the lint tooling: ESLint, Prettier, and their plugins) from the lockfile with pnpm, download Playwright's Firefox into PLAYWRIGHT_BROWSERS_PATH for the check's browser tier (skipped when it's already there), and warm pnpm's, npm's, and bun's caches with lit for the check's offline fixture installs; reads the network"
 # Firefox alone: the browser tier's Chromium is the system's, through executablePath.
 run = [
   "pnpm install --frozen-lockfile",

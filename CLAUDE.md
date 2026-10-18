@@ -10,11 +10,12 @@ The repository is managed with the marathon workflow; start from `context/README
 - **Check:** `mise run check`: ESLint (`eslint.config.js`, which also enforces the import
   direction in `layers/`) and Prettier, run from the devDependencies by `pnpm exec`; shellcheck;
   `tsc --noEmit`; the tests in `test/`, the router suite and the layer test, under `node --test`
-  and `bun test`; the browser tier, `scripts/browser.test.js` under `node --test` alone, Playwright
-  on the system Chromium and on Firefox over Vite's dev server; and the three consumer fixtures
-  (pnpm, npm, and bun) installed offline, failing unless the npm that runs is the version
-  `mise.toml` pins. Run `mise run install` once first: it installs the packages and downloads
-  Playwright's Firefox into `~/.cache/spike-html-conventions/playwright`.
+  and `bun test`; the browser tier, `scripts/browser.test.js` under `node --test` alone, which
+  drives Playwright on the system Chromium and on Playwright's Firefox against pages Vite's dev
+  server serves; and the three consumer fixtures (pnpm, npm, and bun) installed offline, failing
+  unless the npm that runs is the version `mise.toml` pins. Run `mise run install` once first:
+  it installs the packages and downloads Playwright's Firefox into
+  `~/.cache/spike-html-conventions/playwright`.
 - **Tasks:** `mise run install`, `build`, `demo`, `preview`, `measure` (the evidence's dated
   figures, including the four-way lint and format comparison; reads the network), and
   `currency`. Each task's description in `mise.toml` says what it does.

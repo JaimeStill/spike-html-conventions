@@ -936,24 +936,23 @@ elements sheets they adopt (below).
 - **The fixture**, `demo/documents.ts`, is written by hand in go-web-service's wire shape at
   15e0bc3: a directories page and a files page in the envelope, a pending file with a null size,
   and a page continued by cursor with no page or total. Nothing fetches.
-- **The probe**, `demo/probe.ts`, which `mise run demo` runs in headless Chromium with
-  `--dump-dom` and no driver, renders the composition in each version from tsc's emit, loaded
-  natively from `file://`, and drives it: rendered text, the events for prev, next, both clamps, a
-  size change, and an entry's open, the contract cases (a removed number attribute is null,
-  invalid JSON in `page-sizes` is null, a property set before the definition is kept), `disabled`
-  in both directions, the summary present and absent, the cursor page's disabled input, and the
-  slotted label, then two cases on the look: the Next button, the page-size select, the page
-  input, and the entry's button paint as the baseline paints a bare control in the document
-  (background, color, border, padding, font family and size), and the entry holding the
-  fixture's longest content type, narrowed to 22rem, doesn't overflow its box. All four versions
-  hold all 27 cases, with reports identical line for line (`mise run demo`, 2026-10-17).
+- **The probe**, `demo/probe.ts`, renders the composition in one version and drives it: rendered
+  text, the events for prev, next, both clamps, a size change, and an entry's open, the contract
+  cases (a removed number attribute is null, invalid JSON in `page-sizes` is null, a property set
+  before the definition is kept), `disabled` in both directions, the summary present and absent, the
+  cursor page's disabled input, and the slotted label, then two cases on the look: the Next button,
+  the page-size select, the page input, and the entry's button paint as the baseline paints a bare
+  control in the document (background, color, border, padding, font family and size), and the entry
+  holding the fixture's longest content type, narrowed to 22rem, doesn't overflow its box. The
+  check's browser tier runs it in each version (Results 5): all four versions hold all 27 cases,
+  with reports identical line for line *(m 2026-10-18T19:38:34Z)*.
 - **The restyle check**, `demo/restyle.ts`, makes one edit to the source a render root takes its
   button styles from and passes only when both elements' buttons paint from it before and take
   the edit after. Every source is the foundation's elements layer: for the shadow versions a
   button rule inserted at the end of the `foundation.elements` block of the adopted elements
   sheet, the very `CSSStyleSheet` every shadow root holds; for the light ones one rule added to
-  the page's `foundation.elements` layer. All four pass (the same run). The probe and the
-  restyle check have since moved out of the demo into the check's browser tier (Results 5).
+  the page's `foundation.elements` layer. The browser tier runs it too, and all four pass (the
+  same run).
 - **`mise run preview`** serves the four versions side by side under Vite's dev server, each wired
   to the fixture as a host would wire it (paging, page size, the cursor page, opening an entry),
   so the components can be seen and used in a browser. It sits outside the check and writes
@@ -1051,8 +1050,9 @@ tokens (the color, space, and type facets, with the Flexoki, regular, and mono p
 `@layer foundation.<layer>` block (upstream's `spike-html-design.*` names renamed `foundation.*`)
 and headed by its provenance: the tag, the commit, and the upstream path. The page entry,
 `layers/foundation/baseline.css`, states the layer order and imports the files, and every page
-links it: the demo, the preview, and measure's pages, shadow and light alike. The port is this
-repository's own code from here on: Prettier formats it, and no test holds it to upstream. Two
+links it: the browser tier's pages, the preview, and measure's pages, shadow and light alike. The
+port is this repository's own code from here on: Prettier formats it, and no test holds it to
+upstream. Two
 spellings differ from upstream beyond the renaming, each saying the same thing: the rule for a
 block after a block nests `& + &` under the blocks' `:where()` (zero specificity still), and the
 entry states the layer order in two statements, because Prettier, Biome, and oxfmt each broke
@@ -1095,11 +1095,10 @@ constructed `CSSStyleSheet`, its default export, shared by every importer in a d
   (`javascript.statements.import.import_attributes.type_css`) ([web-features][reg-web-features],
   read 2026-10-17).
 - Tools: tsc emits the import unchanged and copies no `.css`; with each `.css` copied beside its
-  emitted `.js`, the components load natively, as the demo then loaded them from `file://` in
-  Chromium and measure's unbundled rows now load them over plain http (Results 5). Vite
-  8.3.4's dev server strips the attribute and injects the CSS into the document, and `vite build`
-  fails on the missing default export; esbuild 0.28.2 refuses it ("Importing with a type
-  attribute of "css" is not supported"); Node 26.12.0 refuses the `.css` extension
+  emitted `.js`, the components load natively, as measure's unbundled rows load them over plain http
+  (Results 5). Vite 8.3.4's dev server strips the attribute and injects the CSS into the document,
+  and `vite build` fails on the missing default export; esbuild 0.28.2 refuses it ("Importing with a
+  type attribute of "css" is not supported"); Node 26.12.0 refuses the `.css` extension
   (`ERR_UNKNOWN_FILE_EXTENSION`); Bun 1.4.3 imports it as `{}` (reproduced 2026-10-17).
 - `scripts/css-sheets.js`, a local Vite plugin of about 30 lines of code and no package, closes
   the gap for apps: a pre transform reads the attribute from each importer's syntax tree, since
@@ -1340,11 +1339,11 @@ Safari until a release ships the change; apps build through Vite and don't depen
 **Why Vite, not `file://`** (the architect: "so that we aren't limited by the restrictions of
 file-based rendering"). tsc's emit loaded from `file://` needs a file-access flag
 (`--allow-file-access-from-files`), an import map into pnpm's store, a copied `.css` beside each
-module, since tsc copies none, and it hides stylesheet rules. The demo's `--dump-dom` pages paid
-for it with a hidden-iframe load hold and a 60 s timeout. Vite serves the working tree through
-`/@fs/` with the local plugin, with no emit, map, or flag, and is the server apps already build
-on (Results 1). The unbundled form stays in measure, over plain http, as the form a library
-ships.
+module, since tsc copies none, and it hides stylesheet rules. Without a driver, a `--dump-dom` page
+also needs a hidden-iframe load hold and a 60 s timeout to wait for its cases. Vite serves the
+working tree through `/@fs/` with the local plugin, with no emit, map, or flag, and is the server
+apps already build on (Results 1). The unbundled form stays in measure, over plain http, as the form
+a library ships.
 
 **The engines round differently.** One report line differs between engines: the input's font
 size is 14.2224px in Chromium and 14.2188px in Firefox (recorded at 9a9f0fd). No row compares
