@@ -97,7 +97,7 @@ description = "Every build: tsc emit (the pagination element's forms, the compon
 depends = ["build:tsc", "build:esbuild", "build:bun"]
 
 [tasks.demo]
-description = "Render every build of the frozen pagination element, and, from tsc's emit loaded unbundled, the components layer's composition (pagination holding entries from the fixture) in each version through the shared probe and the button-style restyle check, in headless Chromium from file://; reads no network"
+description = "Render every build of the frozen pagination element (bundled by esbuild and by bun build, tsc's emit, and the JS forms as written) in headless Chromium from file://; reads no network"
 depends = ["build"]
 run = "scripts/demo.sh"
 dir = "{{config_root}}"
