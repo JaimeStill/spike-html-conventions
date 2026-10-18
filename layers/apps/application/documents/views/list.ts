@@ -5,7 +5,6 @@ import { html, LitElement, type PropertyDeclarations } from "lit";
 
 import "../../../../components/status-badge.js";
 import { define } from "../../../../foundation/dom.js";
-import { SessionController } from "../../../../sdk/session.js";
 import type { DocumentSummary } from "../domains/model.js";
 
 /** Lists documents, each with a status badge. */
@@ -16,8 +15,6 @@ export class DocumentsList extends LitElement {
 
   /** The documents listed. */
   declare documents: DocumentSummary[];
-
-  session = new SessionController(this);
 
   constructor() {
     super();
