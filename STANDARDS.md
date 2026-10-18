@@ -24,9 +24,16 @@ The architecture pages that apply, in the architecture repository:
   column, the manager not picked, and the esbuild pin are the comparison's evidence only; nothing
   shipped depends on a Bun-only API.
 - Every tool comes from a pin in `mise.toml`, except the check's lint tooling, pinned exactly in
-  `package.json`'s devDependencies and run from `node_modules`. The system Chromium is the other
-  exception, by the architect's decision; `mise run measure` records its version.
-- Lit is the only runtime dependency; lint tooling is the only devDependencies.
+  `package.json`'s devDependencies and run from `node_modules`.
+- Every browser the check runs is a `mise.toml` pin: Chrome for Testing's chrome-headless-shell,
+  through mise's `http:` backend, with a sha256 and size taken by hand at each bump, since Chrome
+  for Testing publishes no checksums. Three browsers stay outside `mise.toml`, and the check runs
+  none of them. The system Chromium, by the architect's decision, runs only the demo's frozen
+  `--dump-dom` pages and measure's `file://` and components pages; `mise run measure` records its
+  version. Playwright's own Chromium Headless Shell and Firefox run only in measure's comparison
+  column, which downloads them into its scratch.
+- Lit is the only runtime dependency; the lint tooling is the only devDependencies.
+  playwright-core is measure's comparison column alone, installed into measure's scratch.
 - Anything that reads the network runs in `measure`, `currency`, or `install`, never in the check.
 
 ## Code
@@ -76,6 +83,29 @@ The architecture pages that apply, in the architecture repository:
   `layers/foundation/baseline.ts`: reset, then elements), then a layout-only sheet of its own, and
   never styles a control's look itself: no background, border, color, padding, or font on a
   control. The page's baseline can't reach inside a shadow root; only its tokens cross.
+
+## Tests
+
+- The unit tier is DOM-free code under node --test, with no DOM shim: happy-dom and jsdom load
+  no CSS module script and compute no layout or style, so a test that passes under one proves
+  nothing about a component.
+- Logic that needs no DOM moves into DOM-free modules, tested in the unit tier.
+- Anything that touches the DOM is the browser tier (Results 5): it serves the components through
+  Vite's dev server with the local CSS plugin (`scripts/css-sheets.js`), never from `file://`,
+  and drives Chromium alone, the pinned chrome-headless-shell, over the raw DevTools pipe
+  (`scripts/browser-pipe.js`, no package) from node:test.
+- The browser tier holds only what a browser alone can prove, each component's contract, events,
+  rendering, and styling, as a fixed set of cases run in every version. It adds no test runner
+  beyond node:test, and no screenshot diffing or tracing, without a recorded need; Playwright stays in measure
+  as the comparison column.
+- Firefox and WebKit are gaps the check doesn't cover: a failure only Firefox or Safari shows goes
+  unseen.
+- The check launches Chromium with `--no-sandbox`, everywhere: Ubuntu 23.10 and later, CI's
+  runners among them, let AppArmor refuse a downloaded Chrome's sandbox, and the browser loads
+  only the repository's own pages from the loopback address, every other host refused.
+- A CI job runs the same `mise install` (for example through jdx/mise-action) and the same
+  `mise run check`, so the browser is the same pin there as here; never the runner's own
+  browsers, which no pin fixes.
 
 ## Evidence
 

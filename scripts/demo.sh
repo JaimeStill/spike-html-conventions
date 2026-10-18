@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
-# Renders every build of the frozen pagination element, and the components layer's composition
-# in each of its versions, in the system Chromium, outside the check.
+# Renders every build of the frozen pagination element in the system Chromium, outside the check.
 #
 # For each build output it writes a page to dist/demo/, loads it with
 # `chromium --headless --dump-dom file://...`, and prints the page's one-line report: whether
@@ -16,16 +15,8 @@
 #                  module request, so these pages need --allow-file-access-from-files.
 # `src` loads the JSDoc and plain .js forms as written, with no build at all.
 #
-# The composition, pagination holding entries from demo/documents.ts, runs demo/probe.ts in one
-# page per version; it passes only when every version's probe holds and all their reports match.
-# Then demo/restyle.ts runs in one page per version: one edit to the source of the version's
-# button styles must repaint both elements' buttons. Both load tsc's emit (dist/tsc/demo/ and
-# dist/tsc/layers/components/, each .css beside its module) unbundled, as the tsc pages do: each
-# component imports its styles as CSS module scripts, which Chromium loads natively from file://
-# under the same flag. Every composition page links the foundation's baseline, its page entry
-# (layers/foundation/baseline.css, the port of spike-html-design v0.7.0), from tsc's emit beside
-# the components, dist/tsc/layers/foundation/: the light-DOM versions take their control styles
-# from it, and every version its tokens, so the demo reads no network.
+# The components layer's composition and restyle cases run in the check's browser tier
+# (scripts/browser.test.js), not here.
 set -euo pipefail
 
 root=$(cd "$(dirname "$0")/.." && pwd)
@@ -158,96 +149,5 @@ for form in jsdoc js; do
       "$importmap" --allow-file-access-from-files
   done
 done
-
-# The composition: pagination holding one entry per fixture item (demo/documents.ts), in each
-# version of the components. Each page imports tsc's emit of demo/probe.ts, which imports a
-# version's modules only when it runs that version, so a page defines its own version alone. Each
-# page writes a verdict and one line per case; every verdict must be ok, and every version's
-# report the same text as the first's. TZ and --lang fix the formatted times and sizes, so a
-# report reads the same on any machine; the restyle pages take them too, as one page function
-# writes and loads both.
-#
-# --dump-dom takes the page once its load event fires, which waits for the fetches in flight but
-# not for a top-level await: between one module's fetch and its imports' (while Chromium compiles
-# it) nothing is in flight, so a page whose run imports a version's modules could be dumped before
-# its verdict is written. --virtual-time-budget doesn't close that gap (about one dump in three
-# missed the verdict). So each page holds its own load event: a classic script opens a hidden
-# iframe's document, and a frame whose document is open hasn't loaded, so neither has the page,
-# until the module script removes the frame once the run is done, verdict written or not, or
-# fails to load.
-versions=(lit-shadow vanilla-shadow lit-light vanilla-light)
-baseline="<link rel=\"stylesheet\" href=\"file://$root/dist/tsc/layers/foundation/baseline.css\">"
-for file in demo/probe.js demo/restyle.js layers/foundation/baseline.css; do
-  if [[ ! -f "$root/dist/tsc/$file" ]]; then
-    echo "demo: no dist/tsc/$file; run mise run build" >&2
-    exit 1
-  fi
-done
-# demo_page NAME MODULE VERSION: writes a page that runs MODULE's run(VERSION) from tsc's emit,
-# loads it, and keeps the dumped DOM beside it.
-demo_page() {
-  local name=$1 module=$2 version=$3
-  {
-    echo "<!doctype html>"
-    echo "<html><head><meta charset=\"utf-8\"><title>$name</title>$baseline"
-    echo "$importmap"
-    echo "</head><body>"
-    echo "<main></main>"
-    echo "<pre id=\"verdict\">FAIL: the $module didn't run</pre>"
-    echo "<pre id=\"report\"></pre>"
-    echo "<script>"
-    echo "  const hold = document.createElement(\"iframe\");"
-    echo "  hold.hidden = true;"
-    echo "  document.body.append(hold);"
-    echo "  hold.contentDocument.open();"
-    echo "</script>"
-    echo "<script type=\"module\" onerror=\"hold.remove()\">"
-    echo "  import { run } from \"file://$root/dist/tsc/demo/$module.js\";"
-    echo "  try {"
-    echo "    await run(\"$version\");"
-    echo "  } finally {"
-    echo "    hold.remove();"
-    echo "  }"
-    echo "</script>"
-    echo "</body></html>"
-  } >"$out/$name.html"
-  # A module script whose imports fail never runs, and its error event lets the page load; the
-  # timeout ends a Chromium that hangs on the page anyway, and the empty dump fails the page.
-  TZ=UTC timeout 60 chromium --headless --user-data-dir="$profile" --lang=en-US \
-    --allow-file-access-from-files --dump-dom "file://$out/$name.html" 2>/dev/null \
-    >"$out/$name.dom.html" || true
-}
-# Each verdict and report is read back from the dumped DOM, its entities unescaped.
-unescape='s/&quot;/"/g; s/&lt;/</g; s/&gt;/>/g; s/&amp;/\&/g'
-first=""
-for version in "${versions[@]}"; do
-  name="composition-$version"
-  demo_page "$name" probe "$version"
-  verdict=$(sed -n 's|.*<pre id="verdict">\(.*\)</pre>.*|\1|p' "$out/$name.dom.html" | sed "$unescape")
-  awk '/<pre id="report">/ { on = 1; sub(/.*<pre id="report">/, "") }
-    on && /<\/pre>/ { sub(/<\/pre>.*/, ""); print; exit }
-    on { print }' "$out/$name.dom.html" | sed "$unescape" >"$out/$name.report.txt"
-  printf '%-28s %s\n' "$name" "${verdict:-FAIL: no verdict in the dumped DOM}"
-  [[ "$verdict" == ok:* ]] || failed=1
-  if [[ -z "$first" ]]; then
-    first=$name
-  elif ! diff -u "$out/$first.report.txt" "$out/$name.report.txt" >&2; then
-    printf '%-28s %s\n' "$name" "FAIL: its report differs from $first's"
-    failed=1
-  fi
-done
-
-# The button styles' single source, in each version: each page writes one verdict.
-for version in "${versions[@]}"; do
-  name="restyle-$version"
-  demo_page "$name" restyle "$version"
-  verdict=$(sed -n 's|.*<pre id="verdict">\(.*\)</pre>.*|\1|p' "$out/$name.dom.html" | sed "$unescape")
-  printf '%-28s %s\n' "$name" "${verdict:-FAIL: no verdict in the dumped DOM}"
-  [[ "$verdict" == ok:* ]] || failed=1
-done
-
-echo
-echo "The composition's report ($first):"
-cat "$out/$first.report.txt"
 
 exit "$failed"

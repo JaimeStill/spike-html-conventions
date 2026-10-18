@@ -9,312 +9,188 @@
 1. [x] toolchain
 2. [x] structure
 3. [x] components
-4. [ ] testing
+4. [x] testing
 5. [ ] branches
 
-## Task brief · components
+## Task brief · testing
 
 ```
-Problem       The component convention (vanilla for the foundation and
-              static pages, Lit from components up) has never been tested.
-              The only vanilla/Lit pair is the frozen per-form pagination
-              port, which lives outside the layers, uses no foundation, and
-              diverges from Lit's contract in ways no one has listed.
-              Herald's shadow roots made it re-import shared styles into
-              every element, and no one has tried light DOM against
-              spike-html-design's class-free baseline. Nor has anyone
-              checked whether a build can remove Lit's runtime. Evidence 4.
-              The architect judges readability, maintainability, and
-              scalability by reading the final components, not by metrics,
-              so the task builds them, measures what each serves in
-              development and production, and records that judgement.
-              currency at planning: pnpm 12.11.2 -> 12.14.0 (what mise now
-              resolves natively).
+Problem       The check has a unit tier (the router suite and the layer
+              test, under node --test and bun test) but no browser tier.
+              The components' 27 contract cases and the 4 restyle checks
+              run only in the demo, through --dump-dom, which needs a
+              hidden-iframe load hold, a 60 s timeout, an import map, and
+              file:// flags. Evidence 5 asks for both tiers in the one
+              check. The architect asks whether Playwright's overhead buys
+              enough, by testing every engine (Chromium, Firefox, WebKit),
+              over a no-package driver on the system Chromium alone, and
+              for the browser tier to serve the components through Vite
+              rather than from file://.
+              currency at planning: eslint 10.12.0 -> 10.13.0 (minor,
+              nothing to adapt).
 
 Behaviors
-  1. The pinned tools are current. pnpm is pinned at what mise resolves
-     natively (12.14.0), and every other pin currency reports when BUILD
-     starts is raised too (eslint 10.13.0 once it clears pnpm's
-     release-age gate). `mise run install` succeeds from the frozen
-     lockfile and `mise run check` passes. README Results 1 states the
-     current pnpm pin; its measured figures keep the run they cite.
-  2. Two element-tier components live in the components layer, each in
-     four versions: Lit and vanilla, each with a shadow root and in light
-     DOM. That is 8 versions, each with its own tag. Every version imports
-     only the foundation and Lit (vanilla: the platform plus the
-     foundation's define, emit, and required, with no base class), and
-     the check's lint, layer rule, and type check pass. The frozen
-     per-form tree, its exports, and its rows are unchanged.
-  3. The pagination element is a container whose controls sit around
-     the entries the host places inside it.
-     Its properties come from go-web-sdk's Page envelope:
-     - page, size, total, and more, plus the offered page sizes;
-     - the page count is worked out from total and size;
-     - when total is absent, Next is enabled by more;
-     - when page is absent, the page input is disabled.
-     It sends page-change {page} and page-size-change {size}; it never
-     changes its own page.
-     Its final form also has:
-     - a boolean disabled property that reflects to the attribute and
-       disables every control;
-     - a "Showing X–Y of N" summary, rendered only when total is present
-       and above zero;
-     - author content that replaces the default "Page Size" label: a named
-       slot under a shadow root, children placed by hand in light DOM.
-  4. The entry element shows one directory or one file of a document
-     hierarchy:
-     - kind, name, and status;
-     - for a file, its size and content type, with no size for a pending
-       file whose size is null;
-     - the updated time.
-     Size and time are formatted with Intl. It types its properties with
-     its own interface holding only those fields, so go-web-service's
-     Directory and File objects fit it with no import. Opening it sends
-     open {id, kind}.
-  5. Each render root takes all its button styling from one source, so a
-     single edit reaches both elements: a shared sheet adopted into both
-     elements' shadow roots for the shadow versions, and
-     spike-html-design v0.7.0's baseline for the light-DOM versions.
-     Shadow versions keep herald's folded control styles. Light-DOM
-     versions drop them and take the baseline's elements layer. Each
-     light-DOM component adopts one constructed sheet into the document
-     once, in a named cascade layer above the baseline. The sheet reads
-     only tokens, with its rules nested under the element's tag.
-  6. Every vanilla version matches its Lit counterpart's observable
-     contract, built by hand:
-     - removing a number attribute yields null;
-     - invalid JSON in an array attribute yields null;
-     - a property set before the element is defined is kept.
-     Batched updates and binding-level template updates are forgone and
-     listed as such.
-  7. A static fixture, written by hand in go-web-service's wire shape at
-     15e0bc3, feeds every page. It holds a directories page and a files
-     page in the Page envelope ({items, page, size, total, more, next}),
-     a pending file with a null size, and a page continued by cursor that
-     has no page or total. Nothing fetches.
-  8. `mise run demo` renders the composition (pagination with entries
-     from the fixture) in each of the four versions in headless Chromium
-     with --dump-dom and no driver. One shared probe passes only when all
-     four report the same:
-     - rendered text;
-     - the same events for prev, next, the two clamps, a size change,
-       and an entry's open;
-     - the contract cases of behavior 6;
-     - disabled reflected in both directions;
-     - the summary present and absent;
-     - the cursor page's disabled input;
-     - the slotted label shown.
-     The frozen pagination demo still passes.
-  9. `mise run measure` records what each version serves, for a page
-     with the pagination element alone and for the composition page:
-     - development: Vite 8.3.4's dev server on a scratch copy, the total
-       bytes of every response the page fetches, uncompressed, with Lit's
-       development builds;
-     - production: `vite build` of the same page, every emitted file raw
-       and brotli q11 (node:zlib), with Lit's share split out.
-     Each row passes only on its expected shape: a Lit page in
-     development loads Lit's development build and a vanilla page loads
-     no Lit; no production output holds a development build. Each
-     version's source lines and source brotli are recorded as context.
-     Measure writes nothing to the working tree.
- 10. Review stop: once 1–9 hold, BUILD pauses. The architect reads the
-     final files of all 8 versions, and the judgement on readability,
-     maintainability, and scalability is logged as a goal-record
-     Decision before any evidence is written.
- 11. README Results 4 records:
-     - the architect's judgement, in the architect's words;
-     - the features table: reactive properties, batched updates,
-       attribute conversion, reflection, templates with binding updates,
-       event binding, shadow root and adopted styles, pre-upgrade
-       properties, lifecycle, controllers, keyed lists, slots, form
-       association, and SSR, each row marked as Lit provides, vanilla
-       builds by hand, vanilla forgoes, or not exercised; form
-       association and SSR are given as sourced facts;
-     - the sourced facts:
-       - no build removes Lit's runtime: @lit-labs/compiler prepares
-         templates that lit-html still renders;
-       - Svelte, Stencil, and solid-element each ship a runtime of their
-         own instead;
-       - what light DOM loses (static styles, slots, encapsulation) and
-         how it lets the baseline reach the controls herald had to
-         restyle;
-     - the served-bytes figures, each citing its dated measure run, and
-       the source sizes as context.
-     There is no rubric score. The goal record gains the pending edit for
-     html-artifacts.md's interim components result.
+  1. The pinned tools are current: eslint is 10.13.0, mise run install
+     succeeds from the frozen lockfile, mise run check passes, and
+     currency prints nothing.
+  2. mise run measure runs the probe's 27 cases in each of the four
+     component versions, and the 4 restyle checks, through two drivers
+     against pages Vite's dev server serves with the local CSS plugin:
+     - the raw Chromium debugging pipe, no package, on the system
+       Chromium;
+     - playwright-core 1.64.1 called from node:test, on the system
+       Chromium through executablePath, on Playwright's Chromium Headless
+       Shell 156, on its Firefox 157, and on its WebKit r2370.
+     Every Vite row passes only when every case holds in every version
+     and all four versions' reports match.
+  3. Measure also runs the unbundled form (tsc emit with native CSS
+     module scripts, over plain http) in Chromium, Firefox, and WebKit:
+     Chromium and Firefox rows pass only when every case holds; the
+     WebKit row passes only when the components fail to load, the
+     Safari gap.
+  4. Measure records Playwright's overhead against the raw pipe, weighed
+     against the cross-engine coverage it buys:
+     - footprint: playwright-core's installed bytes, and each browser's
+       download bytes and time;
+     - the pins and devDependencies a Playwright pick would add;
+     - each driver's harness lines;
+     - cold and warm hyperfine times of the same cases on the system
+       Chromium;
+     - a repeat row: 20 runs per driver, failures counted, expected 0.
+     @playwright/test, Web Test Runner, and Vitest browser mode are
+     sourced facts, not columns. Measure keeps Playwright's browsers in
+     its own scratch (PLAYWRIGHT_BROWSERS_PATH), reads the network only
+     there, and writes nothing to the working tree.
+  5. Review stop: once 1-4 hold, BUILD pauses. The architect reads the
+     drafted Results 5 rows and decides the check's driver and its
+     engines; the pick is logged as a Decision. The default, if
+     Playwright doesn't earn its place, is the raw pipe on the system
+     Chromium alone.
+  6. The check's browser tier, under node --test only (never bun test),
+     runs the 27 cases in each of the four versions and the 4 restyle
+     checks on the engines the Decision names. Pages are served by the
+     mise-pinned Vite binary with the local CSS plugin, which the test
+     spawns in scratch and stops. The check reads no network, writes
+     nothing to the working tree, and fails when a named engine is
+     missing. A deliberately broken case fails the check.
+  7. mise run demo renders only the frozen pagination builds; the
+     composition and restyle pages, and their load hold, are gone. The
+     preview is unchanged.
+  8. STANDARDS.md records: the unit tier is DOM-free code under node
+     --test with no DOM shim; anything touching the DOM is the browser
+     tier, which serves components through Vite in the engines the
+     Decision names; and, if Playwright is picked, the revised
+     devDependency rule and browser exception.
+  9. README Results 5 records the comparison table and each overhead
+     row from one dated measure run, the pick and why, the Safari gap
+     row, and the facts for the runners not measured. The goal record
+     gains the pending edit for html-artifacts.md's interim testing
+     result.
 
-Test seams    `mise run check`: the layer rule, the type check, and the
-              lint over the 8 versions (1, 2, 4, 5). `mise run demo`: the
-              shared probe over the four versions of the composition
-              (3–8). `mise run measure` (9). The review stop (10). The
-              README's cited sources (11).
+Test seams    mise run check: the browser tier and the unit tier (1, 6).
+              mise run measure: the driver, engine, unbundled, and
+              overhead rows (2-4). The review stop (5). mise run demo
+              (7). STANDARDS.md and README Results 5 with their cited
+              run (8, 9).
 
 Slices
-  1. Upgrade (only when currency reports a pin when BUILD starts; at
-     planning: pnpm 12.14.0, and eslint 10.13.0 once past the gate).
-     Demo: currency prints nothing; install and check pass; Results 1
-     states the new pin.
-  2. Fixture and the Lit shadow-root pair: pagination container and
-     entry with every behavior 3–4 requirement, the shared button sheet,
-     and the probe over this one version.
-     Demo: the demo renders the composition from the fixture and the
-     probe passes.
-  3. Vanilla shadow-root pair, with the contract cases built by hand;
-     the probe now compares two versions.
-     Demo: both shadow versions pass the probe with identical reports.
-  4. Light-DOM pair, Lit and vanilla: children placed by hand, one
-     constructed sheet per component in its cascade layer, controls
-     styled by the baseline; the probe compares all four.
-     Demo: all four versions pass the probe; one button-style edit
-     visibly reaches both elements in each render root.
-  5. Served bytes: the development and production rows for both pages
-     per version, and the source-size context rows.
+  1. Upgrade: eslint 10.13.0.
+     Demo: currency prints nothing; install and check pass.
+  2. Raw pipe over Vite in measure: Vite started in scratch with the
+     plugin, the cases and restyle checks in all four versions on the
+     system Chromium.
+     Demo: measure's raw-pipe rows pass with matching reports.
+  3. Playwright column: system Chromium, Headless Shell 156, Firefox
+     157, WebKit r2370 over Vite, browsers downloaded into scratch; the
+     unbundled rows per engine.
+     Demo: every Vite row passes; the unbundled WebKit row records the
+     expected load failure.
+  4. Overhead rows: footprint, download times, pins added, harness
+     lines, cold and warm timings, the 20-run repeat row.
      Demo: measure prints every row passing.
-  -- Review stop: BUILD pauses for the architect to read the 8 final
-     versions; the judgement is logged as a Decision. --
-  6. Evidence: Results 4 from the logged judgement, one fresh measure
-     run, and the sourced facts; the pending edit for html-artifacts.md.
-     Demo: Results 4.
+  -- Review stop: the architect decides the check's driver and engines
+     from the drafted Results 5; logged as a Decision. --
+  5. Browser tier in the check, on the picked driver and engines, over
+     Vite, under node --test.
+     Demo: check passes; a broken case fails it.
+  6. Demo trimmed to the frozen pagination pages.
+     Demo: demo passes its frozen pages alone.
+  7. Evidence: STANDARDS.md's tier rules, Results 5 from one fresh
+     measure run, the html-artifacts.md pending edit.
+     Demo: Results 5 and STANDARDS.md.
 
-Out of scope  The frozen per-form tree and its rows. Per-scenario commits
-              or diffs as evidence: the scenarios are requirements of the
-              final form, judged by reading the files. A scored rubric.
-              A compile-to-custom-element column (Svelte, Stencil, Solid):
-              facts only. A breadcrumb or any element beyond the two.
-              Fetching, the SDK, app modules, and cursor-following logic.
-              The browser test tier in the check (testing). Whether static
-              pages use Lit (branches). Component rules in STANDARDS.md
-              beyond what the review's judgement settles. Release builds
-              and packaging (spike-html-packages). @scope (recorded as
-              the alternative to nesting). Re-running Results 1's figures.
-Door          two-way: no tag, nothing published; the pin upgrade is
-              reverted by restoring the pin and lockfile.
+Out of scope  Web Test Runner and Vitest browser mode as measured columns
+              (facts only). A DOM shim; unit tests over the components'
+              private helpers. The browser tier under bun test. The
+              frozen pagination pages and their builds. A fix or shim for
+              Safari's CSS module scripts. Release builds and packaging
+              (spike-html-packages). CI.
+Door          two-way: no tag, nothing published; the eslint pin and any
+              Playwright devDependency revert by restoring the pin and
+              lockfile.
 ```
 
-Amendment (escalation at the review stop): component styles live in native .css files.
+Redirect 2 at BRIEF (architect): native node tests, the browser tier over the raw CDP pipe on a
+pinned Chrome for Testing headless shell; no Playwright in the check. Supersedes redirect 1.
 
-Behaviors (new and revised)
- 12. (new) Every component's own CSS lives in a .css file beside its
-     module, imported as a CSS module script
-     (`import sheet from "./x.css" with { type: "css" }`) and typed by one
-     ambient declaration; no CSS is written in .ts. This covers all 8
-     versions and status-badge. Lit shadow versions put the sheet in
-     `static styles`; vanilla shadow versions adopt it into their root;
-     light versions adopt it into the document once, their cascade layer
-     written inside the .css. The shared button styles are one .css file
-     adopted by reference into every shadow version, so one edit still
-     reaches both elements.
- 13. (new) A local Vite plugin of herald's shape, about 30 lines, no new
-     package, turns each `type: "css"` import into a module that builds
-     and default-exports a constructed sheet, in `vite` dev and
-     `vite build`. Measure's pages use it. If the plugin can't see the
-     attribute before Vite strips it, BUILD escalates.
- 14. (new) `mise run build:tsc` copies each .css beside its emitted .js.
-     `mise run demo` loads the components from tsc's emit natively in
-     Chromium from file://, with no bundling of the components; the
-     probe and restyle checks still pass across all four versions with
-     identical reports.
- 15. (new) The check refuses a .css import without
-     `with { type: "css" }` (core ESLint no-restricted-syntax).
-  9. (rev) The served-bytes and source-size rows re-run on the .css form.
- 11. (rev) Results 4 also records: the architect's judgement (Lit with a
-     shadow root as the default; styles in native .css files); CSS module
-     scripts' support (Chrome/Edge 123+, Firefox 147+, no Safari release;
-     WebKit landed it 2026-10-06) and the Safari gap for unbundled
-     loading, which apps close by building through Vite; that Bun 1.4.3
-     doesn't load the form either and herald's native CSS was a bundler
-     plugin, so Results 1's pick stands.
- 16. (new) STANDARDS.md records: components are Lit with a shadow root by
-     default; a component's CSS lives in its own .css file, imported as a
-     CSS module script, and CSS is never written in .ts.
+Microsoft supports Playwright on Linux only for Ubuntu and Debian, and the architect won't rely
+on unofficial support on Arch. Google names no Arch either, but Chrome for Testing's
+chrome-headless-shell is one generic linux64 zip that runs here, and one pin makes the check the
+same locally and in CI (round 4, 2026-10-18).
 
-Slices (inserted after the review stop, before the evidence slice)
-  5b. Style files: the .css files, the ambient declaration, the Vite
-      plugin, build:tsc's copy, the demo on tsc's emit, the lint rule.
-      Demo: check, demo, and measure pass on the .css form.
-  5c. Preview (architect, during BUILD): `mise run preview`, outside the
-      check, starts Vite's dev server with the local CSS plugin on one
-      page showing all four versions side by side, each wired to the
-      fixture as a host would wire it (paging, page size, cursor page,
-      opening an entry), the light versions with the baseline linked.
-      Writes nothing to the working tree.
-      Demo: the page serves and each version pages through the fixture.
-  6.  (rev) Evidence: Results 4 and STANDARDS.md from one fresh measure
-      run; pending edits for html-artifacts.md, spike-html-packages
-      (ship each .css beside its .js), and the spike-html-design note.
+  6. (rev) The check's browser tier runs `scripts/browser.test.js` under node --test with the
+     raw CDP pipe (no package) on Chrome for Testing's chrome-headless-shell, pinned in mise.toml
+     through mise's http: backend (version 155.0.8059.84, linux-x64 URL, a sha256 and size we
+     record), launched by path with --no-sandbox; Chromium alone. It fails by name when the pin
+     isn't installed. The system Chromium and Firefox leave the check.
+  4. (rev) Measure keeps Playwright as the comparison column, playwright-core installed into
+     measure's scratch (a scratch pin currency lists), its browsers in measure's scratch.
+  8. (rev) STANDARDS.md: the devDependency rule reverts to lint tooling only; every browser the
+     check runs is the mise pin; the browser tier is Chromium alone (Firefox and WebKit are gaps
+     the check doesn't cover); the strategy lines of redirect 1 stay, with the raw pipe as the
+     check's driver and a CI job running the same `mise install` (e.g. jdx/mise-action).
+  9. (rev) Results 5 records the revised pick, the support facts (Microsoft: Ubuntu and Debian;
+     Google: Ubuntu, Debian, openSUSE, Fedora; Playwright's Chromium is itself a CfT build), the
+     check's timing on the pin, CfT's lack of checksums, the CI facts (the runner's unpinned
+     browsers; AppArmor and --no-sandbox), and Firefox over BiDi only (puppeteer-core) as the
+     rejected way to keep it.
 
-Amendment 2 (redirect at BRIEF): the shadow versions take the baseline from a port of
-spike-html-design v0.7.0 in the foundation.
 
-Shadow roots can't see the page's baseline: its reset and elements layers use element
-selectors, which stop at a shadow boundary; only custom and inherited properties cross. No
-platform mechanism lets a shadow root inherit page styles (survey 2026-10-17:
-csswg-drafts#10176, open-stylable/adoptStyles, unresolved; whatwg/html#11687, Declarative CSS
-Modules, open and experimental in Chromium only; the MSEdgeExplainers ShadowDOM explainer). The
-conventional answer for a layered design system: the shadow root adopts the lower layers by
-reference as constructed sheets, then its own layout-only sheet. spike-html-design v0.7.0
-doesn't fit: its one entry builds the layers with `@import ... layer()`, which constructed
-sheets and CSS module scripts don't load, and it exports no layer file. The architect: port
-it into this repo in the correct format rather than change it.
+Redirect at BRIEF (architect): the check's browsers are all Playwright's, so it runs the same in CI.
 
-Behaviors (new and revised)
- 17. (new) The foundation owns a port of spike-html-design v0.7.0's tokens (the color, space,
-     and type facets with baseline.css's defaults: flexoki, regular, mono), reset, and
-     elements layers: one plain .css file per upstream file, no @import, each wrapped in its
-     own `@layer foundation.<layer>` block and headed by its provenance (tag v0.7.0, commit
-     fe75220, upstream path). Each loads as a CSS module script and can be linked by a page.
-     The port is this repo's own code from here on: Prettier formats it, and no test holds it
-     to upstream. The tools layer and the other profiles aren't ported.
- 18. (new) The foundation holds a page entry: the layer order statement, then plain @imports
-     of the ported files. Every page links it (demo, preview, measure; shadow and light
-     alike, since shadow roots read its tokens by inheritance). No page reads the baseline
-     from the spike-html-design checkout any more.
- 19. (new) The shadow versions, Lit and vanilla, take their control look only from the port:
-     a foundation module exports the reset and elements sheets in that order, and each
-     shadow version adopts them before its own sheet. Their buttons, select, and input are
-     bare, as in the light versions; the shadow sheets keep layout only, mirroring the light
-     sheets. buttons.css is deleted; no component sheet gives a control its look.
- 20. (new) A long content type wraps inside its entry in all four versions; no entry
-     overflows its box.
- 21. (new) The probe gains two cases (27 in all), each reporting the same across the four
-     versions: the painted look of the Next button, the page-size select, the page input,
-     and the entry's button (background, color, border, padding, font family and size); and
-     no overflow on the entry with the fixture's longest content type.
-  5. (rev) Every render root takes its control styles from the ported elements layer, so one
-     edit reaches both elements: in the shadow versions an edit to the adopted elements
-     sheet; in the light versions a rule added to the page's `foundation.elements` layer.
-     Light components still adopt one layout sheet into the document once, in a named layer
-     above the baseline.
- 12. (rev) Shared styles stay one .css file adopted by reference; in the shadow versions that
-     file is the foundation's elements layer.
-  9. (rev) Served bytes re-run with the port counted as the baseline share (development: the
-     entry and the adopted sheet modules; production: the entry's CSS and its own chunk for
-     the adopted sheets). The rows record that a shadow page loads reset and elements twice,
-     linked and adopted.
- 11. (rev) Results 4 also records: the shadow-root default adopts the baseline's reset and
-     elements by reference through the foundation, component sheets layout only; the survey
-     with its three sources; why @import is excluded; the port and its provenance. From one
-     fresh measure run.
- 16. (rev) STANDARDS.md also records, under Components: a shadow-root component adopts the
-     foundation's baseline sheets, then a layout-only sheet of its own, and never styles a
-     control's look itself; under Layers: the foundation holds the design-system port, as
-     native CSS without @import except in the page entry.
+The system Chromium isn't pinned by the repository (it moved from 152 to 154 during BUILD) and
+doesn't exist on a CI runner. Playwright's Chromium Headless Shell 156 passed every measure row.
 
-Slices (after 5c, before the evidence slice)
-  5d. Foundation port: the ported files, the page entry; every page links the entry.
-      Demo: check passes; the preview's light columns look as before.
-  5e. Shadow versions on the foundation: the baseline module, layout-only shadow sheets,
-      buttons.css deleted, the overflow fix in all four versions, restyle rewritten, the
-      probe's two cases.
-      Demo: demo passes 27 cases and restyle across four versions; the preview's four
-      columns look alike.
-  6.  (rev) Evidence: Results 4 and STANDARDS.md from one fresh measure run; the pending edit
-      for spike-html-design rewritten (ship each layer as a self-layered, @import-free,
-      exported sheet; the port is the interim and the reference).
+  6. (rev) The check's browser tier runs Playwright on its Chromium Headless Shell and its
+     Firefox, both fixed by playwright-core's pin; `mise run install` downloads both into
+     `~/.cache/spike-html-conventions/playwright`. The system Chromium leaves the check and stays
+     in measure (the raw pipe's browser and Playwright's like-for-like timing row).
+  8. (rev) STANDARDS.md drops the system-Chromium exception from the check (every browser the
+     check runs is fixed by one pin) and records the testing strategy: logic that needs no DOM
+     moves into DOM-free modules tested under node --test; the browser tier holds only what a
+     browser alone can prove (each component's contract, events, rendering, and styling), a fixed
+     set of cases run in every version and engine; no @playwright/test runner, screenshot diffing,
+     or tracing without a recorded need; the raw pipe stays in measure as the no-package fallback.
+     A CI job installs the same browsers with `playwright-core install --with-deps`.
+  9. (rev) Results 5 records the revised pick, the check's timing on Headless Shell, and, as notes
+     for the intake: revisit Firefox if it never catches what Chromium misses; WebKit is cheap to
+     add in CI on an Ubuntu runner.
 
-Out of scope  The tools layer, the non-default profiles, any change to spike-html-design;
-              ::part hooks recorded, not built.
-Door          two-way: no tag, nothing published.
+
+Amendment (escalation at slice 3): WebKit is excluded.
+
+Playwright's WebKit r2370 is an ubuntu-24.04 build that won't launch on this Arch host (missing
+libicu*.so.74, libxml2.so.2, libflite). The architect: exclude WebKit entirely rather than run it
+in a container or install libraries on the host.
+
+  2. (rev) Playwright runs on the system Chromium, Headless Shell 156, and Firefox 157; no
+     WebKit rows.
+  3. (rev) The unbundled rows run in Chromium and Firefox only. The Safari gap is a sourced
+     fact (no Safari release ships CSS module scripts; WebKit landed them 2026-10-06), with the
+     launch failure on a non-Ubuntu host recorded as a fact.
+  4. (rev) Footprint covers playwright-core, Headless Shell, and Firefox; measure downloads no
+     WebKit. The cross-engine coverage weighed is Chromium and Firefox against Chromium alone.
+
 
 ## Progress
 
@@ -448,7 +324,7 @@ Door          two-way: no tag, nothing published.
 - components: the vanilla versions build on the platform and the foundation's define, emit, and required only, with no base class.
 - components: architect: the vanilla versions match Lit's observable contract by hand (attribute removal and invalid JSON give null, a pre-upgrade property is kept) and forgo batched and binding-level updates, to expose the pain of building without Lit so the tradeoffs can be weighed.
 - components: the features table is one fixed list, each row marked Lit provides, vanilla builds by hand, vanilla forgoes, or not exercised; form association and SSR are sourced facts.
-- components: a shared probe in `mise run demo` (outside the check, Chromium --dump-dom, no driver) passes only when every version reports the same text, events, and contract cases; the check's browser tier stays with testing.
+- components (superseded by testing): a shared probe in `mise run demo` (outside the check, Chromium --dump-dom, no driver) passes only when every version reports the same text, events, and contract cases; the check's browser tier stays with testing.
 - components: architect: size is compared as what is served in development and in production after the build.
 - components: architect: line count is a poor metric; source lines and source brotli are context only.
 - components: architect: readability, maintainability, and scalability are the architect's judgement from reading the files, not metrics. Rejected: metrics drawn from scenario diffs; a scored rubric.
@@ -471,7 +347,7 @@ Door          two-way: no tag, nothing published.
 - components: escalation: component styles are standard CSS module scripts (`with { type: "css" }`) with one ambient declaration. Rejected: fetch plus replace() (a request per sheet, not the standard form); a <link> per shadow root (unstyled flash, no shared sheet, advised against by Lit); Vite's `?inline` (Vite-only, breaks tsc library emit).
 - components: escalation: a local ~30-line Vite plugin of herald's shape resolves the form in dev and build. Rejected: @arcmantle/vite-plugin-import-css-sheet (niche, a non-lint devDependency); es-module-shims at runtime (about 20 kB brotli, one maintainer).
 - components: escalation: Safari, which no release yet supports CSS module scripts in (WebKit landed it 2026-10-06), is a recorded gap for unbundled loading; apps build through Vite, so production pages don't depend on it. No shim ships.
-- components: escalation: the demo loads the components from tsc's emit natively in Chromium, not through esbuild IIFE pages or an esbuild plugin; build:tsc copies each .css beside its .js, and spike-html-packages is handed the release consequence.
+- components (superseded by testing): escalation: the demo loads the components from tsc's emit natively in Chromium, not through esbuild IIFE pages or an esbuild plugin; build:tsc copies each .css beside its .js, and spike-html-packages is handed the release consequence.
 - components: escalation: all 8 versions, status-badge, and the shared button sheet move to .css; the button sheet is one .css file adopted by reference into every shadow version. (Amendment 2 deleted the button sheet; the shared file is the foundation's elements layer.)
 - components: escalation: the check refuses a .css import without `with { type: "css" }` (core no-restricted-syntax), since the ambient declaration alone accepts a bare import no browser loads as a sheet.
 - components: escalation: Results 1's toolchain pick doesn't reopen. Bun 1.4.3 loads a CSS module script as `{}`; herald's native CSS was a 30-line BunPlugin, which a Vite plugin reproduces.
@@ -486,7 +362,7 @@ Door          two-way: no tag, nothing published.
 - components (superseded by amendment 2): the shadow sheets and `buttons.css` read spike-html-design v0.7.0's token names, the light versions' vocabulary, keeping herald's rules and each fallback; each file's header records the mapping. Herald's names, most of which the baseline doesn't define, painted themed backgrounds under system-colour text.
 - components: `scripts/css-sheets.js` reads the import attribute in a pre transform that parses each importer (`this.parse`), because Vite 8.3.4 passes no import attributes to `resolveId` or `load`; it rewrites each `type: "css"` import to a virtual module that builds the sheet, and leaves any other `.css` import to Vite. The ~30-line plugin of the escalation holds, so BUILD didn't escalate.
 - components: the check refuses any `import()` of a `.css` file, with the attribute or without, a template specifier included, because a component imports its sheet statically and `scripts/css-sheets.js` handles only the static forms. Static imports and export-froms still need `with { type: "css" }`.
-- components: each demo page holds its own load event with a hidden iframe whose document stays open until the run returns or its module script fails to load, with a 60 s timeout behind it, because `--dump-dom` raced the run's dynamic imports and `--virtual-time-budget` missed the verdict in about one dump in three.
+- components (superseded by testing): each demo page holds its own load event with a hidden iframe whose document stays open until the run returns or its module script fails to load, with a 60 s timeout behind it, because `--dump-dom` raced the run's dynamic imports and `--virtual-time-budget` missed the verdict in about one dump in three.
 - components: the probe reads the pre-definition case from what renders (the page input, the entry's rendered name), because a property an element never took in still reads back from its own field and so couldn't fail the case.
 - components: the pagination contract and the page sizes are exported once from `demo/versions.ts`, which the probe, the preview, and `scripts/components.js` import; measure's pages came out byte for byte the same.
 - components: measure's development figures are the 2xx bodies Chromium's NetLog records (`--net-log-capture-mode=Everything`), with Vite's client as its own share. Rejected: crawling the module graph with fetch, which reproduces Vite's rewriting but not the browser's requests. Production splits Lit into its own chunk with an `output.codeSplitting` group over lit, lit-html, lit-element, and `@lit/*`.
@@ -499,6 +375,48 @@ Door          two-way: no tag, nothing published.
 - components: two lines of the port are respelled so Prettier, Biome, and oxfmt agree (elements.css nests the block-after-block selector under `:where()`; baseline.css states the layer order in two statements); meaning unchanged, recorded in each header. Rejected: recording the disagreement as an expected fact in measure's format rows. The entry button takes `text-align: start` in all four entry sheets so the wrapped type doesn't center; the probe's overflow case narrows the cursor composition to 22rem, the preview's narrowest column, so it can fail.
 - components: standards review of amendment 2: the probe's look case compares each control with a bare control of the same tag and type that the page's baseline paints, not with values copied from the port; production rows require every emitted file outside Lit's chunk comment-free, so a broken minify path fails measure (mutation-tested).
 - components: the shadow versions drop herald's `btn`, `btn-page`, and `input` classes and take the light versions' class names (`page-step`, `page-input`, `entry`), which only the layout sheets select.
+- testing (superseded by the review stop): the browser tier runs on the system Chromium unless the comparison earns more.
+- testing: Playwright is measured against the raw Chromium debugging pipe (architect: "evaluate the overhead of Playwright against raw Chromium").
+- testing: the driver is chosen from a measured comparison in `mise run measure`, argued in the toolchain order.
+- testing: the 27-case composition probe and the 4 restyle checks move into the check, and the demo drops their pages; the 20 frozen pagination pages (12 esbuild and bun, 4 tsc emit, 4 src forms) stay in `mise run demo`, where planning counted 16, the bundled ones only. The preview is unchanged.
+- testing: the unit tier is DOM-free code under node --test with no DOM shim; anything touching the DOM is the browser tier. Rejected: happy-dom or jsdom, which load no CSS module script and compute no layout or style.
+- testing: Web Test Runner and Vitest browser mode are sourced facts, not measured columns (Vitest's browser mode drives Playwright; Web Test Runner brings mocha and an esbuild plugin).
+- testing: Playwright is measured as the playwright-core library called from node:test; @playwright/test is a sourced footprint row.
+- testing (superseded by round 4, below): measure runs Playwright on the system Chromium through executablePath and on its bundled Headless Shell 156.
+- testing: measure runs the cases on Playwright's Firefox too, as the measured answer to coverage. (WebKit beside it: superseded by the slice 3 escalation.)
+- testing: Playwright's overhead is footprint, download bytes and time, pins added, harness lines, cold and warm timings, and a 20-run repeat row, weighed against cross-engine coverage over Chromium alone (architect).
+- testing: a review stop after the measure slices: the architect picks the check's driver and engines from the drafted Results 5; the default is the raw pipe on the system Chromium alone.
+- testing: the browser tier runs under node --test only, never bun test.
+- testing: the browser tier serves the components through Vite's dev server with the local CSS plugin, not file:// (architect: "so that we aren't limited by the restrictions of file-based rendering"). Rejected: tsc emit from file://, which needs a file-access flag, an import map into pnpm's store, a copied .css per module, and hides stylesheet rules.
+- testing: measure keeps one unbundled row per engine (tsc emit with native CSS module scripts over plain http), so the form the library ships stays measured. (The WebKit row, which would have recorded the Safari gap by its expected failure, and its "fails" mode: superseded by the slice 3 escalation.)
+- testing: the check spawns the mise-pinned vite binary with a scratch config, as `mise run preview` does. Rejected: vite as a devDependency, which breaks the devDependency rule and duplicates the pin.
+- testing: measure downloads Playwright's browsers into each run's scratch (PLAYWRIGHT_BROWSERS_PATH), never ~/.cache/ms-playwright; the download is part of the overhead.
+- testing: escalation at slice 3 (architect): WebKit is excluded entirely; "setting up a container image just to test WebKit feels like overkill". Rejected: Playwright's v1.64.1 Docker image for WebKit; host libraries (libxml2-legacy, flite, icu74 from the AUR). The Safari gap is a sourced fact.
+- testing: both drivers emulate the light color scheme, so their reports render the same; the raw pipe took the system's dark scheme, Playwright defaults to light.
+- testing: each measure browser run takes its own TMPDIR inside scratch, removed after, so no Playwright profile or artifact is left behind.
+- testing (superseded by round 4: the check and measure's browser rows left the system Chromium): the system Chromium takes a short TMPDIR of its own under /tmp in both drivers, removed when it closes, because a scratch-length TMPDIR overflows its singleton socket path (SIGABRT).
+- testing: engines differ by rounding in one report line (input font size 14.2224px in Chromium, 14.2188px in Firefox); no row compares across engines, and Results 5 records it as a fact.
+- testing: the system Chromium moved from 152.0.7977.82 to 154.0.8037.97 between slices 3 and 4 (a host update); the evidence cites the run's version.
+- testing (superseded by redirect 1, then redirect 2): review stop (architect): the check's browser tier runs Playwright (playwright-core 1.64.1, a devDependency) on the system Chromium and on Playwright's Firefox 157. Argued in the toolchain order: the standard browser driver and less than half the harness code come first; a second engine for its footprint comes second; 1.5x slower, no order-of-magnitude gap. Rejected: the raw pipe on the system Chromium alone (the default), and Playwright on Chromium alone. Its figures are from m 2026-10-18T18:43:26Z (57 harness lines against 131; 13.7 MB plus Firefox's 324.5 MB).
+- testing (superseded by redirect 2): review stop (architect): `mise run install` downloads Firefox into a repo-specific PLAYWRIGHT_BROWSERS_PATH outside the tree, `~/.cache/spike-html-conventions/playwright`, so the check stays offline. Rejected: the shared `~/.cache/ms-playwright`, which holds another project's browsers.
+- testing (superseded by redirect 2): PLAYWRIGHT_BROWSERS_PATH is set once in mise.toml's `[env]`; measure exports its own scratch path over it.
+- testing: the browser test stays in `scripts/`, so `bun test ./test/` never runs it.
+- testing (superseded by the evidence run below): the evidence cites m 2026-10-18T19:38:34Z (156/156): 63 Playwright harness lines against the raw pipe's 136, and 13.5 MB for playwright-core. The review stop read 57, 131, and 13.7 MB: since then both drivers check for their browser's executable, and measure reads playwright-core from the repository's install instead of a scratch npm install. The argument is unchanged.
+- testing: standards review follow-ups: the browser tier and measure pass only on exactly 27 cases (one count, `probeCases` in `scripts/browser-cases.js`); restyle requires an opaque baseline colour, so unloaded tokens fail it; the raw pipe fails by name when its browser is missing (then the system Chromium, now the executable the check passes it).
+- testing (superseded by redirect 2): redirect 1, at BRIEF (architect): the check runs Playwright's Chromium Headless Shell and Firefox, both fixed by playwright-core's pin, so it runs the same locally and in CI; the system Chromium leaves the check and stays in measure. Rejected: the system Chromium in the check (unpinned: 152 to 154 during BUILD; absent on CI runners).
+- testing: redirect 1, at BRIEF (architect): STANDARDS.md records the test strategy: DOM-free logic moves into modules under node --test, the browser tier holds only contract, events, rendering, and styling, and no @playwright/test, screenshot diffing, or tracing comes without a recorded need.
+- testing (superseded by redirect 2): redirect 1, at BRIEF (architect): the raw pipe is the no-package fallback; Firefox is revisited with evidence and WebKit in CI later.
+- testing: redirect 2 (architect, round 4): the check drives Chromium over the raw CDP pipe, no package. Rejected: puppeteer-core 25.14.0 (Firefox over BiDi, a package with five dependencies); Playwright (Linux support only for Ubuntu and Debian).
+- testing: round 4: the check's Chromium is Chrome for Testing's chrome-headless-shell pinned at Stable 155.0.8059.84 everywhere. Rejected: the system Chromium locally with a separate CI install (unpinned: 152 to 154 during BUILD; the runner's snapshot changes per image).
+- testing: round 4: the pin is a mise http: tool (URL, sha256, size we record; CfT publishes no checksums, so each bump takes a fresh sha256 by hand); currency's mise scan reports new Stables. Rejected: @puppeteer/browsers at install.
+- testing: round 4: the check launches Chromium with --no-sandbox everywhere (the repository's own pages on loopback, every other host refused), since Ubuntu 23.10+ AppArmor blocks a downloaded Chrome's sandbox. Rejected: lifting the AppArmor restriction in CI.
+- testing: round 4: Playwright stays in measure as the comparison column, playwright-core back in measure's scratch; it leaves package.json, and the devDependency rule reverts to lint tooling only.
+- testing: round 4: the stopped redirect-1 slice is discarded, and the repository's 588 MB Playwright cache outside the tree removed.
+- testing: measure's raw-pipe rows and Playwright's like-for-like row run on the pinned headless shell, so the comparison measures the check's own browser; the demo's frozen --dump-dom pages stay on the system Chromium (outside the task).
+- testing: the check guards the pin's version (`--version` must end in the pinned version), because mise's download cache, keyed by checksum, installed the cached 155 build under a lowered 154 pin without error.
+- testing: the pin is linux-x64 only, as the brief names; another platform gets no URL until it needs one.
+- testing: the evidence cites m 2026-10-18T20:47:44Z (156/156), Results 5's run: on the pin, 59 Playwright harness lines against the raw pipe's 143, 13.7 MB for playwright-core in measure's scratch, and Playwright 1.25 times the raw pipe cold and 1.26 warm; the earlier system-Chromium figures keep m 2026-10-18T19:38:34Z.
+- testing: mise.toml sets `task.run_auto_install = false`, so `mise run check` never installs a missing tool from the network and fails by name instead; `mise run install` is the one task that installs tools.
 
 ## Pending edits
 
@@ -510,6 +428,7 @@ Door          two-way: no tag, nothing published.
 - coordinator · roadmap, spike-html-apps: four of herald's element files in `app/client/ui/elements` import from `@domains` (herald 6fc22b3): `classify-progress.ts` the `WORKFLOW_STAGES` constant and the `WorkflowStage` type, `document-card.ts` the `WorkflowStage` and `Document` types, `prompt-card.ts` the `Prompt` type, and `blob-viewer.ts` the `findFormat` lookup. Under spike-html-conventions' layout a component may not import domain code: the types become the element's own properties, and the constant and lookup move up to the app or down into the element.
 - coordinator · roadmap, this spike's `branches` task: add the app-internal tiers (modules and views) and whether static pages use Lit, both handed on by Results 3; STANDARDS.md records the second as undecided.
 - coordinator · `context/html-artifacts.md`, "Experiment: spike-html-conventions": record the components task's interim result, pending the intake's decision. Components are Lit with a shadow root by default, the architect's judgement after reading all 8 final versions (two elements, a pagination container on go-web-sdk's Page envelope and the entry it holds, each in Lit and vanilla, shadow and light DOM): light DOM's hand-placed composition (MutationObserver placement in place of slots, a cascade layer ordered by adoption, page styles leaking in) costs more than it gives, though it lets the page's baseline style the controls directly. Vanilla matches Lit's observable contract only by hand-writing attributes, conversion, reflection, accessors and pre-upgrade properties, and forgoes batched and binding-level updates. No build removes Lit's runtime (5,031 B brotli in production, shared by every Lit element on a page); Svelte, Stencil and solid-element each ship their own runtime. A shadow root can't see the page's baseline: its element selectors stop at the boundary and only tokens cross, and no shipped mechanism lets a shadow root inherit page styles (csswg-drafts#10176 and whatwg/html#11687 are open). So a shadow-root component adopts the foundation's reset and elements sheets by reference, then a layout-only sheet of its own, and no component styles a control's look. The foundation holds a port of spike-html-design v0.7.0 (its tokens with the Flexoki, regular, and mono profiles, reset, and elements) as `.css` files that each wrap their rules in a `@layer foundation.<layer>` block and import nothing, because neither a constructed sheet nor a CSS module script loads `@import`; a page entry states the layer order and imports them, and every page links it, so a shadow page loads the reset and elements layers twice, linked and adopted. A component's CSS lives in its own `.css` file, imported as a standard CSS module script and never written in `.ts`. CSS module scripts run in Chrome/Edge 123+ and Firefox 147+, with no Safari release yet (WebKit landed it 2026-10-06), and are not Baseline. Apps build through Vite with a ~30-line local plugin, so their production pages don't depend on Safari; a page that loads the modules unbundled fails there until a Safari release ships the form. Native CSS doesn't reopen the toolchain pick: Bun loads the form as `{}`, and herald's native CSS was a bundler plugin.
-- coordinator · roadmap, spike-html-packages: a release of the components ships each component's `.css` beside its emitted `.js`, and the foundation's sheets beside its own (the port in `layers/foundation/baseline/`, which the shadow components import as CSS module scripts, and the page entry `layers/foundation/baseline.css`, which pages link), with `exports` and `files` naming the `.css` files too, because tsc's emit copies no `.css` (spike-html-conventions' `build:tsc` copies every `.css` in `layers/` by hand). A CSS module script (`with { type: "css" }`) loads only when the file is served as `text/css`; jsDelivr serves `.css` as `text/css`. Consumers that load the modules unbundled in Safari fail until a Safari release ships WebKit's CSS module scripts (bug 227967, landed 2026-10-06, 322887@main). Bundled consumers go through Vite with a local plugin (spike-html-conventions' `scripts/css-sheets.js`). Neither Node 26 (`ERR_UNKNOWN_FILE_EXTENSION`) nor Bun 1.4.3 (`{}`) loads the form, so a test run outside a browser needs the same treatment. Source: spike-html-conventions Results 4.
+- coordinator · roadmap, spike-html-packages: a release of the components ships each component's `.css` beside its emitted `.js`, and the foundation's sheets beside its own (the port in `layers/foundation/baseline/`, which the shadow components import as CSS module scripts, and the page entry `layers/foundation/baseline.css`, which pages link), with `exports` and `files` naming the `.css` files too, because tsc's emit copies no `.css` (spike-html-conventions' measure copies every `.css` in `layers/` beside tsc's emit by hand, in `scripts/browser-cases.js`). A CSS module script (`with { type: "css" }`) loads only when the file is served as `text/css`; jsDelivr serves `.css` as `text/css`. Consumers that load the modules unbundled in Safari fail until a Safari release ships WebKit's CSS module scripts (bug 227967, landed 2026-10-06, 322887@main). Bundled consumers go through Vite with a local plugin (spike-html-conventions' `scripts/css-sheets.js`). Neither Node 26 (`ERR_UNKNOWN_FILE_EXTENSION`) nor Bun 1.4.3 (`{}`) loads the form, so a test run outside a browser needs the same treatment. Source: spike-html-conventions Results 4.
 - coordinator · roadmap, the web client intake (finding for spike-html-design): ship each layer (tokens with each facet and profile, reset, elements) as a self-layered, `@import`-free, exported sheet: each file wraps its rules in its own `@layer spike-html-design.<layer>` block, imports nothing, and is named in package.json's `exports`, so a component's shadow root can adopt the reset and elements layers by reference as CSS module scripts (`with { type: "css" }`); the one entry may keep the layer order statement and plain `@import`s for pages. Today's entry builds the layers with `@import ... layer()`, which neither a constructed sheet (`replace`/`replaceSync` drop `@import`, WPT css/cssom/CSSStyleSheet-constructable-disallow-import) nor a CSS module script loads, and no layer file is exported, so spike-html-conventions ported v0.7.0 (fe75220) into `layers/foundation/baseline/` as `foundation.*` layers with provenance headers: the interim and the reference for the shape (its shadow components adopt `[reset, elements]` before a layout-only sheet; no component styles a control's look). Also: the theme-menu builds its constructed sheet from a string (`modules/theme-menu.js:46-47` at v0.7.0), against the convention of CSS in `.css` files imported as CSS module scripts. Same support caveats: no Safari release ships CSS module scripts (WebKit landed them 2026-10-06); bundlers need a plugin. Source: spike-html-conventions Results 4.
 - coordinator · roadmap, spike-html-apps: herald's pagination takes `total_pages` (`pkg/pagination` `PageResult`, the element's `total-pages` attribute, 6fc22b3); go-web-sdk's Page envelope carries `items`, `page`, `size`, `total`, `more`, `next` and omits `page` and `total` under a cursor (`total` also when the read didn't count). spike-html-conventions' pagination derives the page count from total and size, follows `more` for Next when total is absent, disables the page input when page is absent, and sends `page-change {page: null}` on cursor Next so the host follows `next`. The real app wires these fields and treats a null page as a cursor follow.
+- coordinator · `context/html-artifacts.md`, "Experiment: spike-html-conventions": record the testing task's interim result, pending the intake's decision. The check has two tiers. The unit tier is DOM-free code under node --test, with no DOM shim, since happy-dom and jsdom load no CSS module script and compute no layout or style; logic that needs no DOM moves into DOM-free modules. Anything that touches the DOM is the browser tier, which serves the components through Vite's dev server with the ~30-line local CSS plugin, not from `file://` (which needs a file-access flag, an import map into the package store, a copied `.css` per module, and hides stylesheet rules), and runs the components' 27 contract cases in each of four versions and 4 restyle checks under node --test. Its driver is the raw Chromium DevTools pipe, no package, on Chrome for Testing's chrome-headless-shell 155.0.8059.84, pinned in `mise.toml` through mise's `http:` backend with a sha256 and size taken by hand (Chrome for Testing publishes no checksums, chrome-for-testing#70), launched with `--no-sandbox` (Ubuntu 23.10+ AppArmor refuses a downloaded Chrome's sandbox; the browser loads only the repository's own pages on loopback); Chromium alone, 0.9 s of a 12 s check. The architect first picked Playwright (playwright-core) on the system Chromium and Firefox, then Playwright's own browsers so CI would match, and finally the pin, because Microsoft supports Playwright on Linux only on Ubuntu and Debian. Google names only Ubuntu, Debian, openSUSE, and Fedora for Chrome, but the headless shell is one generic linux64 zip that runs on Arch and on CI's runners, whose own browsers (ubuntu-24.04 image 20261012.334.1: Chrome 155.0.8059.39, a Chromium 155.0.8059.0 snapshot, Firefox 157) no repository pins; Playwright's Chromium is itself a Chrome for Testing build. A CI job runs the same `mise install`. Playwright stays the measured comparison: on the pin it is 1.25 times the raw pipe cold and 1.26 warm, 59 harness lines against 143, 13.7 MB, 0 failures in 20 runs each. Firefox and WebKit are gaps: Firefox removed CDP in 141, so keeping it means WebDriver BiDi through a package (puppeteer-core), rejected; Playwright's WebKit r2370 is an Ubuntu 24.04 build that doesn't launch on this spike's Arch host, and no Safari release ships CSS module scripts (WebKit landed them 2026-10-06), so a page loading the components unbundled fails in Safari until a release ships them. @playwright/test, Web Test Runner, and Vitest's browser mode are sourced facts, not measured. Source: spike-html-conventions Results 5 (m 2026-10-18T20:47:44Z).

@@ -10,8 +10,12 @@ The repository is managed with the marathon workflow; start from `context/README
 - **Check:** `mise run check`: ESLint (`eslint.config.js`, which also enforces the import
   direction in `layers/`) and Prettier, run from the devDependencies by `pnpm exec`; shellcheck;
   `tsc --noEmit`; the tests in `test/`, the router suite and the layer test, under `node --test`
-  and `bun test`; and the three consumer fixtures (pnpm, npm, and bun) installed offline, failing
-  unless the npm that runs is the version `mise.toml` pins. Run `mise run install` once first.
+  and `bun test`; the browser tier, `scripts/browser.test.js` under `node --test` alone, which
+  drives the pinned chrome-headless-shell over the raw DevTools pipe (no package) against pages
+  Vite's dev server serves; and the three consumer fixtures (pnpm, npm, and bun) installed
+  offline, failing unless the npm that runs is the version `mise.toml` pins. Run
+  `mise run install` once first: it runs `mise install`, which installs the headless shell with
+  the other pins, and installs the packages.
 - **Tasks:** `mise run install`, `build`, `demo`, `preview`, `measure` (the evidence's dated
   figures, including the four-way lint and format comparison; reads the network), and
   `currency`. Each task's description in `mise.toml` says what it does.
@@ -20,7 +24,8 @@ The repository is managed with the marathon workflow; start from `context/README
   record is `context/goals/experiment.html.spike-html-conventions.md`.
 - **Dependencies:** Lit 3.3.3 is the only runtime dependency, and the check's lint tooling
   (ESLint, Prettier, and their plugins) is the only devDependencies, both pinned exactly in
-  `package.json`. Every other tool is pinned in `mise.toml`, Biome, oxlint, and oxfmt for measure
-  only.
+  `package.json`. Every other tool is pinned in `mise.toml`, the check's browser
+  (chrome-headless-shell) among them, and Biome, oxlint, and oxfmt for measure only; measure
+  installs playwright-core and its browsers into its own scratch.
 - **References:** the repositories this spike reads are keys in the coordinator's
   `references.toml` and `references.local.toml`. The spike reads them and never writes to them.
