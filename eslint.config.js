@@ -51,50 +51,113 @@ const cssImports = [
   })),
 ];
 
-// The layer table: each layer's directory and the layers it may import, "own" an app's own
-// directory and "lit" the one package. No app imports another, and a file directly in layers/,
-// layers/apps/, or a branch directory imports nothing.
+// The layer table: each layer's directory and the layers it may import, "lit" the one package.
+// A row whose path holds a * is one app's, the * its directory: an application-branch app's four
+// tiers, a static-branch app's elements, and each branch's app root, which holds the entry, the
+// route table, and every other file of the app no tier holds. An import into an app's row passes
+// only from the same app, so no app imports another, and a file directly in layers/, layers/apps/,
+// or a branch directory imports nothing. Inside an application-branch app the tiers run views,
+// modules, elements: a view may import modules, elements, and domains; a module elements and
+// domains; an element no other tier, nor the SDK, as a component imports; and domains, the app's
+// types and domain services, no UI tier, the SDK and the foundation only. A static-branch app is
+// an entry and its own elements, which follow the same element rules. A tier row comes before its
+// app's root row: an element is the first row whose directory holds the file.
 export const layers = [
   { name: "foundation", path: "layers/foundation", may: ["foundation"] },
   { name: "components", path: "layers/components", may: ["foundation", "components", "lit"] },
   { name: "sdk", path: "layers/sdk", may: ["foundation", "sdk", "lit"] },
-  { name: "static", path: "layers/apps/static/*", may: ["foundation", "components", "own", "lit"] },
+  {
+    name: "static-elements",
+    path: "layers/apps/static/*/elements",
+    may: ["foundation", "components", "static-elements", "lit"],
+  },
+  {
+    name: "static",
+    path: "layers/apps/static/*",
+    may: ["foundation", "components", "static", "static-elements", "lit"],
+  },
+  {
+    name: "views",
+    path: "layers/apps/application/*/views",
+    may: ["foundation", "components", "sdk", "views", "modules", "elements", "domains", "lit"],
+  },
+  {
+    name: "modules",
+    path: "layers/apps/application/*/modules",
+    may: ["foundation", "components", "sdk", "modules", "elements", "domains", "lit"],
+  },
+  {
+    name: "elements",
+    path: "layers/apps/application/*/elements",
+    may: ["foundation", "components", "elements", "lit"],
+  },
+  {
+    name: "domains",
+    path: "layers/apps/application/*/domains",
+    may: ["foundation", "sdk", "domains"],
+  },
   {
     name: "application",
     path: "layers/apps/application/*",
-    may: ["foundation", "components", "sdk", "own", "lit"],
+    may: [
+      "foundation",
+      "components",
+      "sdk",
+      "application",
+      "views",
+      "modules",
+      "elements",
+      "domains",
+      "lit",
+    ],
   },
 ];
 
 // Each layer is an element by its directory, matched from the root (partialMatch false), with a
 // second pattern for a file in a directory whose name starts with a dot, which micromatch's **
-// never enters, so ./.well-known/ and ./..x/ stay in their layer; an app captures its directory's
-// name, which its own policy names. A file directly in layers/, layers/apps/, or a branch
-// directory is a "loose" element with no policy.
+// never enters, so ./.well-known/ and ./..x/ stay in their layer; an app's row captures its
+// directory's name, which a policy into an app's row names. A file directly in layers/,
+// layers/apps/, or a branch directory is a "loose" element with no policy.
+const appRow = (path) => path.includes("*");
 const elements = [
   ...layers.map(({ name, path }) => ({
     type: name,
     pattern: [path, `${path}/**/.*`],
     partialMatch: false,
-    ...(path.endsWith("*") ? { capture: ["app"] } : {}),
+    ...(appRow(path) ? { capture: ["app"] } : {}),
   })),
   { type: "loose", pattern: ["layers", "layers/apps", "layers/apps/*"], partialMatch: false },
 ];
 
 // The rule's default is disallow, and it checks every origin (lit is external) and local files no
-// element holds: an import passes only when a policy names its target.
+// element holds: an import passes only when a policy names its target, and into an app's row only
+// from the app that captured the same directory.
 const policies = layers.map(({ name, may }) => ({
   from: { element: { type: name } },
   allow: {
     to: may.map((target) => {
       if (target === "lit") return { module: { origin: "external", source: "lit" } };
-      if (target === "own") {
-        return { element: { type: name, captured: { app: "{{from.element.captured.app}}" } } };
+      if (appRow(layers.find((layer) => layer.name === target).path)) {
+        return { element: { type: target, captured: { app: "{{from.element.captured.app}}" } } };
       }
       return { element: { type: target } };
     }),
   },
 }));
+
+// A declaration file (layers/sdk/*.d.ts, layers/foundation/format.d.ts) has no runtime, so an
+// import that resolves to one passes only as a type import, `import type` or `export type`, which
+// tsc erases: the last policy refuses any other kind, and as the last whose selector matches it
+// overrides the allows before it. The dependency's kind is the declaration's, so
+// `import { type X }` is a value import here, as it is to verbatimModuleSyntax, which keeps it as
+// `import {}` and so loads the file. checkInternals has the rule judge an import within one layer
+// too (the foundation's own import of format.d.ts); every row's policy allows its own layer.
+const declarations = {
+  disallow: { to: { internalPath: "**/*.d.ts" }, dependency: { kind: "value" } },
+  message:
+    "A .d.ts file is a declaration with no runtime: import it with `import type` (or export " +
+    "from it with `export type`), never as a value, a side effect, or an import().",
+};
 
 export default defineConfig([
   // Build output; ESLint ignores node_modules/ at any depth itself, the fixtures' installs too.
@@ -116,7 +179,13 @@ export default defineConfig([
       "import-x/no-unresolved": "error",
       "boundaries/dependencies": [
         "error",
-        { default: "disallow", checkAllOrigins: true, checkUnknownLocals: true, policies },
+        {
+          default: "disallow",
+          checkAllOrigins: true,
+          checkUnknownLocals: true,
+          checkInternals: true,
+          policies: [...policies, declarations],
+        },
       ],
     },
   },

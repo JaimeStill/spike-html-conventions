@@ -53,6 +53,9 @@ The architecture pages that apply, in the architecture repository:
 - The stack's layers are the directories of `layers/`, beside the frozen per-form tree in `src/`;
   the layer table in `eslint.config.js` enforces the import direction between them.
 - The foundation holds native platform code only, the code every other layer may build on.
+  Formatting is the foundation's, so components and apps share one set: Intl formatters for
+  bytes (SI, base 1000), dates, relative times, and durations, with no library and no Temporal,
+  which isn't Baseline.
 - The foundation's CSS is the design-system port (`layers/foundation/baseline/`, from
   spike-html-design v0.7.0), which this repository owns: each file wraps its rules in its own
   `@layer foundation.<layer>` block and imports nothing, so it loads as a CSS module script.
@@ -61,11 +64,28 @@ The architecture pages that apply, in the architecture repository:
 - Components are the element tier: an element takes properties in and sends events out, and
   holds no services, data, or app state.
 - The SDK holds what application-branch apps share: the router, the API client, the auth hook,
-  formatting, and the domain-service pattern.
+  and the domain-service pattern (Results 8). It is specified here, not built: `layers/sdk/` and
+  the foundation's formatters are type-only declarations, and spike-html-apps writes their
+  implementations.
+- The router rests on URLPattern and the Navigation API, never a hand-written matcher. The API
+  client returns a `Result` whose failure is go-web-sdk's RFC 9457 problem, and it never throws.
+  The auth hook is a token-provider interface, and the SDK chooses no OIDC library.
 - Apps split into two branches: the static branch holds pages of content, and the application
   branch holds interactive clients built on the SDK.
 - An app-internal element is promoted to `components/` once a second app needs it.
-- Whether the static branch uses Lit is undecided, not a rule; the branches task decides it.
+- A static app is an entry plus its own reusable elements. Those elements are Lit with a shadow
+  root, under the component rules.
+- Both branches build through Vite with the local CSS plugin, to hashed filenames and a build
+  manifest. A page that loads components unbundled fails in Safari, so no page ships unbuilt.
+- An application app holds its entry and route table at its root, plus four tiers:
+  - views are route-level: they take route params and load their route's data through
+    the modules they compose;
+  - modules are features: they call domain services and the router's query;
+  - app-internal elements are presentational, under the component rules;
+  - domains hold the app's types and its stateless domain services, one per resource, each
+    method mapping one route to a `Result`.
+- The browser floor is Safari 26.2, Firefox 147, and current Chromium, the Navigation API's
+  Baseline (Results 8).
 
 ## Components
 

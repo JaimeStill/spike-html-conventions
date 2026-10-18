@@ -1,0 +1,16 @@
+/* The documents table's layout; Lit adopts this sheet into its shadow root after the foundation's
+   baseline sheets. */
+
+:host {
+  display: block;
+}
+
+table {
+  inline-size: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  text-align: start;
+}

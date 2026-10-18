@@ -9,13 +9,13 @@ The repository is managed with the marathon workflow; start from `context/README
 - **Standards:** `STANDARDS.md`, with pointers into the architecture repository.
 - **Check:** `mise run check`: ESLint (`eslint.config.js`, which also enforces the import
   direction in `layers/`) and Prettier, run from the devDependencies by `pnpm exec`; shellcheck;
-  `tsc --noEmit`; the tests in `test/`, the router suite and the layer test, under `node --test`
-  and `bun test`; the browser tier, `scripts/browser.test.js` under `node --test` alone, which
-  drives the pinned chrome-headless-shell over the raw DevTools pipe (no package) against pages
-  Vite's dev server serves; and the three consumer fixtures (pnpm, npm, and bun) installed
-  offline, failing unless the npm that runs is the version `mise.toml` pins. Run
-  `mise run install` once first: it runs `mise install`, which installs the headless shell with
-  the other pins, and installs the packages.
+  `tsc --noEmit`; the tests in `test/`, the router suite, the layer test, and the declaration
+  test, under `node --test` and `bun test`; the browser tier, `scripts/browser.test.js` under
+  `node --test` alone, which drives the pinned chrome-headless-shell over the raw DevTools pipe
+  (no package) against pages Vite's dev server serves; and the three consumer fixtures (pnpm,
+  npm, and bun) installed offline, failing unless the npm that runs is the version `mise.toml`
+  pins. Run `mise run install` once first: it runs `mise install`, which installs the headless
+  shell with the other pins, and installs the packages.
 - **Tasks:** `mise run install`, `build`, `demo`, `preview`, `measure` (the evidence's dated
   figures, including the four-way lint and format comparison; reads the network), and
   `currency`. Each task's description in `mise.toml` says what it does.

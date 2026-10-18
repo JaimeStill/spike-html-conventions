@@ -1,0 +1,12 @@
+/* The site header's layout; Lit adopts this sheet into its shadow root after the foundation's
+   baseline sheets. */
+
+:host {
+  display: block;
+}
+
+header {
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+}

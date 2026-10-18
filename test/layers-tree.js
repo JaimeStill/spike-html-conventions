@@ -18,22 +18,44 @@ export const self = JSON.parse(
   readFileSync(join(import.meta.dirname, "..", "package.json"), "utf8"),
 ).name;
 
+/** An edge in each of the four import forms, one file per form, each named for the edge and its
+ * form: a side-effect import, a type import, a re-export, and an import(). */
+function forms(base, specifier) {
+  return {
+    [`${base}.ts`]: `import "${specifier}";`,
+    [`${base}-type.ts`]: `import type { X } from "${specifier}";`,
+    [`${base}-export.ts`]: `export * from "${specifier}";`,
+    [`${base}-dynamic.ts`]: `await import("${specifier}");`,
+  };
+}
+
+/** An edge in the same four forms, as the lines of one file. */
+function inForms(specifier) {
+  return Object.values(forms("", specifier)).join("\n");
+}
+
+// The application-branch app and the static-branch app the tier cases sit in.
+const app = "layers/apps/application/documents";
+const site = "layers/apps/static/site";
+// An application-branch app named as the static-branch app is.
+const namesake = "layers/apps/application/site";
+
 // Each file holds one import. The violating files are named for the edge they cross.
 export const violations = {
   // foundation: native only, no layer and no package
   "layers/foundation/lit.ts": `import { html } from "lit";`,
   "layers/foundation/components.ts": `import "../components/badge.js";`,
-  "layers/foundation/sdk-export.ts": `export { SessionController } from "../sdk/session.js";`,
+  "layers/foundation/sdk-export.ts": `export { Client } from "../sdk/client.js";`,
   "layers/foundation/app-type.ts": `import type { Model } from "../apps/application/documents/model.js";`,
   "layers/foundation/static-dynamic.ts": `await import("../apps/static/site/main.js");`,
   "layers/foundation/self.ts": `import { define } from "${self}/layers/foundation/dom.js";`,
   // components: never the SDK or an app
-  "layers/components/sdk.ts": `import { SessionController } from "../sdk/session.js";`,
-  "layers/components/sdk-dynamic.ts": `const sdk = await import("../sdk/session.js");`,
+  "layers/components/sdk.ts": `import { Client } from "../sdk/client.js";`,
+  "layers/components/sdk-dynamic.ts": `const sdk = await import("../sdk/client.js");`,
   "layers/components/sdk-dir.ts": `import "../sdk";`,
   "layers/components/app-export.ts": `export * from "../apps/application/documents/main.js";`,
   "layers/components/static-type.ts": `import type { Page } from "../apps/static/site/main.js";`,
-  "layers/components/nested/sdk.ts": `import "../../sdk/session.js";`,
+  "layers/components/nested/sdk.ts": `import "../../sdk/client.js";`,
   "layers/components/self.ts": `import "${self}";`,
   // SDK: never components or an app
   "layers/sdk/components.ts": `import { StatusBadge } from "../components/status-badge.js";`,
@@ -42,28 +64,28 @@ export const violations = {
   "layers/sdk/static-export.ts": `export { x } from "../apps/static/site/main.js";`,
   "layers/sdk/self.ts": `import "${self}/layers/components/status-badge.js";`,
   // static-branch app: never the SDK, an application-branch app, or another app
-  "layers/apps/static/site/sdk.ts": `import "../../../sdk/session.js";`,
-  "layers/apps/static/site/sdk-type.ts": `import type { SessionController } from "../../../sdk/session.js";`,
+  "layers/apps/static/site/sdk.ts": `import "../../../sdk/client.js";`,
+  "layers/apps/static/site/sdk-type.ts": `import type { Client } from "../../../sdk/client.js";`,
   "layers/apps/static/site/application.ts": `import "../../application/documents/main.js";`,
   "layers/apps/static/site/sibling-export.ts": `export * from "../blog/main.js";`,
   "layers/apps/static/site/sibling-dynamic.ts": `await import("../blog/main.js");`,
   "layers/apps/static/site/reentry.ts": `import "../../../apps/static/blog/main.js";`,
   "layers/apps/static/site/escape.ts": `import "../../../../src/ts/router.ts";`,
   "layers/apps/static/site/pages/sibling.ts": `import "../../blog/main.js";`,
-  "layers/apps/static/site/pages/sdk.ts": `import "../../../../sdk/session.js";`,
+  "layers/apps/static/site/pages/sdk.ts": `import "../../../../sdk/client.js";`,
   "layers/apps/static/site/a/b/c/sibling.ts": `import "../../../../blog/main.js";`,
-  "layers/apps/static/site/a/b/c/d/sdk.ts": `import "../../../../../../../sdk/session.js";`,
-  "layers/apps/static/site/self.ts": `import "${self}/layers/sdk/session.js";`,
-  "layers/apps/static/site/absolute.ts": `import "/layers/sdk/session.js";`,
+  "layers/apps/static/site/a/b/c/d/sdk.ts": `import "../../../../../../../sdk/client.js";`,
+  "layers/apps/static/site/self.ts": `import "${self}/layers/sdk/client.js";`,
+  "layers/apps/static/site/absolute.ts": `import "/layers/sdk/client.js";`,
   // the same edges by a path that isn't normalized, climbing back through a name, a . or ..
   // segment, or an empty one, which a re-allowed layer prefix would otherwise let through
-  "layers/apps/static/site/dot-climb.ts": `import "./../../../sdk/session.js";`,
-  "layers/apps/static/site/descend-climb.ts": `import "./x/../../../../sdk/session.js";`,
-  "layers/apps/static/site/foundation-climb.ts": `import "../../../foundation/../sdk/session.js";`,
-  "layers/apps/static/site/components-climb.ts": `import "../../../components/../sdk/session.js";`,
-  "layers/apps/static/site/dot-segment.ts": `import "../../../foundation/./../sdk/session.js";`,
-  "layers/apps/static/site/empty-segment.ts": `import "../../../foundation//../sdk/session.js";`,
-  "layers/apps/static/site/percent.ts": `import "../../../foundation/%2e%2e/sdk/session.js";`,
+  "layers/apps/static/site/dot-climb.ts": `import "./../../../sdk/client.js";`,
+  "layers/apps/static/site/descend-climb.ts": `import "./x/../../../../sdk/client.js";`,
+  "layers/apps/static/site/foundation-climb.ts": `import "../../../foundation/../sdk/client.js";`,
+  "layers/apps/static/site/components-climb.ts": `import "../../../components/../sdk/client.js";`,
+  "layers/apps/static/site/dot-segment.ts": `import "../../../foundation/./../sdk/client.js";`,
+  "layers/apps/static/site/empty-segment.ts": `import "../../../foundation//../sdk/client.js";`,
+  "layers/apps/static/site/percent.ts": `import "../../../foundation/%2e%2e/sdk/client.js";`,
   "layers/apps/static/site/dot-parent.ts": `import "./..";`,
   "layers/apps/static/site/foundation-parent.ts": `import "../../../foundation/..";`,
   // ...or by the bare climb, which resolves to the branch directory's index
@@ -85,9 +107,58 @@ export const violations = {
   "layers/apps/application/documents/dots-climb.ts": `import "../../../sdk/.../../../apps/application/prompts/main.js";`,
   "layers/apps/application/documents/bare-parent.ts": `import "../";`,
   "layers/apps/application/documents/views/bare-parent.ts": `import "../..";`,
+  // an application-branch app's tiers, each forbidden edge in each form: no tier imports the
+  // app's root or another app's tier; a view imports no root, a module no view, an element no
+  // other tier and not the SDK, and domains no UI tier, no component, and not lit
+  ...forms(`${app}/views/root`, "../main.js"),
+  ...forms(`${app}/views/a/b/root`, "../../../main.js"),
+  ...forms(`${app}/views/other-app`, "../../prompts/views/list.js"),
+  ...forms(`${app}/views/other-app-modules`, "../../prompts/modules/feed.js"),
+  ...forms(`${app}/modules/views`, "../views/list.js"),
+  ...forms(`${app}/modules/root`, "../main.js"),
+  ...forms(`${app}/modules/other-app`, "../../prompts/modules/feed.js"),
+  ...forms(`${app}/modules/other-app-elements`, "../../prompts/elements/card.js"),
+  ...forms(`${app}/elements/views`, "../views/list.js"),
+  ...forms(`${app}/elements/modules`, "../modules/feed.js"),
+  ...forms(`${app}/elements/domains`, "../domains/model.js"),
+  ...forms(`${app}/elements/root`, "../main.js"),
+  ...forms(`${app}/elements/sdk`, "../../../../sdk/client.js"),
+  ...forms(`${app}/elements/a/sdk`, "../../../../../sdk/client.js"),
+  ...forms(`${app}/elements/other-app`, "../../prompts/elements/card.js"),
+  ...forms(`${app}/elements/static`, "../../../static/site/elements/hero.js"),
+  ...forms(`${app}/domains/views`, "../views/list.js"),
+  ...forms(`${app}/domains/modules`, "../modules/feed.js"),
+  ...forms(`${app}/domains/elements`, "../elements/card.js"),
+  ...forms(`${app}/domains/root`, "../main.js"),
+  ...forms(`${app}/domains/components`, "../../../../components/badge.js"),
+  ...forms(`${app}/domains/lit`, "lit"),
+  ...forms(`${app}/domains/other-app`, "../../prompts/domains/model.js"),
+  ...forms(`${app}/other-app-views`, "../prompts/views/list.js"),
+  // a static-branch app's elements follow the element rules: never the app's entry, the SDK, or
+  // another app's elements; and its entry imports no other app's elements
+  ...forms(`${site}/elements/root`, "../main.js"),
+  ...forms(`${site}/elements/sdk`, "../../../../sdk/client.js"),
+  ...forms(`${site}/elements/other-app`, "../../blog/elements/hero.js"),
+  ...forms(`${site}/elements/application`, "../../../application/documents/elements/card.js"),
+  ...forms(`${site}/other-app-elements`, "../blog/elements/hero.js"),
+  // nor does an app import another branch's app of the same name, though the two capture the same
+  // directory name: an application-branch site and the static-branch site, each row of each
+  ...forms(`${namesake}/static-root`, "../../static/site/main.js"),
+  ...forms(`${namesake}/static-elements`, "../../static/site/elements/hero.js"),
+  ...Object.assign(
+    {},
+    ...["views", "modules", "elements", "domains"].flatMap((tier) => [
+      forms(`${namesake}/${tier}/static-root`, "../../../static/site/main.js"),
+      forms(`${namesake}/${tier}/static-elements`, "../../../static/site/elements/hero.js"),
+      forms(`${site}/application-${tier}`, `../../application/site/${tier}/x.js`),
+      forms(`${site}/elements/application-${tier}`, `../../../application/site/${tier}/x.js`),
+    ]),
+  ),
+  ...forms(`${site}/application-root`, "../../application/site/main.js"),
+  ...forms(`${site}/elements/application-root`, "../../../application/site/main.js"),
   // outside a layer directory or an app: a file there could re-export any layer
-  "layers/index.ts": `export * from "./sdk/session.js";`,
-  "layers/apps/static/index.ts": `export * from "../../sdk/session.js";`,
+  "layers/index.ts": `export * from "./sdk/client.js";`,
+  "layers/apps/static/index.ts": `export * from "../../sdk/client.js";`,
   "layers/apps/application/index.ts": `export * from "${self}/layers/apps/static/site/main.js";`,
 };
 
@@ -102,7 +173,7 @@ export const allowed = {
     `import { define } from "../foundation/dom.js";`,
     `export { x } from "./other.js";`,
   ].join("\n"),
-  "layers/sdk/session.ts": [
+  "layers/sdk/client.ts": [
     `import type { ReactiveController } from "lit";`,
     `import { emit } from "../foundation/dom.js";`,
     `await import("./api.js");`,
@@ -119,18 +190,18 @@ export const allowed = {
     `import { html } from "lit";`,
     `import "../../../components/badge.js";`,
     `import { emit } from "../../../foundation/dom.js";`,
-    `import type { SessionController } from "../../../sdk/session.js";`,
+    `import type { Client } from "../../../sdk/client.js";`,
     `export * from "../../../sdk";`,
     `await import("./views/list.js");`,
   ].join("\n"),
   "layers/apps/application/documents/views/list.ts": [
-    `import type { Model } from "../model.js";`,
-    `import "../../../../sdk/session.js";`,
+    `import type { Model } from "../domains/model.js";`,
+    `import "../../../../sdk/client.js";`,
     `import "../../../../components/badge.js";`,
   ].join("\n"),
-  "layers/apps/application/documents/a/b/deep.ts": `import "../../main.js";\nimport "../../../../../sdk/session.js";`,
+  "layers/apps/application/documents/a/b/deep.ts": `import "../../main.js";\nimport "../../../../../sdk/client.js";`,
   "layers/apps/application/documents/a/b/c/deeper.ts": `import "../../../main.js";\nimport "../../../../../../foundation/dom.js";`,
-  "layers/apps/application/prompts/main.ts": `import "./shell.js";\nimport "../../../sdk/session.js";`,
+  "layers/apps/application/prompts/main.ts": `import "./shell.js";\nimport "../../../sdk/client.js";`,
   "layers/components/dotted.ts": `import "./..x/y.js";\nimport "../foundation/x..y/z.js";`,
   "layers/apps/static/site/dotted.ts": [
     `import "./..x/y.js";`,
@@ -138,6 +209,44 @@ export const allowed = {
     `import "../../../components/x..y/z.js";`,
     `import "../../../foundation/.../a.js";`,
   ].join("\n"),
+  // An application-branch app's tiers, each permitted edge in each form, one file per edge: the
+  // root imports every tier; a view its own tier, modules, elements, and domains; a module its
+  // own tier, elements, and domains; an element its own tier; domains their own tier; and each
+  // the layers its row names.
+  [`${app}/routes.ts`]: inForms("./views/list.js"),
+  [`${app}/root-modules.ts`]: inForms("./modules/feed.js"),
+  [`${app}/root-elements.ts`]: inForms("./elements/card.js"),
+  [`${app}/root-domains.ts`]: inForms("./domains/model.js"),
+  [`${app}/views/own.ts`]: inForms("./list.js"),
+  [`${app}/views/modules.ts`]: inForms("../modules/feed.js"),
+  [`${app}/views/elements.ts`]: inForms("../elements/card.js"),
+  [`${app}/views/domains.ts`]: inForms("../domains/model.js"),
+  [`${app}/views/a/b/domains.ts`]: inForms("../../../domains/model.js"),
+  [`${app}/views/sdk.ts`]: inForms("../../../../sdk/client.js"),
+  [`${app}/views/components.ts`]: inForms("../../../../components/badge.js"),
+  [`${app}/views/foundation.ts`]: inForms("../../../../foundation/dom.js"),
+  [`${app}/views/lit.ts`]: inForms("lit"),
+  [`${app}/modules/own.ts`]: inForms("./feed.js"),
+  [`${app}/modules/elements.ts`]: inForms("../elements/card.js"),
+  [`${app}/modules/domains.ts`]: inForms("../domains/model.js"),
+  [`${app}/modules/sdk.ts`]: inForms("../../../../sdk/client.js"),
+  [`${app}/modules/components.ts`]: inForms("../../../../components/badge.js"),
+  [`${app}/modules/foundation.ts`]: inForms("../../../../foundation/dom.js"),
+  [`${app}/modules/lit.ts`]: inForms("lit"),
+  [`${app}/elements/own.ts`]: inForms("./card.js"),
+  [`${app}/elements/components.ts`]: inForms("../../../../components/badge.js"),
+  [`${app}/elements/foundation.ts`]: inForms("../../../../foundation/dom.js"),
+  [`${app}/elements/lit.ts`]: inForms("lit"),
+  [`${app}/domains/own.ts`]: inForms("./model.js"),
+  [`${app}/domains/sdk.ts`]: inForms("../../../../sdk/client.js"),
+  [`${app}/domains/foundation.ts`]: inForms("../../../../foundation/dom.js"),
+  // A static-branch app's entry imports its elements, which import their own tier, components,
+  // the foundation, and lit.
+  [`${site}/elements.ts`]: inForms("./elements/hero.js"),
+  [`${site}/elements/own.ts`]: inForms("./hero.js"),
+  [`${site}/elements/components.ts`]: inForms("../../../../components/badge.js"),
+  [`${site}/elements/foundation.ts`]: inForms("../../../../foundation/dom.js"),
+  [`${site}/elements/lit.ts`]: inForms("lit"),
   // Paths that aren't normalized but reach a file the layer may import: the foundation's dom.ts,
   // and the app's own index.ts. Biome's text rules refused them by a normalization convention;
   // the direction is judged by the file an import resolves to, so they cross no layer (Results 3).

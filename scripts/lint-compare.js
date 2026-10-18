@@ -168,7 +168,8 @@ const formatterMap = [
 /** eslint-plugin-import-x's no-restricted-paths and no-unresolved for the layer table, with its
  * built-in resolver (unrs-resolver) taking a .js specifier to its .ts source and a directory to
  * its index.ts. A zone has no captures, so the config lists each app's directory when it loads,
- * one zone each, refusing every path outside the layers it may import and its own directory. */
+ * and each tier directory under it, one zone each, refusing every path outside the layers it may
+ * import, an app's rows only in the same app. */
 function importXBlock() {
   return `{
     plugins: { "import-x": importX },
@@ -185,26 +186,29 @@ function importXBlock() {
 }
 
 /** The zones function an import-x config holds: from the root, so a package under node_modules is
- * refused unless lit, and each app's directory listed from the tree as the config loads. */
+ * refused unless lit, and each app's directory, and the tier directories in it, listed from the
+ * tree as the config loads. An app's root zone takes in its tiers too, so a file in a tier is held
+ * to the root's zone and to its tier's, the narrower. */
 const zonesSource = `function zones(layers) {
   const root = import.meta.dirname;
+  // A row's directories, each with the name of the app its * stands for, if it has one.
   const dirs = (path) => {
-    if (!path.endsWith("/*")) return [path];
-    const parent = path.slice(0, -2);
+    if (!path.includes("/*")) return [{ dir: path }];
+    const [parent, rest] = path.split("/*");
     if (!existsSync(join(root, parent))) return [];
     return readdirSync(join(root, parent), { withFileTypes: true })
       .filter((entry) => entry.isDirectory())
-      .map((entry) => \`\${parent}/\${entry.name}\`);
+      .map((entry) => ({ dir: \`\${parent}/\${entry.name}\${rest}\`, app: entry.name }));
   };
   const where = (target) => (target === "lit" ? ["node_modules/lit"] : []);
-  const list = layers.flatMap(({ name, path, may }) =>
-    dirs(path).map((dir) => ({
+  const list = layers.flatMap(({ path, may }) =>
+    dirs(path).map(({ dir, app }) => ({
       target: dir,
       from: ".",
       except: may.flatMap((target) => {
-        if (target === "own") return [dir];
         if (target === "lit") return where(target);
-        return dirs(layers.find((layer) => layer.name === target).path);
+        const reached = dirs(layers.find((layer) => layer.name === target).path);
+        return reached.filter((to) => to.app === undefined || to.app === app).map((to) => to.dir);
       }),
     })),
   );

@@ -11,7 +11,7 @@
     "allowJs": true,
     "checkJs": true,
     "noEmit": true,
-    "skipLibCheck": true
+    "skipLibCheck": false
   },
   "include": ["src/ts", "src/jsdoc", "layers", "demo"]
 }

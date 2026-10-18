@@ -1,8 +1,8 @@
 # goal · experiment.html.spike-html-conventions
 
-- **State:** idle
-- **Task:** none
-- **Branch:** none
+- **State:** handoff
+- **Task:** branches
+- **Branch:** branches
 
 ## Tasks
 
@@ -10,189 +10,166 @@
 2. [x] structure
 3. [x] components
 4. [x] testing
-5. [ ] branches
+5. [x] branches
 
-## Task brief · testing
+## Task brief · branches
 
 ```
-Problem       The check has a unit tier (the router suite and the layer
-              test, under node --test and bun test) but no browser tier.
-              The components' 27 contract cases and the 4 restyle checks
-              run only in the demo, through --dump-dom, which needs a
-              hidden-iframe load hold, a 60 s timeout, an import map, and
-              file:// flags. Evidence 5 asks for both tiers in the one
-              check. The architect asks whether Playwright's overhead buys
-              enough, by testing every engine (Chromium, Firefox, WebKit),
-              over a no-package driver on the system Chromium alone, and
-              for the browser tier to serve the components through Vite
-              rather than from file://.
-              currency at planning: eslint 10.12.0 -> 10.13.0 (minor,
-              nothing to adapt).
+Problem       Evidence 8 is the spike's last open item, and "The answer"
+              in the README is still pending. The layers and their
+              direction are proven (Results 3), but no spec says how a
+              static page or an application is laid out inside its app,
+              how it builds and is served, or what the application SDK
+              offers. spike-html-apps builds the SDK from this spec, and
+              spike-html-hosting and v1.client build on the static
+              layout. Today the SDK holds only a runtime stand-in, the
+              session controller, and nothing stops one app-internal
+              tier from importing another. Round 1 settled every choice.
+              currency at planning: current (no lines, exit 0).
 
 Behaviors
-  1. The pinned tools are current: eslint is 10.13.0, mise run install
-     succeeds from the frozen lockfile, mise run check passes, and
-     currency prints nothing.
-  2. mise run measure runs the probe's 27 cases in each of the four
-     component versions, and the 4 restyle checks, through two drivers
-     against pages Vite's dev server serves with the local CSS plugin:
-     - the raw Chromium debugging pipe, no package, on the system
-       Chromium;
-     - playwright-core 1.64.1 called from node:test, on the system
-       Chromium through executablePath, on Playwright's Chromium Headless
-       Shell 156, on its Firefox 157, and on its WebKit r2370.
-     Every Vite row passes only when every case holds in every version
-     and all four versions' reports match.
-  3. Measure also runs the unbundled form (tsc emit with native CSS
-     module scripts, over plain http) in Chromium, Firefox, and WebKit:
-     Chromium and Firefox rows pass only when every case holds; the
-     WebKit row passes only when the components fail to load, the
-     Safari gap.
-  4. Measure records Playwright's overhead against the raw pipe, weighed
-     against the cross-engine coverage it buys:
-     - footprint: playwright-core's installed bytes, and each browser's
-       download bytes and time;
-     - the pins and devDependencies a Playwright pick would add;
-     - each driver's harness lines;
-     - cold and warm hyperfine times of the same cases on the system
-       Chromium;
-     - a repeat row: 20 runs per driver, failures counted, expected 0.
-     @playwright/test, Web Test Runner, and Vitest browser mode are
-     sourced facts, not columns. Measure keeps Playwright's browsers in
-     its own scratch (PLAYWRIGHT_BROWSERS_PATH), reads the network only
-     there, and writes nothing to the working tree.
-  5. Review stop: once 1-4 hold, BUILD pauses. The architect reads the
-     drafted Results 5 rows and decides the check's driver and its
-     engines; the pick is logged as a Decision. The default, if
-     Playwright doesn't earn its place, is the raw pipe on the system
-     Chromium alone.
-  6. The check's browser tier, under node --test only (never bun test),
-     runs the 27 cases in each of the four versions and the 4 restyle
-     checks on the engines the Decision names. Pages are served by the
-     mise-pinned Vite binary with the local CSS plugin, which the test
-     spawns in scratch and stops. The check reads no network, writes
-     nothing to the working tree, and fails when a named engine is
-     missing. A deliberately broken case fails the check.
-  7. mise run demo renders only the frozen pagination builds; the
-     composition and restyle pages, and their load hold, are gone. The
-     preview is unchanged.
-  8. STANDARDS.md records: the unit tier is DOM-free code under node
-     --test with no DOM shim; anything touching the DOM is the browser
-     tier, which serves components through Vite in the engines the
-     Decision names; and, if Playwright is picked, the revised
-     devDependency rule and browser exception.
-  9. README Results 5 records the comparison table and each overhead
-     row from one dated measure run, the pick and why, the Safari gap
-     row, and the facts for the runners not measured. The goal record
-     gains the pending edit for html-artifacts.md's interim testing
-     result.
+  1. The pinned tools stay current: currency prints nothing, and mise
+     run check passes on the finished tree.
+  2. README Results 8 holds the static-branch layout spec:
+     - an app is an entry plus its own reusable elements;
+     - those elements are Lit with a shadow root, under the component
+       rules;
+     - the app imports the foundation, components, and Lit, and never
+       the SDK;
+     - it builds through Vite with the local CSS plugin, to hashed
+       filenames and a build manifest, because a page that loads
+       components unbundled fails in Safari;
+     - what a Pages workflow uploads is the build output.
+  3. Results 8 holds the application-branch layout spec:
+     - the entry and the route table at the app's root;
+     - four tiers: views (route-level, take route params, load data);
+       modules (features that call domain services and the router's
+       query); app-internal elements (presentational, the component
+       rules, promoted to components once a second app needs one);
+       domains (the app's types and its domain services);
+     - a direction table for the tiers, which the check enforces
+       (behavior 9);
+     - the same Vite build as the static branch.
+  4. Results 8 holds the SDK spec, each part with its signatures and
+     the platform API it rests on:
+     - the router on URLPattern and the Navigation API. It intercepts
+       same-document navigations, plain links included, mounts the
+       route's element with path params as attributes, and reads and
+       updates the query. Neither herald quirk exists in it;
+     - the API client on fetch and AbortSignal. It returns a Result<T>
+       union whose failure is go-web-sdk's RFC 9457 problem (type,
+       status, title, detail, request_id), with network and abort
+       errors mapped into it. It reads go-web-sdk's Page envelope,
+       cursor included;
+     - the auth hook, a token-provider interface with a no-op default.
+       The client attaches a Bearer token and retries a 401 once
+       through the provider. The OIDC library is left to v1.auth;
+     - the domain-service pattern: stateless services, one per
+       resource, each method mapping one route to a Result;
+     - the build config: Vite, the local CSS plugin, base path, hashed
+       names, and the manifest;
+     - formatting is a foundation spec, not an SDK one: shared Intl
+       formatters for bytes (SI, 1000), dates, relative times, and
+       durations, with no library and no Temporal.
+  5. Results 8 proposes the Go serving half for go-web-sdk as prose
+     with Go signatures, and no Go code:
+     - a shell handler that writes <base href>, the title, a config
+       JSON, and the entry the manifest names;
+     - embedded build output served as immutable;
+     - client routes fall back to the shell, and a missing asset
+       answers a 404 problem;
+     - it mounts through NewHandlerModule;
+     - it stays proposed until spike-html-apps proves it.
+  6. Results 8 states the browser floor the specs set (Safari 26.2,
+     Firefox 147, Chromium), with each API's Baseline status sourced,
+     and names live transport (SSE and the WebSocket bridge) as a gap
+     the spec leaves to spike-html-apps and v1.client.
+  7. The SDK, and the foundation's formatters, exist as type-only
+     declarations of the specified signatures, which tsc checks.
+     The session controller stand-in is gone. The check fails when an
+     SDK declaration file holds runtime code, and a deliberately added
+     runtime statement fails it.
+  8. The application occupants are typed against those declarations:
+     the documents app spans all four tiers, and the prompts app stays
+     its sibling. The static occupant has its own element. tsc passes,
+     and a deliberately mistyped call to an SDK signature fails the
+     check.
+  9. The check enforces the tier direction by resolved file, through
+     the layer table:
+     - views may import modules, elements, and domains;
+     - modules may import elements and domains;
+     - app-internal elements may import no other tier, and not the SDK;
+     - domains may import no UI tier;
+     - the static branch's elements follow the element rules.
+     The layer test extends the violation and allowed trees with every
+     forbidden and permitted tier edge, in the four import forms. It
+     still passes only on an exact match, and a table that refuses
+     everything or nothing fails it.
+ 10. STANDARDS.md records:
+     - a static page's own elements are Lit with a shadow root;
+     - static pages build through Vite;
+     - formatting is in the foundation, and leaves the SDK's line;
+     - the four tiers, and what belongs in each;
+     - the SDK is specified, not built, here;
+     - the browser floor.
+ 11. README "The answer" states the spike's question, a one-line
+     answer, and evidence 1-8, each naming where it is proven (test,
+     measure run, or demo). The goal record gains these pending edits:
+     - the answer section under html-artifacts.md's
+       "Answers · experiment.html";
+     - html-artifacts.md's Build line, answered;
+     - formatting removed from the SDK lists in web-client.md and
+       html-artifacts.md;
+     - spike-html-apps: the Go serving-half proposal, the live-
+       transport gap, the browser floor, and the router superseding the
+       quirk-fix edit (marked superseded);
+     - spike-html-hosting: the Pages workflow gains a Vite build step.
 
-Test seams    mise run check: the browser tier and the unit tier (1, 6).
-              mise run measure: the driver, engine, unbundled, and
-              overhead rows (2-4). The review stop (5). mise run demo
-              (7). STANDARDS.md and README Results 5 with their cited
-              run (8, 9).
+Test seams    mise run check: the layer test over the tier trees (9),
+              tsc over the declarations and occupants, and the guard
+              that the declarations hold no runtime code (7, 8). README
+              Results 8 and The answer, STANDARDS.md, and the goal
+              record's pending edits (2-6, 10, 11).
 
 Slices
-  1. Upgrade: eslint 10.13.0.
-     Demo: currency prints nothing; install and check pass.
-  2. Raw pipe over Vite in measure: Vite started in scratch with the
-     plugin, the cases and restyle checks in all four versions on the
-     system Chromium.
-     Demo: measure's raw-pipe rows pass with matching reports.
-  3. Playwright column: system Chromium, Headless Shell 156, Firefox
-     157, WebKit r2370 over Vite, browsers downloaded into scratch; the
-     unbundled rows per engine.
-     Demo: every Vite row passes; the unbundled WebKit row records the
-     expected load failure.
-  4. Overhead rows: footprint, download times, pins added, harness
-     lines, cold and warm timings, the 20-run repeat row.
-     Demo: measure prints every row passing.
-  -- Review stop: the architect decides the check's driver and engines
-     from the drafted Results 5; logged as a Decision. --
-  5. Browser tier in the check, on the picked driver and engines, over
-     Vite, under node --test.
-     Demo: check passes; a broken case fails it.
-  6. Demo trimmed to the frozen pagination pages.
-     Demo: demo passes its frozen pages alone.
-  7. Evidence: STANDARDS.md's tier rules, Results 5 from one fresh
-     measure run, the html-artifacts.md pending edit.
-     Demo: Results 5 and STANDARDS.md.
+  1. Tier direction: the layer table's tier rows, with the violation
+     and allowed trees extended.
+     Demo: check passes; the layer test's exact match holds; a
+     loosened tier row fails it.
+  2. SDK and formatter declarations: type-only, the stand-in removed,
+     the runtime-code guard in the check.
+     Demo: check passes; a runtime statement in an SDK file fails it.
+  3. Occupants on the four tiers, typed against the declarations; the
+     static occupant's own element.
+     Demo: check passes; a mistyped SDK call fails it.
+  4. Results 8: the static and application layouts, the SDK spec, the
+     foundation formatters, the Go serving half, the browser floor, and
+     the live-transport gap.
+     Demo: Results 8, each fact sourced.
+  5. STANDARDS.md's rules.
+     Demo: STANDARDS.md.
+  6. The answer and the pending edits.
+     Demo: README The answer; the goal record's pending edits.
 
-Out of scope  Web Test Runner and Vitest browser mode as measured columns
-              (facts only). A DOM shim; unit tests over the components'
-              private helpers. The browser tier under bun test. The
-              frozen pagination pages and their builds. A fix or shim for
-              Safari's CSS module scripts. Release builds and packaging
-              (spike-html-packages). CI.
-Door          two-way: no tag, nothing published; the eslint pin and any
-              Playwright devDependency revert by restoring the pin and
-              lockfile.
+Out of scope  Any SDK or router implementation, and runtime router
+              tests (spike-html-apps). Go code or a Go pin. An OIDC
+              library choice (v1.auth). Live transport. Changing the
+              components' own Intl formatting, or the frozen src/ forms
+              and their router suite. Release builds and packaging
+              (spike-html-packages). The Pages workflow itself
+              (spike-html-hosting). A tag.
+Door          two-way: no tag, nothing published; every change reverts
+              with its commits. The pending edits land only at the sync
+              that SHIP's acceptance authorizes.
 ```
 
-Redirect 2 at BRIEF (architect): native node tests, the browser tier over the raw CDP pipe on a
-pinned Chrome for Testing headless shell; no Playwright in the check. Supersedes redirect 1.
-
-Microsoft supports Playwright on Linux only for Ubuntu and Debian, and the architect won't rely
-on unofficial support on Arch. Google names no Arch either, but Chrome for Testing's
-chrome-headless-shell is one generic linux64 zip that runs here, and one pin makes the check the
-same locally and in CI (round 4, 2026-10-18).
-
-  6. (rev) The check's browser tier runs `scripts/browser.test.js` under node --test with the
-     raw CDP pipe (no package) on Chrome for Testing's chrome-headless-shell, pinned in mise.toml
-     through mise's http: backend (version 155.0.8059.84, linux-x64 URL, a sha256 and size we
-     record), launched by path with --no-sandbox; Chromium alone. It fails by name when the pin
-     isn't installed. The system Chromium and Firefox leave the check.
-  4. (rev) Measure keeps Playwright as the comparison column, playwright-core installed into
-     measure's scratch (a scratch pin currency lists), its browsers in measure's scratch.
-  8. (rev) STANDARDS.md: the devDependency rule reverts to lint tooling only; every browser the
-     check runs is the mise pin; the browser tier is Chromium alone (Firefox and WebKit are gaps
-     the check doesn't cover); the strategy lines of redirect 1 stay, with the raw pipe as the
-     check's driver and a CI job running the same `mise install` (e.g. jdx/mise-action).
-  9. (rev) Results 5 records the revised pick, the support facts (Microsoft: Ubuntu and Debian;
-     Google: Ubuntu, Debian, openSUSE, Fedora; Playwright's Chromium is itself a CfT build), the
-     check's timing on the pin, CfT's lack of checksums, the CI facts (the runner's unpinned
-     browsers; AppArmor and --no-sandbox), and Firefox over BiDi only (puppeteer-core) as the
-     rejected way to keep it.
-
-
-Redirect at BRIEF (architect): the check's browsers are all Playwright's, so it runs the same in CI.
-
-The system Chromium isn't pinned by the repository (it moved from 152 to 154 during BUILD) and
-doesn't exist on a CI runner. Playwright's Chromium Headless Shell 156 passed every measure row.
-
-  6. (rev) The check's browser tier runs Playwright on its Chromium Headless Shell and its
-     Firefox, both fixed by playwright-core's pin; `mise run install` downloads both into
-     `~/.cache/spike-html-conventions/playwright`. The system Chromium leaves the check and stays
-     in measure (the raw pipe's browser and Playwright's like-for-like timing row).
-  8. (rev) STANDARDS.md drops the system-Chromium exception from the check (every browser the
-     check runs is fixed by one pin) and records the testing strategy: logic that needs no DOM
-     moves into DOM-free modules tested under node --test; the browser tier holds only what a
-     browser alone can prove (each component's contract, events, rendering, and styling), a fixed
-     set of cases run in every version and engine; no @playwright/test runner, screenshot diffing,
-     or tracing without a recorded need; the raw pipe stays in measure as the no-package fallback.
-     A CI job installs the same browsers with `playwright-core install --with-deps`.
-  9. (rev) Results 5 records the revised pick, the check's timing on Headless Shell, and, as notes
-     for the intake: revisit Firefox if it never catches what Chromium misses; WebKit is cheap to
-     add in CI on an Ubuntu runner.
-
-
-Amendment (escalation at slice 3): WebKit is excluded.
-
-Playwright's WebKit r2370 is an ubuntu-24.04 build that won't launch on this Arch host (missing
-libicu*.so.74, libxml2.so.2, libflite). The architect: exclude WebKit entirely rather than run it
-in a container or install libraries on the host.
-
-  2. (rev) Playwright runs on the system Chromium, Headless Shell 156, and Firefox 157; no
-     WebKit rows.
-  3. (rev) The unbundled rows run in Chromium and Firefox only. The Safari gap is a sourced
-     fact (no Safari release ships CSS module scripts; WebKit landed them 2026-10-06), with the
-     launch failure on a non-Ubuntu host recorded as a fact.
-  4. (rev) Footprint covers playwright-core, Headless Shell, and Firefox; measure downloads no
-     WebKit. The cross-engine coverage weighed is Chromium and Firefox against Chromium alone.
-
-
 ## Progress
+
+slices 6/6 committed · standards ✓ · spec ✓ · editor ✓ · brief accepted
+
+## Handoff
+
+merge, then sync: pull request #5 (branches) is published and accepted; the merge was blocked by the session's permission mode. Merge #5, then run the sync (session brief's Sync section; stage experiment.html.spike-html-packages).
 
 ## Decisions
 
@@ -418,17 +395,107 @@ in a container or install libraries on the host.
 - testing: the evidence cites m 2026-10-18T20:47:44Z (156/156), Results 5's run: on the pin, 59 Playwright harness lines against the raw pipe's 143, 13.7 MB for playwright-core in measure's scratch, and Playwright 1.25 times the raw pipe cold and 1.26 warm; the earlier system-Chromium figures keep m 2026-10-18T19:38:34Z.
 - testing: mise.toml sets `task.run_auto_install = false`, so `mise run check` never installs a missing tool from the network and fails by name instead; `mise run install` is the one task that installs tools.
 
+- branches: round 1 (architect, 2026-10-18): static pages build through Vite with the local CSS plugin, like applications. Rejected: hand-written HTML and ES modules with no build (a page using any component imports CSS module scripts, which no Safari release loads unbundled).
+- branches: round 1: a static page's own reusable elements are Lit with a shadow root, under the component rules. Rejected: vanilla only.
+- branches: round 1: an application has four tiers: views, modules, app-internal elements, and domains (types and services). Rejected: three, with modules folded into views.
+- branches: round 1: the check enforces the tier direction through eslint-plugin-boundaries' layer table, with violation and allowed trees. Rejected: STANDARDS.md alone.
+- branches: round 1: the SDK router rests on URLPattern and the Navigation API (Baseline; floor Safari 26.2, Firefox 147). Rejected: herald's History API router with the ported matcher, which stays frozen evidence.
+- branches: round 1: the Intl formatters are in the foundation, shared by components and apps, with no library and no Temporal. Rejected: the SDK (a component may not import it).
+- branches: round 1: the API client returns Result<T>, whose failure is go-web-sdk's RFC 9457 problem, with network and abort errors mapped into it. Rejected: throwing.
+- branches: round 1: the auth hook is a token-provider interface with a no-op default. The client retries a 401 once through it. Rejected: choosing an OIDC library now (v1.auth owns it).
+- branches: round 1: the SDK spec is prose plus type-only declarations checked by tsc. Rejected: prose only.
+- branches: round 1: the specs live in README Results 8. Rejected: a separate spec note.
+- branches: round 1: the Go serving half is a prose spec with Go signatures, mounted through NewHandlerModule. Rejected: a Go fixture with a Go pin.
+- branches: round 1: the Go proposal reaches spike-html-apps only, through a pending edit. Rejected: also a candidate note in go-web-sdk (it reaches go-web-sdk once spike-html-apps proves it).
+- branches: round 1: apps build to Vite's hashed names with build.manifest, which the Go half reads. Rejected: herald's fixed names.
+- branches: round 1: live transport (SSE, the WebSocket bridge) is a named gap left to spike-html-apps and v1.client. Rejected: specifying it here.
+- branches: round 1: no tag. Rejected: v0.2.0 (nothing consumes it; release builds belong to spike-html-packages).
+- branches: drafting: the foundation's formatters are type-only declarations, like the SDK's, and the components' existing Intl calls stay as they are.
+- branches: drafting: the session controller stand-in is removed. The token-provider declaration replaces it.
+- branches: drafting: app-internal elements import neither the SDK nor domains, under the component rules.
+- branches: drafting: the static branch is an entry plus its own elements, with no four-tier split.
+- branches: drafting: the router quirk-fix pending edit is kept and marked superseded, not deleted.
+- branches: drafting: no runtime router test. With no matcher of our own, a URLPattern test would only test the platform.
+- branches: the layer table lists each app's tier rows before its root row, since eslint-plugin-boundaries takes the first row whose directory holds a file, and a `*` row is importable only from its own app. An app's root may import every tier of its own app, and no tier may import the root. Domains import only the SDK, the foundation, and their own tier.
+- branches: the SDK's and the formatters' declarations are `.d.ts` files, with `skipLibCheck` off so tsc checks them. `test/declarations.test.js` requires every SDK file and the formatters to be declaration files, and proves that the check's own tsc (mise's TypeScript-Go pin) refuses runtime code in one.
+- branches: a final boundaries policy refuses any value import that resolves to a `.d.ts`, an inline `type` specifier included (`verbatimModuleSyntax` keeps `import { type X }` as `import {}`). `checkInternals` is on, so the rule judges an import within one layer too.
+- branches: SDK values reach an app as arguments: `start(runtime)` takes `typeof createClient` and `typeof createRouter`, a `TokenProvider`, and the formatters. A module gets its service and router through a composed `documents-context` event that the app's root answers. An app-internal element declares its own row type and takes the formatters as a property.
+- branches: `Problem.detail` is optional, as go-web-sdk omits it when empty. `title` stays required, and the client fills it for a status outside net/http's table.
+- branches: the problems the client makes itself have the types `urn:standards-lab:problem:network`, `:abort`, and `:timeout`, each with status 0. An error response that isn't a problem document becomes an `about:blank` problem with its status.
+- branches: the router's shape: URLPattern pathnames relative to `base`; a `Loader` resolves to a tag; the router has `current`, `start`, `stop`, `navigate`, and `query`; `RouterOptions` holds `outlet`, `base`, and `notFound`.
+- branches: standards review: the new elements adopt the foundation's baseline, and three tests that could pass for the wrong reason were fixed: the declaration case is held to the `dependencies` rule alone, every tsc error is accounted for, and `format.d.ts` must be the only `format.*` file.
+- branches: spec review: STANDARDS.md says a view loads its route's data through the modules it composes.
+- branches: measure was not re-run, since it reads the network. `scripts/biome-layers.json` has no tier zones, and the next measure run may need the new files added to measure.sh's `unrestored` list, the files setup D's formatter is expected to leave changed.
+
 ## Pending edits
 
 - coordinator · `context/html-artifacts.md`, "Experiment: spike-html-conventions": record the toolchain task's interim results, pending the intake's decision. The hypothesis's split by role (Node + pnpm for packages, Bun for bundling) is ruled out. Across Node + npm, Node + pnpm, and Bun, argued industry standard and maintainability first, footprint second, and speed only on an order-of-magnitude gap, the runtime is Node, settled, and the manager is pnpm provisionally. If spike-html-packages releases the layers through a registry, the choice between npm and pnpm reopens: spike-html-packages weighs npm's standard by use and stewardship against pnpm's multi-package practice and npm's monorepo gaps, with its hosting and repository-layout decisions. Every layer is written in `.ts` and released through a build that ships `.js` and `.d.ts`. tsc emit builds libraries and Vite builds apps; esbuild doesn't earn its place.
 - coordinator · roadmap, spike-html-packages: decide the hosting and repository layout, on which spike-html-conventions' manager pick depends (a repository release keeps pnpm; a registry release reopens the choice between npm and pnpm, which this task weighs with those decisions: npm's standard by use and stewardship against pnpm's multi-package practice and npm's monorepo gaps), weighing registry-based options (npm registry publish, release-asset tarballs installed by URL, plain URL imports through an import map) and spike-html-conventions' evidence (Results 1, 2, and 7, and the Ecosystem survey's Release hosting). Prefixed tags: pnpm installs a subdirectory with `#fixture/v0.1.0&path:/fixture`; bun can't resolve the spec; npm ignores `&path:` as an unknown key, and its own `::path:` resolves the tag to its commit, then fails with ENOENT on the clone's package.json. Git-tag dependencies: npm 12 defaults to allow-git=none and refuses any; allow-git=root admits a consumer's own but refuses a git-tag package's own git-tag dependency, which allow-git=all installs; pnpm 12's `blockExoticSubdeps` default refuses only that nested one; bun has no guard. A git dependency's `prepare`: npm runs it at pack time while warning that it was blocked, and only `--ignore-scripts` skips it; pnpm refuses the install until `allowBuilds` names the resolved spec with its commit; bun installs without running it and reports it until `trustedDependencies` names it. The release build: each `.ts` module ships as an unbundled, unminified `.js` ES module with its `.d.ts` (`tsc -p tsconfig.build.json` emits that); the built files sit in the tag or a release asset; `exports` points at the built `.js` with its types; `files` names the built output (bun ignores `files`). Hosting facts: jsDelivr `/gh/` caches an exact tag for good, serves `.ts` as `text/plain` with `nosniff`, and returns 404 for `/+esm`; GitHub Packages needs a token for every install, public packages included, and takes only scoped packages; JSR emits JS and `.d.ts` from `.ts` and installs natively in pnpm 10.9+ and Yarn 4.9+, while npm needs `.npmrc` setup and Bun's support isn't documented; Verdaccio is a server you run; all 13 surveyed web-component libraries publish to the npm registry, which stays ruled out unless no workable alternative exists, so a registry release means GitHub Packages, JSR, or a self-hosted registry. npm's monorepo gaps: workspace runs follow the `workspaces` array's order, not the dependency graph (npm/rfcs#707); npm has no `workspace:` protocol (npm/cli#8845) and no catalogs (npm/rfcs#872); five linked-layout bugs are open, two on workspaces (npm/cli#10082, #9982). npm's linked install strategy (`--install-strategy=linked`) refuses phantom dependencies, the strictest layout measured, but it is opt-in, stable only since 11.18.0 and 12.0.0, and still copies each package into a per-project `node_modules/.store`.
-- coordinator · roadmap, spike-html-apps: the real router fixes two herald quirks this spike's port kept (a second `?` in the query is dropped; a `#fragment` reaches the route path) and strips the base path only at a segment boundary.
+- (superseded by the `branches` task; don't apply: the router on URLPattern and the Navigation API has neither quirk) coordinator · roadmap, spike-html-apps: the real router fixes two herald quirks this spike's port kept (a second `?` in the query is dropped; a `#fragment` reaches the route path) and strips the base path only at a segment boundary.
 - coordinator · `context/html-artifacts.md`, "Experiment: spike-html-conventions": record the structure task's interim results, pending the intake's decision. The layers are directories of `layers/` in one package: the foundation (native only, no package), components (the element tier) and the application SDK as siblings on the foundation, a static branch that may import the foundation, components, and Lit, and an application branch that may import all three plus the SDK; no app imports another. eslint-plugin-boundaries' `dependencies` rule, over the layer table in `eslint.config.js` with import-x's `no-unresolved` beside it, enforces that direction in the check by the file each import resolves to, so relative specifiers need no normalization convention. The lint and format setup is ESLint + Prettier, provisionally, argued industry standard and maintainability first: the standard by a wide margin, the better-stewarded tools, and a direction rule by resolved file outweigh Biome's smaller surface (one binary and one config file against nine pins and four config files); ESLint Stylistic can't restore a disturbed tree, and oxlint + oxfmt isn't the standard and judges direction by text. Footprint and speed don't overturn it. The pick reopens if spike-html-packages makes the layers packages, or if ESLint's or Prettier's foundation or funding changes.
 - coordinator · roadmap, spike-html-packages: decide whether the layers become packages, and the import extension the releases use (this spike's occupants import `.js` paths, which bundler resolution maps to `.ts`). The package-boundary facts (spike-html-conventions' Results 3): pnpm refuses an import of an undeclared package by default, and a lint rule can refuse one too (import-x's `no-extraneous-dependencies`, not measured), so as packages each layer's declared dependencies would enforce the direction at install as well as in the lint. Making the layers packages reopens the provisional ESLint + Prettier pick (Results 6): the direction plugin's role shrinks to the files inside a package, so direction weighs less against Biome's smaller surface. The lint tooling is the root package's devDependencies, under STANDARDS.md's rule "Lit is the only runtime dependency; lint tooling is the only devDependencies".
 - coordinator · roadmap, spike-html-apps: four of herald's element files in `app/client/ui/elements` import from `@domains` (herald 6fc22b3): `classify-progress.ts` the `WORKFLOW_STAGES` constant and the `WorkflowStage` type, `document-card.ts` the `WorkflowStage` and `Document` types, `prompt-card.ts` the `Prompt` type, and `blob-viewer.ts` the `findFormat` lookup. Under spike-html-conventions' layout a component may not import domain code: the types become the element's own properties, and the constant and lookup move up to the app or down into the element.
-- coordinator · roadmap, this spike's `branches` task: add the app-internal tiers (modules and views) and whether static pages use Lit, both handed on by Results 3; STANDARDS.md records the second as undecided.
 - coordinator · `context/html-artifacts.md`, "Experiment: spike-html-conventions": record the components task's interim result, pending the intake's decision. Components are Lit with a shadow root by default, the architect's judgement after reading all 8 final versions (two elements, a pagination container on go-web-sdk's Page envelope and the entry it holds, each in Lit and vanilla, shadow and light DOM): light DOM's hand-placed composition (MutationObserver placement in place of slots, a cascade layer ordered by adoption, page styles leaking in) costs more than it gives, though it lets the page's baseline style the controls directly. Vanilla matches Lit's observable contract only by hand-writing attributes, conversion, reflection, accessors and pre-upgrade properties, and forgoes batched and binding-level updates. No build removes Lit's runtime (5,031 B brotli in production, shared by every Lit element on a page); Svelte, Stencil and solid-element each ship their own runtime. A shadow root can't see the page's baseline: its element selectors stop at the boundary and only tokens cross, and no shipped mechanism lets a shadow root inherit page styles (csswg-drafts#10176 and whatwg/html#11687 are open). So a shadow-root component adopts the foundation's reset and elements sheets by reference, then a layout-only sheet of its own, and no component styles a control's look. The foundation holds a port of spike-html-design v0.7.0 (its tokens with the Flexoki, regular, and mono profiles, reset, and elements) as `.css` files that each wrap their rules in a `@layer foundation.<layer>` block and import nothing, because neither a constructed sheet nor a CSS module script loads `@import`; a page entry states the layer order and imports them, and every page links it, so a shadow page loads the reset and elements layers twice, linked and adopted. A component's CSS lives in its own `.css` file, imported as a standard CSS module script and never written in `.ts`. CSS module scripts run in Chrome/Edge 123+ and Firefox 147+, with no Safari release yet (WebKit landed it 2026-10-06), and are not Baseline. Apps build through Vite with a ~30-line local plugin, so their production pages don't depend on Safari; a page that loads the modules unbundled fails there until a Safari release ships the form. Native CSS doesn't reopen the toolchain pick: Bun loads the form as `{}`, and herald's native CSS was a bundler plugin.
 - coordinator · roadmap, spike-html-packages: a release of the components ships each component's `.css` beside its emitted `.js`, and the foundation's sheets beside its own (the port in `layers/foundation/baseline/`, which the shadow components import as CSS module scripts, and the page entry `layers/foundation/baseline.css`, which pages link), with `exports` and `files` naming the `.css` files too, because tsc's emit copies no `.css` (spike-html-conventions' measure copies every `.css` in `layers/` beside tsc's emit by hand, in `scripts/browser-cases.js`). A CSS module script (`with { type: "css" }`) loads only when the file is served as `text/css`; jsDelivr serves `.css` as `text/css`. Consumers that load the modules unbundled in Safari fail until a Safari release ships WebKit's CSS module scripts (bug 227967, landed 2026-10-06, 322887@main). Bundled consumers go through Vite with a local plugin (spike-html-conventions' `scripts/css-sheets.js`). Neither Node 26 (`ERR_UNKNOWN_FILE_EXTENSION`) nor Bun 1.4.3 (`{}`) loads the form, so a test run outside a browser needs the same treatment. Source: spike-html-conventions Results 4.
 - coordinator · roadmap, the web client intake (finding for spike-html-design): ship each layer (tokens with each facet and profile, reset, elements) as a self-layered, `@import`-free, exported sheet: each file wraps its rules in its own `@layer spike-html-design.<layer>` block, imports nothing, and is named in package.json's `exports`, so a component's shadow root can adopt the reset and elements layers by reference as CSS module scripts (`with { type: "css" }`); the one entry may keep the layer order statement and plain `@import`s for pages. Today's entry builds the layers with `@import ... layer()`, which neither a constructed sheet (`replace`/`replaceSync` drop `@import`, WPT css/cssom/CSSStyleSheet-constructable-disallow-import) nor a CSS module script loads, and no layer file is exported, so spike-html-conventions ported v0.7.0 (fe75220) into `layers/foundation/baseline/` as `foundation.*` layers with provenance headers: the interim and the reference for the shape (its shadow components adopt `[reset, elements]` before a layout-only sheet; no component styles a control's look). Also: the theme-menu builds its constructed sheet from a string (`modules/theme-menu.js:46-47` at v0.7.0), against the convention of CSS in `.css` files imported as CSS module scripts. Same support caveats: no Safari release ships CSS module scripts (WebKit landed them 2026-10-06); bundlers need a plugin. Source: spike-html-conventions Results 4.
 - coordinator · roadmap, spike-html-apps: herald's pagination takes `total_pages` (`pkg/pagination` `PageResult`, the element's `total-pages` attribute, 6fc22b3); go-web-sdk's Page envelope carries `items`, `page`, `size`, `total`, `more`, `next` and omits `page` and `total` under a cursor (`total` also when the read didn't count). spike-html-conventions' pagination derives the page count from total and size, follows `more` for Next when total is absent, disables the page input when page is absent, and sends `page-change {page: null}` on cursor Next so the host follows `next`. The real app wires these fields and treats a null page as a cursor follow.
 - coordinator · `context/html-artifacts.md`, "Experiment: spike-html-conventions": record the testing task's interim result, pending the intake's decision. The check has two tiers. The unit tier is DOM-free code under node --test, with no DOM shim, since happy-dom and jsdom load no CSS module script and compute no layout or style; logic that needs no DOM moves into DOM-free modules. Anything that touches the DOM is the browser tier, which serves the components through Vite's dev server with the ~30-line local CSS plugin, not from `file://` (which needs a file-access flag, an import map into the package store, a copied `.css` per module, and hides stylesheet rules), and runs the components' 27 contract cases in each of four versions and 4 restyle checks under node --test. Its driver is the raw Chromium DevTools pipe, no package, on Chrome for Testing's chrome-headless-shell 155.0.8059.84, pinned in `mise.toml` through mise's `http:` backend with a sha256 and size taken by hand (Chrome for Testing publishes no checksums, chrome-for-testing#70), launched with `--no-sandbox` (Ubuntu 23.10+ AppArmor refuses a downloaded Chrome's sandbox; the browser loads only the repository's own pages on loopback); Chromium alone, 0.9 s of a 12 s check. The architect first picked Playwright (playwright-core) on the system Chromium and Firefox, then Playwright's own browsers so CI would match, and finally the pin, because Microsoft supports Playwright on Linux only on Ubuntu and Debian. Google names only Ubuntu, Debian, openSUSE, and Fedora for Chrome, but the headless shell is one generic linux64 zip that runs on Arch and on CI's runners, whose own browsers (ubuntu-24.04 image 20261012.334.1: Chrome 155.0.8059.39, a Chromium 155.0.8059.0 snapshot, Firefox 157) no repository pins; Playwright's Chromium is itself a Chrome for Testing build. A CI job runs the same `mise install`. Playwright stays the measured comparison: on the pin it is 1.25 times the raw pipe cold and 1.26 warm, 59 harness lines against 143, 13.7 MB, 0 failures in 20 runs each. Firefox and WebKit are gaps: Firefox removed CDP in 141, so keeping it means WebDriver BiDi through a package (puppeteer-core), rejected; Playwright's WebKit r2370 is an Ubuntu 24.04 build that doesn't launch on this spike's Arch host, and no Safari release ships CSS module scripts (WebKit landed them 2026-10-06), so a page loading the components unbundled fails in Safari until a release ships them. @playwright/test, Web Test Runner, and Vitest's browser mode are sourced facts, not measured. Source: spike-html-conventions Results 5 (m 2026-10-18T20:47:44Z).
+- coordinator · `context/html-artifacts.md`, under "## Answers · experiment.html", after spike-html-design's section: add spike-html-conventions' answer section, this text:
+
+  ```markdown
+  ### Answer · experiment.html.spike-html-conventions
+
+  **Question:** Which conventions does the native web stack build on?
+
+  **Answer:** Node 26 with pnpm, `.ts` shipped through a release build, the layers of `layers/`
+  with their import direction enforced by resolved file, Lit with a shadow root for components,
+  a DOM-free unit tier and a browser tier on the raw DevTools pipe, ESLint + Prettier, and one
+  Vite build for both app branches over an SDK declared on the platform.
+
+  1. Toolchain: Node over Bun clearly, pnpm over npm narrowly, never Bun beside it; tsc emit
+     builds libraries, Vite builds apps, and esbuild doesn't earn its place. pnpm is
+     provisional until spike-html-packages decides how the layers release; a registry release
+     reopens npm against pnpm. Proven by measure run m 2026-10-16T14:03:02Z and the survey's
+     sourced facts.
+  2. TypeScript form: `.ts` with a release build, over JSDoc with a type check and plain JS,
+     the architect's decision on the measured Forms rows (m 2026-10-16). What a release must
+     ship is handed to spike-html-packages.
+  3. Layout and direction: the layers are directories of `layers/` (the foundation,
+     components, the SDK, and the static and application app branches), and
+     eslint-plugin-boundaries judges each import by the file it resolves to. An application
+     app adds four tiers: views, modules, app-internal elements, and domains. Proven by the
+     check: `test/layers.test.js` passes only on an exact match over 256 violation files and
+     48 allowed files. The rejected mechanisms are measured in m 2026-10-16T21:11:09Z.
+  4. Components: Lit with a shadow root, adopting the foundation's reset and elements sheets
+     before a layout-only `.css` of its own, the architect's choice after reading all 8
+     versions (Lit and vanilla, shadow and light DOM). Proven by the check's browser tier
+     (`scripts/browser.test.js`), with served bytes in m 2026-10-17T23:45:28Z and a running
+     demo: `mise run preview`.
+  5. Testing tiers: a unit tier under node --test and bun test with no DOM shim, and a browser
+     tier over the raw DevTools pipe on the pinned chrome-headless-shell, Chromium alone.
+     Proven by the check, and compared with Playwright in m 2026-10-18T20:47:44Z. Firefox and
+     WebKit are gaps.
+  6. Lint and format: ESLint + Prettier, over Biome, oxlint + oxfmt, and ESLint Stylistic,
+     provisionally: the pick reopens if spike-html-packages makes the layers packages, or if
+     ESLint's or Prettier's foundation or funding changes. Run by the check; compared in
+     m 2026-10-16T21:11:09Z.
+  7. Consumption: spike-html-design v0.7.0 and this package's v0.1.0 install by tag under
+     npm, pnpm, and bun, and load from jsDelivr; v0.1.0 ships source only. Proven by the
+     check's offline fixtures and by m 2026-10-16 and m 2026-10-16T17:15:39Z.
+  8. Branches and the SDK: a static app is an entry plus its own Lit elements; an application
+     app is an entry and a route table over the four tiers; both build through Vite with the
+     local CSS plugin, to hashed filenames and a build manifest. The SDK's router rests on
+     URLPattern and the Navigation API, its client returns a `Result` whose failure is
+     go-web-sdk's RFC 9457 problem, its auth hook is a token provider, and its services follow
+     one domain-service pattern; the Intl formatters are the foundation's. The browser floor
+     is Safari 26.2, Firefox 147, and Chromium. Specified, not built: tsc checks the type-only
+     declarations, `test/declarations.test.js` holds them free of runtime code, and
+     `test/layers.test.js` checks the tier direction, but no router, client, formatter, or Go
+     serving half runs anywhere. spike-html-apps builds them.
+
+  [The answer](https://github.com/JaimeStill/spike-html-conventions/blob/main/context/README.md#the-answer) · [spike-html-conventions](https://github.com/JaimeStill/spike-html-conventions)
+  ```
+- coordinator · `context/html-artifacts.md`, "Settled for the spikes", the **Build.** line ("None for the foundation and static pages, pending spike-html-conventions"): spike-html-conventions answers it, pending the intake's decision. Static pages build as applications do: both branches build through Vite with the local CSS plugin (spike-html-conventions' `scripts/css-sheets.js`), to hashed filenames and a build manifest, and a Pages workflow uploads the build output. A page that loads components unbundled imports CSS module scripts, which no Safari release loads, so no page ships unbuilt. Source: spike-html-conventions Results 8.
+- coordinator · `context/web-client.md` (the Apps item's SDK list) and `context/html-artifacts.md` ("Experiment: spike-html-conventions", the SDK list): remove "formatting" from the application SDK's parts. The Intl formatters are a foundation spec now, shared by components and apps, because components format too and a component may not import the SDK. Source: spike-html-conventions Results 8. Also in `context/web-client.md`, the Apps item's "static content, such as the Pages sites, built vanilla on the foundation" is stale: a static app's own elements are Lit with a shadow root, and its pages build through Vite with the local CSS plugin (Results 8).
+- coordinator · roadmap, spike-html-apps: build the router, the API client, the default token provider, and the foundation's formatters to spike-html-conventions' declarations (`layers/sdk/*.d.ts`, `layers/foundation/format.d.ts`), and prove the Go serving half it proposes in go-web-service's `sdk/` package before go-web-sdk takes it. The proposal is one handler for an app's embedded Vite build output: `func NewClient(dist fs.FS, opts ClientOptions) (http.Handler, error)`, with `ClientOptions` holding the base path, the page title, the manifest key of the app's entry, and a config value; it reads `.vite/manifest.json` from `dist` once and fails if the entry isn't there. Every path that isn't an asset is a client route and answers the shell, an HTML page that writes `<base href>`, the title, the config value as JSON in a `<script type="application/json">`, and the manifest's entry as a module script with its CSS, so a deep link or a reload reaches the router. A request under the build's asset directory answers the embedded file with `Cache-Control: public, max-age=31536000, immutable`, since its hashed name changes with its content; a missing asset answers a 404 problem (go-web-sdk `WriteProblem`, `problem.go`), never the shell. It mounts as `router.Mount(web.NewHandlerModule("/app", client, mw...))` beside the API's module; go-web-sdk's `validatePrefix` (`group.go`) refuses a prefix that ends in `/`, so spike-html-apps settles how an app at the server's root mounts (`Router.SetNotFound` is the candidate), and that Vite's `base`, the shell's `<base href>`, and `RouterOptions.base` agree. Live transport is a named gap: the spec declares neither server-sent events nor the WebSocket bridge, and spike-html-apps names it with v1.client, to which `context/messaging.md` gives the bridge. The browser floor is Safari 26.2, Firefox 147, and Chromium, set by the Navigation API (web-features 3.43.0). `api.d.ts` types `Problem.title` as always present, but go-web-sdk's `Write` omits it for a status outside net/http's table, so the client fills it. Source: spike-html-conventions Results 8.
+- coordinator · roadmap, spike-html-hosting: the Pages workflow runs a Vite build step, with spike-html-conventions' local CSS plugin (`scripts/css-sheets.js`), and uploads the build output, not the source tree, because a page that loads components unbundled fails in Safari. Source: spike-html-conventions Results 8.

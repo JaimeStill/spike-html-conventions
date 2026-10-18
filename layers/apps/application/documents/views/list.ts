@@ -1,37 +1,33 @@
-// The documents app's list view: one directory into the app, so it reaches its own model with
-// `../` and the layers with four.
+// The documents app's list view: the element the route table mounts at "/" and
+// "/folders/:folder". The router sets each path param on it as an attribute of the same name, so
+// `folder` is a reactive property with an attribute; the view composes the list module with it.
 
 import { html, LitElement, type PropertyDeclarations } from "lit";
 
-import "../../../../components/status-badge.js";
 import { define } from "../../../../foundation/dom.js";
-import { SessionController } from "../../../../sdk/session.js";
-import type { DocumentSummary } from "../model.js";
+import "../modules/document-list.js";
 
-/** Lists documents, each with a status badge. */
-export class DocumentsList extends LitElement {
+/** The tag the view defines, which the route table's loader resolves to. */
+export const tagName = "documents-list-view";
+
+/** A folder's documents; every folder's when `folder` is empty. */
+export class DocumentsListView extends LitElement {
   static properties = {
-    documents: { attribute: false },
+    folder: { type: String },
   } satisfies PropertyDeclarations;
 
-  /** The documents listed. */
-  declare documents: DocumentSummary[];
-
-  session = new SessionController(this);
+  /** The route's `folder` param; empty on "/". */
+  declare folder: string;
 
   constructor() {
     super();
-    this.documents = [];
+    this.folder = "";
   }
 
   render() {
-    return html`<ul>
-      ${this.documents.map((doc) => html`<li>${doc.title} <sl-status-badge label="Draft"></sl-status-badge></li>`)}
-    </ul>`;
+    return html`<h1>${this.folder || "All documents"}</h1>
+      <documents-list .folder=${this.folder}></documents-list>`;
   }
 }
 
-/** The tag the view defines. */
-export const listTag = "documents-list";
-
-define(listTag, DocumentsList);
+define(tagName, DocumentsListView);
