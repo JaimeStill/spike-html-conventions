@@ -130,6 +130,32 @@ Door          two-way: no tag, nothing published; the eslint pin and any
               lockfile.
 ```
 
+Redirect 2 at BRIEF (architect): native node tests, the browser tier over the raw CDP pipe on a
+pinned Chrome for Testing headless shell; no Playwright in the check. Supersedes redirect 1.
+
+Microsoft supports Playwright on Linux only for Ubuntu and Debian, and the architect won't rely
+on unofficial support on Arch. Google names no Arch either, but Chrome for Testing's
+chrome-headless-shell is one generic linux64 zip that runs here, and one pin makes the check the
+same locally and in CI (round 4, 2026-10-18).
+
+  6. (rev) The check's browser tier runs `scripts/browser.test.js` under node --test with the
+     raw CDP pipe (no package) on Chrome for Testing's chrome-headless-shell, pinned in mise.toml
+     through mise's http: backend (version 155.0.8059.84, linux-x64 URL, a sha256 and size we
+     record), launched by path with --no-sandbox; Chromium alone. It fails by name when the pin
+     isn't installed. The system Chromium and Firefox leave the check.
+  4. (rev) Measure keeps Playwright as the comparison column, playwright-core installed into
+     measure's scratch (a scratch pin currency lists), its browsers in measure's scratch.
+  8. (rev) STANDARDS.md: the devDependency rule reverts to lint tooling only; every browser the
+     check runs is the mise pin; the browser tier is Chromium alone (Firefox and WebKit are gaps
+     the check doesn't cover); the strategy lines of redirect 1 stay, with the raw pipe as the
+     check's driver and a CI job running the same `mise install` (e.g. jdx/mise-action).
+  9. (rev) Results 5 records the revised pick, the support facts (Microsoft: Ubuntu and Debian;
+     Google: Ubuntu, Debian, openSUSE, Fedora; Playwright's Chromium is itself a CfT build), the
+     check's timing on the pin, CfT's lack of checksums, the CI facts (the runner's unpinned
+     browsers; AppArmor and --no-sandbox), and Firefox over BiDi only (puppeteer-core) as the
+     rejected way to keep it.
+
+
 Redirect at BRIEF (architect): the check's browsers are all Playwright's, so it runs the same in CI.
 
 The system Chromium isn't pinned by the repository (it moved from 152 to 154 during BUILD) and
@@ -386,6 +412,14 @@ in a container or install libraries on the host.
 - testing: standards review follow-ups: the browser tier and measure pass only on exactly 27 cases (one count, `probeCases` in `scripts/browser-cases.js`); restyle requires an opaque baseline colour, so unloaded tokens fail it; the raw pipe fails by name when the system Chromium is missing.
 - testing: redirect at BRIEF (architect): the check runs Playwright's Chromium Headless Shell and Firefox, both fixed by playwright-core's pin, so it runs the same locally and in CI; the system Chromium leaves the check and stays in measure. Rejected: the system Chromium in the check (unpinned: 152 to 154 during BUILD; absent on CI runners).
 - testing: redirect at BRIEF (architect): STANDARDS.md records the strategy: DOM-free logic in node --test modules, the browser tier narrow (contract, events, rendering, styling), no @playwright/test, screenshot diffing, or tracing without a recorded need, the raw pipe as the no-package fallback; revisit Firefox with evidence, WebKit in CI later.
+- testing (superseded by redirect 2): redirect 1's pick of Playwright's own Chromium and Firefox in the check.
+- testing: redirect 2 (architect, round 4): the check drives Chromium over the raw CDP pipe, no package. Rejected: puppeteer-core 25.14.0 (Firefox over BiDi, a package with five dependencies); Playwright (Linux support only for Ubuntu and Debian).
+- testing: round 4: the check's Chromium is Chrome for Testing's chrome-headless-shell pinned at Stable 155.0.8059.84 everywhere. Rejected: the system Chromium locally with a separate CI install (unpinned: 152 to 154 during BUILD; the runner's snapshot changes per image).
+- testing: round 4: the pin is a mise http: tool (URL, sha256, size we record; CfT publishes no checksums, so each bump takes a fresh sha256 by hand); currency's mise scan reports new Stables. Rejected: @puppeteer/browsers at install.
+- testing: round 4: the check launches Chromium with --no-sandbox everywhere (the repository's own pages on loopback, every other host refused), since Ubuntu 23.10+ AppArmor blocks a downloaded Chrome's sandbox. Rejected: lifting the AppArmor restriction in CI.
+- testing: round 4: Playwright stays in measure as the comparison column, playwright-core back in measure's scratch; it leaves package.json, and the devDependency rule reverts to lint tooling only.
+- testing: round 4: the stopped redirect-1 slice is discarded, and the repository's 588 MB Playwright cache outside the tree removed.
+- testing: measure's raw-pipe rows and Playwright's like-for-like row run on the pinned headless shell, so the comparison measures the check's own browser; the demo's frozen --dump-dom pages stay on the system Chromium (outside the task).
 
 ## Pending edits
 
