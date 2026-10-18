@@ -2,7 +2,7 @@
 // one version, drives it, and reports every case as a line of text. It reaches the elements only
 // through what every version shares (tags, properties, attributes, events, the controls' labels,
 // and the text a reader sees, through a shadow root or not), so two versions that keep the same
-// contract write the same report, and scripts/demo.sh compares the reports line for line.
+// contract write the same report, and scripts/browser.test.js compares the reports line for line.
 
 import type { EntryItem } from "../layers/components/entry-lit-shadow.js";
 import { continued, directories, files, type Page } from "./documents.js";

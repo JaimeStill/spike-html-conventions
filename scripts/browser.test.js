@@ -31,8 +31,7 @@ const servers = { vite: serve, unbundled: serveUnbundled };
 const kind = process.env.BROWSER_SERVER ?? "vite";
 if (servers[kind] === undefined) throw new Error(`no server ${kind}`);
 const owned = process.env.BROWSER_SCRATCH === undefined;
-const scratch =
-  process.env.BROWSER_SCRATCH ?? mkdtempSync(join(process.env.TMPDIR ?? tmpdir(), "browser."));
+const scratch = process.env.BROWSER_SCRATCH ?? mkdtempSync(join(tmpdir(), "browser."));
 mkdirSync(scratch, { recursive: true });
 
 /**
@@ -79,6 +78,8 @@ describe(`browser cases, ${driver} driver${engine}, ${kind} server`, () => {
 
   test(`probe: every version's report is ${versions[0]}'s`, () => {
     const [first, ...rest] = versions;
+    // Matching an absent or empty report proves nothing: the first must have written one.
+    assert.ok(results.probe[first]?.report, `${first} wrote no report`);
     for (const version of rest) {
       assert.equal(results.probe[version]?.report, results.probe[first]?.report, version);
     }

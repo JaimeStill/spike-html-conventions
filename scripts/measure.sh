@@ -2044,6 +2044,10 @@ browser_rows() {
   while IFS=$'\t' read -r name ok fact; do
     row "Browser, $label $over: $name" "$ok" "$fact"
   done < <(node "$root/scripts/browser-cases.js" "${command[@]}")
+  # A run that fails where no results row shows it (a hook, the server's stop) still fails a row.
+  if ((status != 0)); then
+    row "Browser, $label $over: node --test passes" 0 "exit $status: $(grep -m1 '^not ok' "$browser/$key.log" || tail -n1 "$browser/$key.log")"
+  fi
 }
 browser_rows pipe vite "raw pipe (system Chromium, no package)" pipe
 browser_rows playwright-system vite "Playwright (system Chromium)" playwright chromium-system
@@ -2087,9 +2091,11 @@ browsers_pinned=$(node -e '
   });
   console.log(pinned.join(", "));
 ' "$playwright_core/browsers.json")
-# package_imports FILE: the packages FILE imports, node: modules aside, space-separated.
+# package_imports FILE: the packages FILE imports, node: modules aside, space-separated: each
+# static import's specifier, on one line or ending one written over several, a bare import too.
 package_imports() {
-  sed -nE 's/^import .* from "([^"]+)";$/\1/p' "$1" | { grep -v '^node:' || true; } | paste -s -d ' ' -
+  sed -nE 's/^(import .+ from|\} from|import) "([^"]+)";$/\2/p' "$1" | { grep -v '^node:' || true; } |
+    paste -s -d ' ' -
 }
 pipe_imports=$(package_imports "$root/scripts/browser-pipe.js")
 playwright_imports=$(package_imports "$root/scripts/browser-playwright.js")

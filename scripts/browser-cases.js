@@ -284,7 +284,7 @@ function rows({ browser, error, probe, restyle }) {
     ]),
     [
       `every version's probe report is ${first}'s`,
-      probe[first] && diffs.length === 0 ? 1 : 0,
+      probe[first]?.report && diffs.length === 0 ? 1 : 0,
       `${lines(first).length} lines each; ${diffs.length ? diffs.join("; ") : "none differs"}`,
     ],
     [
