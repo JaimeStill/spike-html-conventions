@@ -1,8 +1,8 @@
 # goal · experiment.html.spike-html-conventions
 
-- **State:** idle
-- **Task:** none
-- **Branch:** none
+- **State:** handoff
+- **Task:** branches
+- **Branch:** branches
 
 ## Tasks
 
@@ -164,6 +164,12 @@ Door          two-way: no tag, nothing published; every change reverts
 ```
 
 ## Progress
+
+slices 6/6 committed · standards ✓ · spec ✓ · editor ✓ · brief accepted
+
+## Handoff
+
+merge, then sync: pull request #5 (branches) is published and accepted; the merge was blocked by the session's permission mode. Merge #5, then run the sync (session brief's Sync section; stage experiment.html.spike-html-packages).
 
 ## Decisions
 
