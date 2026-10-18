@@ -36,7 +36,8 @@ Behaviors
 - slice 2 committed (02c63b0): raw Chromium pipe over Vite in measure (`scripts/browser-cases.js`, `browser-pipe.js`, `browser.test.js`); 6 rows pass, measure 127/127. Decisions in the commit message: Vite started from JS, verdict promise awaited after load, 1280x720 viewport, Chromium profile in /tmp. Measure hit EDQUOT on /tmp; rerun with TMPDIR outside /tmp.
 - slice 3 committed (80a88fe): Playwright column (system Chromium, Headless Shell 156, Firefox 157 pass) and unbundled rows (Chromium, Firefox pass); measure 147/154, the 7 WebKit rows fail: Playwright WebKit r2370 won't launch on Arch (missing libicu*.so.74, libxml2.so.2, libflite). Escalation answered: WebKit excluded (amendment). Fixes owed: leftover WebKit profile dirs in TMPDIR; both drivers emulate the light scheme.
 - slice 4 committed (9a9f0fd): WebKit out, light scheme in both drivers, overhead rows; measure 2026-10-18T18:43:26Z 156/156. Review stop answered: Playwright on the system Chromium and Firefox.
-- slice 5 committed (9a1d80a): browser tier in the check (Playwright on system Chromium and Firefox over Vite, node --test only, ~6 s of a ~17 s check); a broken case fails it; measure 2026-10-18T19:09:47Z 156/156. Next: slice 6.
+- slice 5 committed (9a1d80a): browser tier in the check (Playwright on system Chromium and Firefox over Vite, node --test only, ~6 s of a ~17 s check); a broken case fails it; measure 2026-10-18T19:09:47Z 156/156. 
+- slice 6 committed (e3d9958): demo trimmed to the 20 frozen pagination pages (esbuild, bun, tsc, src). Next: slice 7, evidence.
   2. mise run measure runs the probe's 27 cases in each of the four
      component versions, and the 4 restyle checks, through two drivers
      against pages Vite's dev server serves with the local CSS plugin:
@@ -359,6 +360,7 @@ in a container or install libraries on the host.
 - testing: review stop (architect): the check's browser tier runs Playwright (playwright-core 1.64.1, a devDependency) on the system Chromium and on Playwright's Firefox 157. Argued in the toolchain order: the standard browser driver and less than half the harness code (57 lines against 131) come first; a second engine for 13.7 MB plus Firefox's 324.5 MB comes second; 1.5x slower, no order-of-magnitude gap. Rejected: the raw pipe on the system Chromium alone (the default), and Playwright on Chromium alone. STANDARDS.md's devDependency rule and browser exception are revised.
 - testing: review stop (architect): `mise run install` downloads Firefox into a repo-specific PLAYWRIGHT_BROWSERS_PATH outside the tree, `~/.cache/spike-html-conventions/playwright`, so the check stays offline. Rejected: the shared `~/.cache/ms-playwright`, which holds another project's browsers.
 - testing: PLAYWRIGHT_BROWSERS_PATH is set once in mise.toml's `[env]`; measure exports its own scratch path over it. The browser test stays in `scripts/`, so `bun test ./test/` never runs it.
+- testing: the demo keeps all 20 frozen pagination pages (12 esbuild and bun, 4 tsc emit, 4 src forms); planning's "16" counted only the bundled ones.
 
 ## Pending edits
 
