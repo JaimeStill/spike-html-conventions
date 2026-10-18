@@ -18,6 +18,28 @@ export const self = JSON.parse(
   readFileSync(join(import.meta.dirname, "..", "package.json"), "utf8"),
 ).name;
 
+/** An edge in each of the four import forms, one file per form, each named for the edge and its
+ * form: a side-effect import, a type import, a re-export, and an import(). */
+function forms(base, specifier) {
+  return {
+    [`${base}.ts`]: `import "${specifier}";`,
+    [`${base}-type.ts`]: `import type { X } from "${specifier}";`,
+    [`${base}-export.ts`]: `export * from "${specifier}";`,
+    [`${base}-dynamic.ts`]: `await import("${specifier}");`,
+  };
+}
+
+/** An edge in the same four forms, as the lines of one file. */
+function inForms(specifier) {
+  return Object.values(forms("", specifier)).join("\n");
+}
+
+// The application-branch app and the static-branch app the tier cases sit in.
+const app = "layers/apps/application/documents";
+const site = "layers/apps/static/site";
+// An application-branch app named as the static-branch app is.
+const namesake = "layers/apps/application/site";
+
 // Each file holds one import. The violating files are named for the edge they cross.
 export const violations = {
   // foundation: native only, no layer and no package
@@ -85,6 +107,55 @@ export const violations = {
   "layers/apps/application/documents/dots-climb.ts": `import "../../../sdk/.../../../apps/application/prompts/main.js";`,
   "layers/apps/application/documents/bare-parent.ts": `import "../";`,
   "layers/apps/application/documents/views/bare-parent.ts": `import "../..";`,
+  // an application-branch app's tiers, each forbidden edge in each form: no tier imports the
+  // app's root or another app's tier; a view imports no root, a module no view, an element no
+  // other tier and not the SDK, and domains no UI tier, no component, and not lit
+  ...forms(`${app}/views/root`, "../main.js"),
+  ...forms(`${app}/views/a/b/root`, "../../../main.js"),
+  ...forms(`${app}/views/other-app`, "../../prompts/views/list.js"),
+  ...forms(`${app}/views/other-app-modules`, "../../prompts/modules/feed.js"),
+  ...forms(`${app}/modules/views`, "../views/list.js"),
+  ...forms(`${app}/modules/root`, "../main.js"),
+  ...forms(`${app}/modules/other-app`, "../../prompts/modules/feed.js"),
+  ...forms(`${app}/modules/other-app-elements`, "../../prompts/elements/card.js"),
+  ...forms(`${app}/elements/views`, "../views/list.js"),
+  ...forms(`${app}/elements/modules`, "../modules/feed.js"),
+  ...forms(`${app}/elements/domains`, "../domains/model.js"),
+  ...forms(`${app}/elements/root`, "../main.js"),
+  ...forms(`${app}/elements/sdk`, "../../../../sdk/session.js"),
+  ...forms(`${app}/elements/a/sdk`, "../../../../../sdk/session.js"),
+  ...forms(`${app}/elements/other-app`, "../../prompts/elements/card.js"),
+  ...forms(`${app}/elements/static`, "../../../static/site/elements/hero.js"),
+  ...forms(`${app}/domains/views`, "../views/list.js"),
+  ...forms(`${app}/domains/modules`, "../modules/feed.js"),
+  ...forms(`${app}/domains/elements`, "../elements/card.js"),
+  ...forms(`${app}/domains/root`, "../main.js"),
+  ...forms(`${app}/domains/components`, "../../../../components/badge.js"),
+  ...forms(`${app}/domains/lit`, "lit"),
+  ...forms(`${app}/domains/other-app`, "../../prompts/domains/model.js"),
+  ...forms(`${app}/other-app-views`, "../prompts/views/list.js"),
+  // a static-branch app's elements follow the element rules: never the app's entry, the SDK, or
+  // another app's elements; and its entry imports no other app's elements
+  ...forms(`${site}/elements/root`, "../main.js"),
+  ...forms(`${site}/elements/sdk`, "../../../../sdk/session.js"),
+  ...forms(`${site}/elements/other-app`, "../../blog/elements/hero.js"),
+  ...forms(`${site}/elements/application`, "../../../application/documents/elements/card.js"),
+  ...forms(`${site}/other-app-elements`, "../blog/elements/hero.js"),
+  // nor does an app import another branch's app of the same name, though the two capture the same
+  // directory name: an application-branch site and the static-branch site, each row of each
+  ...forms(`${namesake}/static-root`, "../../static/site/main.js"),
+  ...forms(`${namesake}/static-elements`, "../../static/site/elements/hero.js"),
+  ...Object.assign(
+    {},
+    ...["views", "modules", "elements", "domains"].flatMap((tier) => [
+      forms(`${namesake}/${tier}/static-root`, "../../../static/site/main.js"),
+      forms(`${namesake}/${tier}/static-elements`, "../../../static/site/elements/hero.js"),
+      forms(`${site}/application-${tier}`, `../../application/site/${tier}/x.js`),
+      forms(`${site}/elements/application-${tier}`, `../../../application/site/${tier}/x.js`),
+    ]),
+  ),
+  ...forms(`${site}/application-root`, "../../application/site/main.js"),
+  ...forms(`${site}/elements/application-root`, "../../../application/site/main.js"),
   // outside a layer directory or an app: a file there could re-export any layer
   "layers/index.ts": `export * from "./sdk/session.js";`,
   "layers/apps/static/index.ts": `export * from "../../sdk/session.js";`,
@@ -124,7 +195,7 @@ export const allowed = {
     `await import("./views/list.js");`,
   ].join("\n"),
   "layers/apps/application/documents/views/list.ts": [
-    `import type { Model } from "../model.js";`,
+    `import type { Model } from "../domains/model.js";`,
     `import "../../../../sdk/session.js";`,
     `import "../../../../components/badge.js";`,
   ].join("\n"),
@@ -138,6 +209,44 @@ export const allowed = {
     `import "../../../components/x..y/z.js";`,
     `import "../../../foundation/.../a.js";`,
   ].join("\n"),
+  // An application-branch app's tiers, each permitted edge in each form, one file per edge: the
+  // root imports every tier; a view its own tier, modules, elements, and domains; a module its
+  // own tier, elements, and domains; an element its own tier; domains their own tier; and each
+  // the layers its row names.
+  [`${app}/routes.ts`]: inForms("./views/list.js"),
+  [`${app}/root-modules.ts`]: inForms("./modules/feed.js"),
+  [`${app}/root-elements.ts`]: inForms("./elements/card.js"),
+  [`${app}/root-domains.ts`]: inForms("./domains/model.js"),
+  [`${app}/views/own.ts`]: inForms("./list.js"),
+  [`${app}/views/modules.ts`]: inForms("../modules/feed.js"),
+  [`${app}/views/elements.ts`]: inForms("../elements/card.js"),
+  [`${app}/views/domains.ts`]: inForms("../domains/model.js"),
+  [`${app}/views/a/b/domains.ts`]: inForms("../../../domains/model.js"),
+  [`${app}/views/sdk.ts`]: inForms("../../../../sdk/session.js"),
+  [`${app}/views/components.ts`]: inForms("../../../../components/badge.js"),
+  [`${app}/views/foundation.ts`]: inForms("../../../../foundation/dom.js"),
+  [`${app}/views/lit.ts`]: inForms("lit"),
+  [`${app}/modules/own.ts`]: inForms("./feed.js"),
+  [`${app}/modules/elements.ts`]: inForms("../elements/card.js"),
+  [`${app}/modules/domains.ts`]: inForms("../domains/model.js"),
+  [`${app}/modules/sdk.ts`]: inForms("../../../../sdk/session.js"),
+  [`${app}/modules/components.ts`]: inForms("../../../../components/badge.js"),
+  [`${app}/modules/foundation.ts`]: inForms("../../../../foundation/dom.js"),
+  [`${app}/modules/lit.ts`]: inForms("lit"),
+  [`${app}/elements/own.ts`]: inForms("./card.js"),
+  [`${app}/elements/components.ts`]: inForms("../../../../components/badge.js"),
+  [`${app}/elements/foundation.ts`]: inForms("../../../../foundation/dom.js"),
+  [`${app}/elements/lit.ts`]: inForms("lit"),
+  [`${app}/domains/own.ts`]: inForms("./model.js"),
+  [`${app}/domains/sdk.ts`]: inForms("../../../../sdk/session.js"),
+  [`${app}/domains/foundation.ts`]: inForms("../../../../foundation/dom.js"),
+  // A static-branch app's entry imports its elements, which import their own tier, components,
+  // the foundation, and lit.
+  [`${site}/elements.ts`]: inForms("./elements/hero.js"),
+  [`${site}/elements/own.ts`]: inForms("./hero.js"),
+  [`${site}/elements/components.ts`]: inForms("../../../../components/badge.js"),
+  [`${site}/elements/foundation.ts`]: inForms("../../../../foundation/dom.js"),
+  [`${site}/elements/lit.ts`]: inForms("lit"),
   // Paths that aren't normalized but reach a file the layer may import: the foundation's dom.ts,
   // and the app's own index.ts. Biome's text rules refused them by a normalization convention;
   // the direction is judged by the file an import resolves to, so they cross no layer (Results 3).

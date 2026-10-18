@@ -1,12 +1,12 @@
 // The documents app's list view: one directory into the app, so it reaches its own model with
-// `../` and the layers with four.
+// `../domains/` and the layers with four.
 
 import { html, LitElement, type PropertyDeclarations } from "lit";
 
 import "../../../../components/status-badge.js";
 import { define } from "../../../../foundation/dom.js";
 import { SessionController } from "../../../../sdk/session.js";
-import type { DocumentSummary } from "../model.js";
+import type { DocumentSummary } from "../domains/model.js";
 
 /** Lists documents, each with a status badge. */
 export class DocumentsList extends LitElement {
