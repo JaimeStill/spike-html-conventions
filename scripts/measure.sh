@@ -162,17 +162,29 @@
 #                   scratch with scripts/css-sheets.js, loading the working tree through /@fs/,
 #                   through each driver and engine: the raw Chromium debugging pipe (no package,
 #                   the system Chromium), and playwright-core (playwright_packages, below) on the
-#                   system Chromium, its Chromium Headless Shell, its Firefox, and its WebKit. Per
-#                   driver and engine, a row per version's probe, passing when every case holds;
-#                   one passing when all four versions' reports match, within that engine; and
-#                   one for the restyle check, passing when it holds in all four. Then the
-#                   unbundled form, tsc's emit with native CSS module scripts over plain http, the
-#                   probe in all four versions through Playwright on the system Chromium, Firefox,
-#                   and WebKit: the Chromium and Firefox rows pass when every case holds, the WebKit
-#                   row when the components fail to load in every version (WebKit's missing CSS
-#                   module scripts, Safari's gap). Reads the network only to install playwright-core
-#                   and download its browsers into scratch (PLAYWRIGHT_BROWSERS_PATH), never
-#                   Playwright's default ~/.cache/ms-playwright. See "Browser" below.
+#                   system Chromium, its Chromium Headless Shell, and its Firefox, both drivers
+#                   emulating the light color scheme. Per driver and engine, a row per version's
+#                   probe, passing when every case holds; one passing when all four versions'
+#                   reports match, within that engine; and one for the restyle check, passing when
+#                   it holds in all four. Then the unbundled form, tsc's emit with native CSS module
+#                   scripts over plain http, the probe in all four versions through Playwright on
+#                   the system Chromium and Firefox, passing when every case holds. No WebKit:
+#                   Playwright's WebKit build doesn't launch off its Ubuntu. Each browser run has a
+#                   TMPDIR of its own in scratch, removed after. Reads the network only to install
+#                   playwright-core and download its browsers into scratch
+#                   (PLAYWRIGHT_BROWSERS_PATH), never Playwright's default ~/.cache/ms-playwright.
+#                   See "Browser" below.
+#   browser         Playwright's overhead over the raw pipe, a row each: footprint, playwright-core's
+#   overhead        installed bytes, and each browser install's download bytes (from its log) and
+#                   wall time, download and unpack, passing when the install succeeds with the
+#                   brief's majors (Headless Shell 156, Firefox 157); the pins and devDependencies a
+#                   Playwright pick would add, passing when playwright-core brings no other package
+#                   and neither driver imports one; each driver's harness lines, those holding code;
+#                   cold and warm, hyperfine's times of the same cases on the system Chromium
+#                   through each driver, cold emptying the run's scratch, Vite's dependency cache
+#                   with it, before every run, warm keeping it from a warmup run, passing when every
+#                   run passes (and, warm, Vite's cache was kept); and a repeat row per driver, 20
+#                   runs on the system Chromium, each in fresh scratch, passing when none fails.
 #   lint and format per setup: footprint, each tool's installed size, B's devDependencies and D's
 #                   scratch packages included, passing when every tool and package is at its pin;
 #                   time, the timings' means, passing when the lint, the format check, and both pass
@@ -1953,49 +1965,79 @@ echo
 # scripts/browser-cases.js and the driver in scripts/browser-<name>.js. The raw pipe drives the
 # system Chromium over its DevTools protocol on a pipe, with no package; Playwright drives each
 # engine through playwright-core, installed into scratch with its browsers. Then the unbundled
-# form: tsc's emit served over plain http, the probe alone. The test writes every page's verdict
+# form: tsc's emit served over plain http, the probe alone. Then Playwright's overhead rows. The test writes every page's verdict
 # and report to a results file in scratch, which the rows read. The section reads the network only
 # for playwright-core and its browsers; Chromium resolves no name but the loopback address.
 echo "measure: browser rows" >&2
 browser="$scratch/browser"
 mkdir -p "$browser"
 # playwright-core into scratch, as D's packages are, and its browsers beside it: Chromium
-# Headless Shell, Firefox, and WebKit, each downloaded by its own install so each one's time and
-# size are its own. A browser this host can't run (WebKit, short of system libraries) still
-# downloads; Playwright warns, and its launch fails in the rows, with Playwright's error.
+# Headless Shell and Firefox, each downloaded by its own install so each one's time and bytes are
+# its own. WebKit is left out: Playwright's build for it doesn't launch on a host that isn't the
+# Ubuntu it's built for.
 playwright="$browser/playwright"
 export PLAYWRIGHT_BROWSERS_PATH="$playwright/browsers"
+mkdir -p "$PLAYWRIGHT_BROWSERS_PATH"
 status=0
 "$npm" install --prefix "$playwright" --cache "$playwright/npm-cache" "${npm_flags[@]}" \
   --save-exact "${playwright_packages[@]}" >"$playwright.log" 2>&1 || status=$?
 ((status == 0)) || fail "npm couldn't install ${playwright_packages[*]} into scratch: $(tail -n1 "$playwright.log")"
 playwright_core="$playwright/node_modules/playwright-core"
-for engine in chromium-headless-shell firefox webkit; do
+# installed DIR: the directories in DIR, its own .links aside, sorted, one per line.
+installed() {
+  find "$1/" -mindepth 1 -maxdepth 1 -type d ! -name .links -printf '%f\n' | LC_ALL=C sort
+}
+# Each install's row, kept until the footprint rows below: the browser's directory prefix in
+# PLAYWRIGHT_BROWSERS_PATH, and the major version its title must carry.
+declare -A engine_dir=([chromium-headless-shell]=chromium_headless_shell- [firefox]=firefox-)
+declare -A engine_title=([chromium-headless-shell]="Chrome Headless Shell 156." [firefox]="Firefox 157.")
+declare -A install_ok install_fact
+for engine in chromium-headless-shell firefox; do
+  before=$(installed "$PLAYWRIGHT_BROWSERS_PATH")
+  mkdir -p "$playwright-$engine.tmp"
   start=$(date +%s%N)
   status=0
-  node "$playwright_core/cli.js" install "$engine" >"$playwright-$engine.log" 2>&1 || status=$?
-  echo "measure: playwright install $engine: exit $status, $((($(date +%s%N) - start) / 1000000)) ms" >&2
+  TMPDIR="$playwright-$engine.tmp" node "$playwright_core/cli.js" install "$engine" \
+    >"$playwright-$engine.log" 2>&1 || status=$?
+  ms=$((($(date +%s%N) - start) / 1000000))
+  rm -rf "${playwright:?}-$engine.tmp"
+  added=$(LC_ALL=C comm -13 <(echo "$before") <(installed "$PLAYWRIGHT_BROWSERS_PATH") | sed '/^$/d')
+  # Each download the install's log names, with the size its progress bar reached 100% of.
+  downloads=$(paste -d ' ' \
+    <(sed -nE 's/^Downloading (.+) \(playwright .*/\1/p' "$playwright-$engine.log") \
+    <(tr '\r' '\n' <"$playwright-$engine.log" | grep -oE '100% of [0-9.]+ [KMG]iB' | sed 's/^100% of //'))
+  sizes=()
+  while IFS= read -r dir; do
+    [[ -n "$dir" ]] && sizes+=("$dir $(mb "$(bytes "$PLAYWRIGHT_BROWSERS_PATH/$dir")")")
+  done <<<"$added"
+  install_ok[$engine]=0
+  if ((status == 0)) && grep -q "^${engine_dir[$engine]}" <<<"$added" &&
+    grep -qF "${engine_title[$engine]}" <<<"$downloads"; then install_ok[$engine]=1; fi
+  printf -v list '%s, ' "${sizes[@]}"
+  install_fact[$engine]="exit $status in $(awk -v ms="$ms" 'BEGIN { printf "%.1f s", ms / 1000 }') (download and unpack); downloaded: $(paste -s -d ';' - <<<"$downloads" | sed 's/;/; /g'); unpacked: ${list%, }"
 done
-du -sb "$PLAYWRIGHT_BROWSERS_PATH"/* | sed 's|^|measure: playwright browsers |' >&2
-# browser_rows KEY SERVER LABEL DRIVER [ENGINE [EXPECT]]: runs the cases on DRIVER (and the
-# Playwright ENGINE) against SERVER, vite or unbundled, keeping the results as KEY, and adds its
-# rows, named by LABEL. Over Vite: one per version's probe, passing when every case holds; one
-# for the reports, passing when every version's is the first's line for line; and one for the
-# restyle check, passing when it holds in all four versions. Unbundled: one row, EXPECT holds or
-# fails, as scripts/browser-cases.js says.
+# browser_rows KEY SERVER LABEL DRIVER [ENGINE]: runs the cases on DRIVER (and the Playwright
+# ENGINE) against SERVER, vite or unbundled, keeping the results as KEY, and adds its rows, named
+# by LABEL. Over Vite: one per version's probe, passing when every case holds; one for the
+# reports, passing when every version's is the first's line for line; and one for the restyle
+# check, passing when it holds in all four versions. Unbundled: one row, passing when every
+# version's probe holds. The run has a TMPDIR of its own, removed after, so nothing a browser
+# leaves there (Playwright's profile and artifacts directories) outlives it.
 browser_rows() {
-  local key=$1 server=$2 label=$3 driver=$4 engine=${5:-} expect=${6:-holds}
+  local key=$1 server=$2 label=$3 driver=$4 engine=${5:-}
   local results="$browser/$key.json" status=0 over="over Vite"
   [[ "$server" == unbundled ]] && over="unbundled over plain http"
-  BROWSER_DRIVER=$driver BROWSER_ENGINE=$engine BROWSER_SERVER=$server PLAYWRIGHT_CORE="$playwright_core" \
-    BROWSER_SCRATCH="$browser/$key" BROWSER_RESULTS="$results" \
+  mkdir -p "$browser/$key.tmp"
+  TMPDIR="$browser/$key.tmp" BROWSER_DRIVER=$driver BROWSER_ENGINE=$engine BROWSER_SERVER=$server \
+    PLAYWRIGHT_CORE="$playwright_core" BROWSER_SCRATCH="$browser/$key" BROWSER_RESULTS="$results" \
     node --test "$root/scripts/browser.test.js" >"$browser/$key.log" 2>&1 || status=$?
+  rm -rf "${browser:?}/${key:?}.tmp"
   if [[ ! -f "$results" ]]; then
     row "Browser, $label $over: the cases run" 0 "exit $status, no results: $(tail -n3 "$browser/$key.log")"
     return
   fi
   local command=(rows "$results")
-  [[ "$server" == unbundled ]] && command=(unbundled "$results" "$expect")
+  [[ "$server" == unbundled ]] && command=(unbundled "$results")
   while IFS=$'\t' read -r name ok fact; do
     row "Browser, $label $over: $name" "$ok" "$fact"
   done < <(node "$root/scripts/browser-cases.js" "${command[@]}")
@@ -2004,13 +2046,148 @@ browser_rows pipe vite "raw pipe (system Chromium, no package)" pipe
 browser_rows playwright-system vite "Playwright (system Chromium)" playwright chromium-system
 browser_rows playwright-shell vite "Playwright (Chromium Headless Shell)" playwright chromium-headless-shell
 browser_rows playwright-firefox vite "Playwright (Firefox)" playwright firefox
-browser_rows playwright-webkit vite "Playwright (WebKit)" playwright webkit
-# The unbundled form through Playwright on every engine, Chromium the system's: one driver across
-# the three rows, so the engine is all that differs, and the Chromium the demo already loads tsc's
-# emit in.
+# The unbundled form through Playwright on each engine, Chromium the system's: one driver across
+# the rows, so the engine is all that differs, and the Chromium the demo already loads tsc's emit
+# in.
 browser_rows unbundled-chromium unbundled "Playwright (system Chromium)" playwright chromium-system
 browser_rows unbundled-firefox unbundled "Playwright (Firefox)" playwright firefox
-browser_rows unbundled-webkit unbundled "Playwright (WebKit)" playwright webkit fails
+
+# ---- Browser overhead: what Playwright costs over the raw pipe, each a row, as the header's
+# "browser overhead" says.
+echo "measure: browser overhead rows" >&2
+core_pin=${playwright_packages[0]##*@}
+# playwright-core's version and how many dependencies it declares, and the packages npm put in
+# node_modules, its lockfile aside.
+read -r core_version core_deps < <(node -e '
+  const { version, dependencies = {} } = require(process.argv[1]);
+  console.log(version, Object.keys(dependencies).length);
+' "$playwright_core/package.json")
+core_modules=$(find "$playwright/node_modules/" -mindepth 1 -maxdepth 1 ! -name '.*' -printf '%f ' | sed 's/ $//')
+ok=0
+if [[ "$core_version" == "$core_pin" && "$core_deps" == 0 && "$core_modules" == playwright-core ]]; then ok=1; fi
+row "Browser, overhead: footprint, playwright-core installed" "$ok" \
+  "playwright-core $core_version, $(mb "$(bytes "$playwright_core")") in $(find "$playwright_core" -type f | wc -l) files; $core_deps dependencies declared; node_modules holds: $core_modules"
+for engine in chromium-headless-shell firefox; do
+  row "Browser, overhead: footprint, playwright-core install $engine into scratch, its download bytes and time" \
+    "${install_ok[$engine]}" "${install_fact[$engine]}"
+done
+
+# The pins a Playwright pick adds, read from playwright-core's browsers.json, which pins each
+# browser's build to the playwright-core release; and the raw pipe's, none. Passes when
+# playwright-core brings no package beside itself, its browsers are the brief's majors, and
+# neither driver imports a package (the Playwright driver loads playwright-core from the path
+# PLAYWRIGHT_CORE names).
+browsers_pinned=$(node -e '
+  const { browsers } = require(process.argv[1]);
+  const pinned = ["chromium-headless-shell", "firefox", "ffmpeg"].map((name) => {
+    const { title = name, browserVersion, revision } = browsers.find((b) => b.name === name);
+    return title + (browserVersion ? " " + browserVersion : "") + " (r" + revision + ")";
+  });
+  console.log(pinned.join(", "));
+' "$playwright_core/browsers.json")
+package_imports=$(cat "$root/scripts/browser-pipe.js" "$root/scripts/browser-playwright.js" |
+  sed -nE 's/^import .* from "([^"]+)";$/\1/p' | { grep -v '^node:' || true; } | paste -s -d ' ' -)
+ok=0
+if [[ "$core_deps" == 0 && -z "$package_imports" && "$browsers_pinned" == *"Chrome Headless Shell 156."*"Firefox 157."* ]]; then ok=1; fi
+row "Browser, overhead: the pins and devDependencies a Playwright pick would add" "$ok" \
+  "Playwright: one devDependency, playwright-core $core_version, pinned exactly in package.json and the lockfile, with $core_deps of its own; its browsers pinned by that release's browsers.json, $browsers_pinned, downloaded by playwright-core install at mise run install (a network read) for any engine but the system Chromium, which executablePath launches with no download. Raw pipe: no package, no pin, the system Chromium. Packages either driver imports: ${package_imports:-none, node: modules alone}"
+
+# harness_lines FILE: FILE's lines that hold code: not blank, and not wholly a // comment or a
+# line of a /* */ block. A line with code and a trailing comment counts.
+harness_lines() {
+  awk '
+    { t = $0; sub(/^[ \t]+/, "", t) }
+    block { if (t ~ /\*\//) block = 0; next }
+    t == "" || t ~ /^\/\// { next }
+    t ~ /^\/\*/ { if (t !~ /\*\//) block = 1; next }
+    { n++ }
+    END { print n + 0 }
+  ' "$1"
+}
+pipe_lines=$(harness_lines "$root/scripts/browser-pipe.js")
+playwright_lines=$(harness_lines "$root/scripts/browser-playwright.js")
+ok=0
+if ((pipe_lines > 0 && playwright_lines > 0)) &&
+  grep -q '^export async function launch' "$root/scripts/browser-pipe.js" &&
+  grep -q '^export async function launch' "$root/scripts/browser-playwright.js"; then ok=1; fi
+row "Browser, overhead: each driver's harness lines" "$ok" \
+  "raw pipe (scripts/browser-pipe.js) $pipe_lines, Playwright (scripts/browser-playwright.js) $playwright_lines: lines that hold code, not blank and not wholly a comment; both keep scripts/browser-cases.js's driver interface, the harness they share with scripts/browser.test.js ($(harness_lines "$root/scripts/browser-cases.js") and $(harness_lines "$root/scripts/browser.test.js") lines)"
+
+# Cold and warm: the same cases on the system Chromium through each driver, a hyperfine run of
+# scripts/browser.test.js over Vite each, as the timings use the words. Cold: the run's scratch,
+# Vite's dependency cache (its pre-bundled Lit) with it, emptied before every run. Warm: the
+# scratch kept from a warmup run, so Vite reuses its cache. Each driver launches its browser on a
+# fresh profile in both. Every run has an empty TMPDIR of its own.
+# browser_timed DIR DRIVER: the command hyperfine times, run in DIR.
+browser_timed() {
+  echo "env TMPDIR=$1/tmp BROWSER_DRIVER=$2 BROWSER_ENGINE=chromium-system PLAYWRIGHT_CORE=$playwright_core BROWSER_SCRATCH=$1/scratch node --test $root/scripts/browser.test.js"
+}
+declare -A browser_runs=([cold]=5 [warm]=10)
+for mode in cold warm; do
+  args=(--runs "${browser_runs[$mode]}")
+  [[ "$mode" == warm ]] && args+=(--warmup 1)
+  for driver in pipe playwright; do
+    dir="$browser/timed-$mode-$driver"
+    # Cold empties all of DIR; warm its TMPDIR alone.
+    if [[ "$mode" == cold ]]; then empty=$dir; else empty=$dir/tmp; fi
+    args+=(--prepare "bash -c 'rm -rf $empty && mkdir -p $dir/tmp'" -n "$driver" "$(browser_timed "$dir" "$driver")")
+  done
+  echo "measure: timing browser cases, $mode" >&2
+  status=0
+  hyperfine --style basic --export-json "$browser/timed-$mode.json" "${args[@]}" >&2 || status=$?
+  ok=0
+  fact="hyperfine exit $status"
+  if ((status == 0)); then
+    fact=$(node -e '
+      const { results } = JSON.parse(require("node:fs").readFileSync(process.argv[1], "utf8"));
+      const label = { pipe: "raw pipe", playwright: "Playwright" };
+      const ms = (s) => (s * 1000).toFixed(0);
+      const lines = results.map(({ name, summary }) => {
+        const { mean, stddev, min, max, count } = summary.time_wall_clock;
+        return label[name] + " " + ms(mean) + " ms ± " + ms(stddev) +
+          " (" + ms(min) + " to " + ms(max) + ", " + count + " runs)";
+      });
+      const [pipe, playwright] = results.map((result) => result.summary.time_wall_clock.mean);
+      const ratio = (playwright / pipe).toFixed(2);
+      console.log(lines.join("; ") + "; Playwright over the raw pipe " + ratio + "x");
+    ' "$browser/timed-$mode.json")
+    ok=1
+    # Warm is warm only when each driver's scratch kept Vite's pre-bundled dependencies.
+    if [[ "$mode" == warm ]]; then
+      for driver in pipe playwright; do
+        [[ -d "$browser/timed-warm-$driver/scratch/vite-cache/deps" ]] || ok=0
+      done
+      if ((ok)); then fact+="; Vite's dependency cache kept"; else fact+="; Vite's dependency cache missing"; fi
+    fi
+  fi
+  rm -rf "${browser:?}/timed-$mode-"*
+  row "Browser, overhead: $mode, every case on the system Chromium, raw pipe against Playwright (hyperfine, over Vite)" "$ok" "$fact"
+done
+
+# Repeat: 20 runs per driver of the same cases on the system Chromium, each in a fresh scratch and
+# TMPDIR, as a check's run would be; a run fails when node --test exits nonzero. Passes on none.
+repeats=20
+for driver in pipe playwright; do
+  failures=0 first=""
+  dir="$browser/repeat-$driver"
+  for ((i = 1; i <= repeats; i++)); do
+    mkdir -p "$dir/tmp"
+    status=0
+    TMPDIR="$dir/tmp" BROWSER_DRIVER=$driver BROWSER_ENGINE=chromium-system \
+      PLAYWRIGHT_CORE="$playwright_core" BROWSER_SCRATCH="$dir/scratch" \
+      node --test "$root/scripts/browser.test.js" >"$dir.log" 2>&1 || status=$?
+    if ((status != 0)); then
+      failures=$((failures + 1))
+      [[ -n "$first" ]] || first="; the first, run $i: exit $status, $(grep -m1 '^not ok' "$dir.log" || tail -n1 "$dir.log")"
+    fi
+    rm -rf "${dir:?}"
+  done
+  ok=0
+  ((failures == 0)) && ok=1
+  if [[ "$driver" == pipe ]]; then label="raw pipe"; else label=Playwright; fi
+  row "Browser, overhead: repeat, $label on the system Chromium, $repeats runs, none failing" "$ok" \
+    "$failures of $repeats runs failed$first"
+done
 
 echo "measure: lint and format rows" >&2
 # pin TOOL: TOOL's version in mise.toml.

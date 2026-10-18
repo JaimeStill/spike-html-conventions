@@ -16,8 +16,10 @@ const chromium = "/usr/bin/chromium";
  * Launches Chromium on a profile of its own with the language and time zone given, and no name
  * resolved but the loopback address, so its background requests never leave the machine.
  * Resolves to the browser once the protocol answers. The profile is in the system's temporary
- * directory, never TMPDIR: Chromium refuses a profile whose singleton socket's path is longer
- * than a socket address holds.
+ * directory, never TMPDIR, and is Chromium's TMPDIR too, where it makes its singleton socket's
+ * directory and its other temporary files, so closing removes them with it: Chromium aborts when
+ * that socket's path is longer than a socket address holds, as it is under a run's TMPDIR in
+ * measure's scratch.
  */
 export async function launch({ lang, tz, width, height }) {
   const profile = mkdtempSync(join("/tmp", "browser-pipe."));
@@ -34,7 +36,10 @@ export async function launch({ lang, tz, width, height }) {
       "--host-resolver-rules=MAP * ~NOTFOUND, EXCLUDE 127.0.0.1",
       "about:blank",
     ],
-    { stdio: ["ignore", "ignore", "pipe", "pipe", "pipe"], env: { ...process.env, TZ: tz } },
+    {
+      stdio: ["ignore", "ignore", "pipe", "pipe", "pipe"],
+      env: { ...process.env, TZ: tz, TMPDIR: profile },
+    },
   );
   const [, , errors, commands, replies] = child.stdio;
   // Chromium's own log, kept to say why it exited, if it does.
@@ -120,9 +125,9 @@ export async function launch({ lang, tz, width, height }) {
   return {
     version: product,
     /**
-     * Opens the URL in a new page at the viewport given, resolving once its load event fires. A
-     * page Target.createTarget opens in headless Chromium has no size of its own until it is
-     * emulated: its window can be 0 by 0.
+     * Opens the URL in a new page at the viewport given, in the light color scheme, resolving once
+     * its load event fires. A page Target.createTarget opens in headless Chromium has no size of
+     * its own until it is emulated: its window can be 0 by 0.
      */
     async open(url) {
       const { targetId } = await send("Target.createTarget", { url: "about:blank" });
@@ -131,6 +136,13 @@ export async function launch({ lang, tz, width, height }) {
       await send(
         "Emulation.setDeviceMetricsOverride",
         { width, height, deviceScaleFactor: 1, mobile: false },
+        sessionId,
+      );
+      // The light color scheme, as Playwright's context emulates it, so a report reads the same
+      // in both drivers whatever the system's scheme is.
+      await send(
+        "Emulation.setEmulatedMedia",
+        { features: [{ name: "prefers-color-scheme", value: "light" }] },
         sessionId,
       );
       const loaded = once(sessionId, "Page.loadEventFired");

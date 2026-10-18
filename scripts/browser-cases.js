@@ -31,11 +31,9 @@
 //       version's probe, passing when every case holds; one for the reports, passing when every
 //       version's is the first's line for line; and one for the restyle check, passing when it
 //       holds in every version
-//   browser-cases.js unbundled <results.json> holds|fails
-//       one row, the same way, from the unbundled server's results: with holds, passing when
-//       every version's probe holds every case; with fails, passing when the browser launched and
-//       every version's components failed to load, the probe writing a failed verdict and no
-//       case, its error text the row's fact
+//   browser-cases.js unbundled <results.json>
+//       one row, the same way, from the unbundled server's results, passing when every version's
+//       probe holds every case
 
 import { spawn, spawnSync } from "node:child_process";
 import {
@@ -297,43 +295,31 @@ function rows({ browser, error, probe, restyle }) {
   ];
 }
 
-/** measure's row from the unbundled server's results, expecting the probe to hold or to fail. */
-function unbundled({ browser, error, probe }, expect) {
+/** measure's row from the unbundled server's results. */
+function unbundled({ browser, error, probe }) {
   const verdict = (version) => probe[version]?.verdict ?? `no verdict${error ? `: ${error}` : ""}`;
-  const who = browser ?? "no browser";
-  if (expect === "holds") {
-    const held = versions.every((version) => verdict(version).startsWith("ok: "));
-    const fact = held
-      ? `${verdict(versions[0])} in each of ${versions.length} versions`
-      : versions.map((version) => `${version}: ${verdict(version)}`).join("; ");
-    return [["the probe in every version, every case holds", held ? 1 : 0, `${who}: ${fact}`]];
-  }
-  // A load failure: the browser ran the probe's page, and the probe wrote a failed verdict before
-  // any case, as it does when a version's modules fail to import.
-  const failed = versions.every(
-    (version) => probe[version]?.verdict.startsWith("FAIL: ") && probe[version].report === "",
-  );
-  const texts = [...new Set(versions.map(verdict))].join("; ");
+  const held = versions.every((version) => verdict(version).startsWith("ok: "));
+  const fact = held
+    ? `${verdict(versions[0])} in each of ${versions.length} versions`
+    : versions.map((version) => `${version}: ${verdict(version)}`).join("; ");
   return [
     [
-      "the components fail to load in every version (no CSS module scripts)",
-      browser !== null && failed ? 1 : 0,
-      `${who}: ${texts}`,
+      "the probe in every version, every case holds",
+      held ? 1 : 0,
+      `${browser ?? "no browser"}: ${fact}`,
     ],
   ];
 }
 
 if (import.meta.main) {
-  const [command, path, expect] = process.argv.slice(2);
-  const usage =
-    "usage: browser-cases.js rows <results.json> | unbundled <results.json> holds|fails";
+  const [command, path] = process.argv.slice(2);
+  const usage = "usage: browser-cases.js rows <results.json> | unbundled <results.json>";
   if (path === undefined) throw new Error(usage);
   const results = JSON.parse(readFileSync(path, "utf8"));
   let printed;
   if (command === "rows") printed = rows(results);
-  else if (command === "unbundled" && (expect === "holds" || expect === "fails")) {
-    printed = unbundled(results, expect);
-  } else throw new Error(usage);
+  else if (command === "unbundled") printed = unbundled(results);
+  else throw new Error(usage);
   for (const row of printed) {
     console.log(row.map((cell) => String(cell).replace(/[\t\n]/g, " ")).join("\t"));
   }
