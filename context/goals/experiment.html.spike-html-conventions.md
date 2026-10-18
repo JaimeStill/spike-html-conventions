@@ -38,7 +38,8 @@ Behaviors
 - slice 4 committed (9a9f0fd): WebKit out, light scheme in both drivers, overhead rows; measure 2026-10-18T18:43:26Z 156/156. Review stop answered: Playwright on the system Chromium and Firefox.
 - slice 5 committed (9a1d80a): browser tier in the check (Playwright on system Chromium and Firefox over Vite, node --test only, ~6 s of a ~17 s check); a broken case fails it; measure 2026-10-18T19:09:47Z 156/156. 
 - slice 6 committed (e3d9958): demo trimmed to the 20 frozen pagination pages (esbuild, bun, tsc, src). 
-- slice 7 committed (93da1e6): build:tsc's demo emit dropped; Results 5, STANDARDS.md Tests and dependency rules, the html-artifacts.md pending edit; measure 2026-10-18T19:20:43Z 156/156. Next: standards review.
+- slice 7 committed (93da1e6): build:tsc's demo emit dropped; Results 5, STANDARDS.md Tests and dependency rules, the html-artifacts.md pending edit; measure 2026-10-18T19:20:43Z 156/156. 
+- standards review committed (9b90c44); its follow-ups committed (997a494): exactly 27 cases, opaque restyle baseline, the pipe's missing-Chromium error; evidence re-cited to measure 2026-10-18T19:38:34Z 156/156. Next: spec review.
   2. mise run measure runs the probe's 27 cases in each of the four
      component versions, and the 4 restyle checks, through two drivers
      against pages Vite's dev server serves with the local CSS plugin:
@@ -362,7 +363,8 @@ in a container or install libraries on the host.
 - testing: review stop (architect): `mise run install` downloads Firefox into a repo-specific PLAYWRIGHT_BROWSERS_PATH outside the tree, `~/.cache/spike-html-conventions/playwright`, so the check stays offline. Rejected: the shared `~/.cache/ms-playwright`, which holds another project's browsers.
 - testing: PLAYWRIGHT_BROWSERS_PATH is set once in mise.toml's `[env]`; measure exports its own scratch path over it. The browser test stays in `scripts/`, so `bun test ./test/` never runs it.
 - testing: the demo keeps all 20 frozen pagination pages (12 esbuild and bun, 4 tsc emit, 4 src forms); planning's "16" counted only the bundled ones.
-- testing: the evidence run 2026-10-18T19:20:43Z measures 63 Playwright harness lines and 13.5 MB for playwright-core (the review stop read 57 and 13.7 MB): slice 5 added the executable checks, and measure reads playwright-core from the repo's install instead of a scratch npm install. The argument is unchanged.
+- testing: the evidence run (2026-10-18T19:20:43Z, re-cited to 19:38:34Z after the review fixes; raw pipe 136 lines) measures 63 Playwright harness lines and 13.5 MB for playwright-core (the review stop read 57 and 13.7 MB): slice 5 added the executable checks, and measure reads playwright-core from the repo's install instead of a scratch npm install. The argument is unchanged.
+- testing: standards review follow-ups: the browser tier and measure pass only on exactly 27 cases (one count in `scripts/browser-cases.js`); restyle requires an opaque baseline colour, so unloaded tokens fail it; the raw pipe fails by name when the system Chromium is missing.
 
 ## Pending edits
 
