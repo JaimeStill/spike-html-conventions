@@ -35,6 +35,7 @@ Behaviors
      currency prints nothing.
 - slice 2 committed (02c63b0): raw Chromium pipe over Vite in measure (`scripts/browser-cases.js`, `browser-pipe.js`, `browser.test.js`); 6 rows pass, measure 127/127. Decisions in the commit message: Vite started from JS, verdict promise awaited after load, 1280x720 viewport, Chromium profile in /tmp. Measure hit EDQUOT on /tmp; rerun with TMPDIR outside /tmp.
 - slice 3 committed (80a88fe): Playwright column (system Chromium, Headless Shell 156, Firefox 157 pass) and unbundled rows (Chromium, Firefox pass); measure 147/154, the 7 WebKit rows fail: Playwright WebKit r2370 won't launch on Arch (missing libicu*.so.74, libxml2.so.2, libflite). Escalation answered: WebKit excluded (amendment). Fixes owed: leftover WebKit profile dirs in TMPDIR; both drivers emulate the light scheme.
+- slice 4 committed (9a9f0fd): WebKit out, light scheme in both drivers, overhead rows; measure 2026-10-18T18:43:26Z 156/156. Next: the review stop (behavior 5): the architect picks the check's driver and engines from the drafted Results 5; then slice 5.
   2. mise run measure runs the probe's 27 cases in each of the four
      component versions, and the 4 restyle checks, through two drivers
      against pages Vite's dev server serves with the local CSS plugin:
@@ -352,6 +353,8 @@ in a container or install libraries on the host.
 - testing: both drivers emulate the light color scheme, so their reports render the same; the raw pipe took the system's dark scheme, Playwright defaults to light.
 - testing: each measure browser run takes its own TMPDIR inside scratch, removed after, so no Playwright profile is left behind.
 - testing: engines differ by rounding in one report line (input font size 14.2224px in Chromium, 14.2188px in Firefox); no row compares across engines, and Results 5 records it as a fact.
+- testing: the system Chromium takes a short TMPDIR of its own under /tmp in both drivers, removed when it closes, because a scratch-length TMPDIR overflows its singleton socket path (SIGABRT); Playwright's profile and artifacts stay in the run's scratch TMPDIR. The unbundled "fails" mode is removed with WebKit.
+- testing: the system Chromium moved from 152.0.7977.82 to 154.0.8037.97 between slices 3 and 4 (a host update); the evidence cites the run's version.
 
 ## Pending edits
 
