@@ -132,6 +132,8 @@ Door          two-way: no tag, nothing published; the eslint pin and any
 
 ## Progress
 
+- slice 1 committed (c12c783): eslint 10.13.0; check passes, currency prints nothing.
+
 ## Decisions
 
 - setup: the evidence is the eight items in `context/README.md`, "The evidence".
