@@ -1237,8 +1237,9 @@ its Chromium Headless Shell and its Firefox, both fixed by playwright-core's pin
 system Chromium isn't pinned by the repository (it moved from 152.0.7977.82 to 154.0.8037.97
 during BUILD) and isn't what a CI runner has. Redirect 2 replaced that before it landed (its
 slice was discarded, with the repository's 588 MB Playwright cache outside the tree): Microsoft
-supports Playwright on Linux only on Ubuntu and Debian ([system requirements][pw-sysreq]), and
-the architect won't rely on unofficial support on Arch, where this spike runs. Google names no
+supports Playwright on Linux only on Ubuntu and Debian (Debian 12 and 13, Ubuntu 22.04, 24.04,
+and 26.04, [system requirements][pw-sysreq]), and the architect won't rely on unofficial support
+on Arch, where this spike runs. Google names no
 Arch for Chrome either (64-bit Ubuntu 18.04+, Debian 10+, openSUSE 15.5+, or Fedora Linux 39+,
 [Chrome system requirements][chrome-sysreq]), but Chrome for Testing's chrome-headless-shell is
 one generic linux64 zip that runs here, and one pin makes the check the same locally and in CI.
@@ -1278,9 +1279,11 @@ color scheme. The test lives in `scripts/`, outside `test/`, so `bun test` never
 - `mise run install` runs `mise install`, which installs the pin with the others (283.1 MB
   installed, the Footprint table). With the pin missing, the check fails by name before the run
   ("chrome-headless-shell (mise.toml's pin) isn't installed; run mise run install first"), and
-  the driver does the same for a path that doesn't exist; mise's own task auto-install
-  (`task.run_auto_install`, on by default) otherwise installs a missing pin first, as it does for
-  every mise tool.
+  the driver does the same for a path that doesn't exist. `mise.toml` turns off mise's own task
+  auto-install (`task.run_auto_install = false` under `[settings]`; on by default, it installs
+  any missing mise tool before a task runs), so the check never downloads the pin, or any other
+  tool: with the pin uninstalled it fails by name in 0.04 s and the pin stays missing, and
+  `mise run install` puts it back (the check, 2026-10-18).
 - The tier takes 0.9 s of a check of about 12 s (three runs, 12.0 to 12.3 s, the check,
   2026-10-18), down from about 6 s of about 17 s on Playwright with two engines; a deliberately
   broken case fails it.
@@ -1289,13 +1292,15 @@ color scheme. The test lives in `scripts/`, outside `test/`, so `bun test` never
 155.0.8059.39, a Chromium snapshot 155.0.8059.0 at `/usr/bin/chromium`, and Firefox 157.0
 ([Ubuntu 24.04 image][runner-2404]), none pinned by a repository: each moves with the image. So a
 CI job runs the same `mise install` (for example through jdx/mise-action) and the same check,
-on the pin. Ubuntu 23.10 and later restrict unprivileged user namespaces through AppArmor, which
-refuses a downloaded Chrome's sandbox ("No usable sandbox!", [Puppeteer
-troubleshooting][pptr-apparmor]); [actions/runner-images#11489][runner-11489], on that refusal,
-was closed unmerged. The check passes
-`--no-sandbox` everywhere instead, the same here and in CI: the browser loads only the
-repository's own pages from the loopback address, and every other host is refused. Lifting the
-AppArmor restriction in CI was rejected.
+on the pin. Ubuntu 23.10 and later ship an AppArmor policy that keeps a downloaded Chrome for
+Testing build from using user namespaces, so its sandbox fails to start ("No usable sandbox!",
+[Puppeteer troubleshooting][pptr-apparmor]). [actions/runner-images#11489][runner-11489], a pull
+request to lift that restriction on the Ubuntu images (opened for skopeo and buildah's `unshare`,
+with headless Chrome and Electron raised in its comments), was closed unmerged on 2025-01-28, the
+maintainers pointing to the per-job workaround instead. The check passes `--no-sandbox`
+everywhere, the same here and in CI: the browser loads only the repository's own pages from the
+loopback address, and every other host is refused. Lifting the AppArmor restriction in CI was
+rejected.
 
 **The comparison** *(m 2026-10-18T20:47:44Z)*. The same cases over Vite through each driver
 and engine, and the probe alone on the unbundled form, tsc's emit of the components with each

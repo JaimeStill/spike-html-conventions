@@ -1,3 +1,9 @@
+# mise run never installs a missing tool first (task.run_auto_install, on by default): the check
+# reads no network, and fails naming mise run install, the one task that downloads (it runs mise
+# install itself).
+[settings]
+task.run_auto_install = false
+
 [tools]
 # Biome, the lint and format comparison's setup A, for the measure task only.
 biome = "2.5.15"
