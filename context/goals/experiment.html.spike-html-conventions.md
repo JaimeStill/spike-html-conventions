@@ -1,6 +1,6 @@
 # goal · experiment.html.spike-html-conventions
 
-- **State:** brief ready
+- **State:** building
 - **Task:** testing
 - **Branch:** testing
 
@@ -129,6 +129,27 @@ Door          two-way: no tag, nothing published; the eslint pin and any
               Playwright devDependency revert by restoring the pin and
               lockfile.
 ```
+
+Redirect at BRIEF (architect): the check's browsers are all Playwright's, so it runs the same in CI.
+
+The system Chromium isn't pinned by the repository (it moved from 152 to 154 during BUILD) and
+doesn't exist on a CI runner. Playwright's Chromium Headless Shell 156 passed every measure row.
+
+  6. (rev) The check's browser tier runs Playwright on its Chromium Headless Shell and its
+     Firefox, both fixed by playwright-core's pin; `mise run install` downloads both into
+     `~/.cache/spike-html-conventions/playwright`. The system Chromium leaves the check and stays
+     in measure (the raw pipe's browser and Playwright's like-for-like timing row).
+  8. (rev) STANDARDS.md drops the system-Chromium exception from the check (every browser the
+     check runs is fixed by one pin) and records the testing strategy: logic that needs no DOM
+     moves into DOM-free modules tested under node --test; the browser tier holds only what a
+     browser alone can prove (each component's contract, events, rendering, and styling), a fixed
+     set of cases run in every version and engine; no @playwright/test runner, screenshot diffing,
+     or tracing without a recorded need; the raw pipe stays in measure as the no-package fallback.
+     A CI job installs the same browsers with `playwright-core install --with-deps`.
+  9. (rev) Results 5 records the revised pick, the check's timing on Headless Shell, and, as notes
+     for the intake: revisit Firefox if it never catches what Chromium misses; WebKit is cheap to
+     add in CI on an Ubuntu runner.
+
 
 Amendment (escalation at slice 3): WebKit is excluded.
 
@@ -363,6 +384,8 @@ in a container or install libraries on the host.
 - testing: PLAYWRIGHT_BROWSERS_PATH is set once in mise.toml's `[env]`; measure exports its own scratch path over it. The browser test stays in `scripts/`, so `bun test ./test/` never runs it.
 - testing: the evidence cites m 2026-10-18T19:38:34Z (156/156): 63 Playwright harness lines against the raw pipe's 136, and 13.5 MB for playwright-core. The review stop read 57, 131, and 13.7 MB: since then both drivers check for their browser's executable, and measure reads playwright-core from the repository's install instead of a scratch npm install. The argument is unchanged.
 - testing: standards review follow-ups: the browser tier and measure pass only on exactly 27 cases (one count, `probeCases` in `scripts/browser-cases.js`); restyle requires an opaque baseline colour, so unloaded tokens fail it; the raw pipe fails by name when the system Chromium is missing.
+- testing: redirect at BRIEF (architect): the check runs Playwright's Chromium Headless Shell and Firefox, both fixed by playwright-core's pin, so it runs the same locally and in CI; the system Chromium leaves the check and stays in measure. Rejected: the system Chromium in the check (unpinned: 152 to 154 during BUILD; absent on CI runners).
+- testing: redirect at BRIEF (architect): STANDARDS.md records the strategy: DOM-free logic in node --test modules, the browser tier narrow (contract, events, rendering, styling), no @playwright/test, screenshot diffing, or tracing without a recorded need, the raw pipe as the no-package fallback; revisit Firefox with evidence, WebKit in CI later.
 
 ## Pending edits
 
