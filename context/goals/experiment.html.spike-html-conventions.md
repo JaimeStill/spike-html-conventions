@@ -1,8 +1,8 @@
 # goal · experiment.html.spike-html-conventions
 
-- **State:** brief ready
-- **Task:** branches
-- **Branch:** branches
+- **State:** idle
+- **Task:** none
+- **Branch:** none
 
 ## Tasks
 
@@ -10,7 +10,7 @@
 2. [x] structure
 3. [x] components
 4. [x] testing
-5. [ ] branches
+5. [x] branches
 
 ## Task brief · branches
 
@@ -164,8 +164,6 @@ Door          two-way: no tag, nothing published; every change reverts
 ```
 
 ## Progress
-
-slices 6/6 committed · standards ✓ · spec ✓ · editor ✓
 
 ## Decisions
 
