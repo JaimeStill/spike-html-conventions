@@ -28,12 +28,12 @@
 //
 //   browser-cases.js rows <results.json>
 //       one row per line, its name, 1 or 0, and its observed fact, tab-separated: one per
-//       version's probe, passing when every case holds; one for the reports, passing when every
-//       version's is the first's line for line; and one for the restyle check, passing when it
-//       holds in every version
+//       version's probe, passing when all probeCases cases hold, no fewer and no more; one for
+//       the reports, passing when every version's is the first's line for line; and one for the
+//       restyle check, passing when it holds in every version
 //   browser-cases.js unbundled <results.json>
 //       one row, the same way, from the unbundled server's results, passing when every version's
-//       probe holds every case
+//       probe holds all probeCases cases
 
 import { spawn, spawnSync } from "node:child_process";
 import {
@@ -53,6 +53,14 @@ const root = join(import.meta.dirname, "..");
 
 /** Every version the probe and the restyle check run in, the first the one the others match. */
 export const versions = ["lit-shadow", "vanilla-shadow", "lit-light", "vanilla-light"];
+
+/**
+ * How many cases demo/probe.ts holds in each version, as the brief promises, and the verdict a
+ * probe passes on: every case holding, and exactly that many, so a probe that lost or gained a case
+ * fails here and in measure's rows rather than passing on whatever number it held.
+ */
+export const probeCases = 27;
+export const probeHolds = `ok: all ${probeCases} cases hold`;
 
 /**
  * What every browser runs with, so a report reads the same on any machine and in any driver: the
@@ -266,6 +274,7 @@ export async function run(browser, origin, module, version) {
 /** measure's rows from a results file, as the header says. */
 function rows({ browser, error, probe, restyle }) {
   const ok = (outcome) => (outcome?.verdict.startsWith("ok: ") ? 1 : 0);
+  const held = (outcome) => (outcome?.verdict === probeHolds ? 1 : 0);
   const verdict = (outcome) => outcome?.verdict ?? `no verdict${error ? `: ${error}` : ""}`;
   const lines = (version) => probe[version]?.report.split("\n") ?? [];
   const [first, ...rest] = versions;
@@ -278,8 +287,8 @@ function rows({ browser, error, probe, restyle }) {
   });
   return [
     ...versions.map((version) => [
-      `probe in ${version}, every case holds`,
-      ok(probe[version]),
+      `probe in ${version}, all ${probeCases} cases hold`,
+      held(probe[version]),
       `${browser ?? "no browser"}: ${verdict(probe[version])}`,
     ]),
     [
@@ -298,13 +307,13 @@ function rows({ browser, error, probe, restyle }) {
 /** measure's row from the unbundled server's results. */
 function unbundled({ browser, error, probe }) {
   const verdict = (version) => probe[version]?.verdict ?? `no verdict${error ? `: ${error}` : ""}`;
-  const held = versions.every((version) => verdict(version).startsWith("ok: "));
+  const held = versions.every((version) => verdict(version) === probeHolds);
   const fact = held
     ? `${verdict(versions[0])} in each of ${versions.length} versions`
     : versions.map((version) => `${version}: ${verdict(version)}`).join("; ");
   return [
     [
-      "the probe in every version, every case holds",
+      `the probe in every version, all ${probeCases} cases hold`,
       held ? 1 : 0,
       `${browser ?? "no browser"}: ${fact}`,
     ],

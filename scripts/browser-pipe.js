@@ -6,7 +6,7 @@
 // URL, evaluate an expression in it, close.
 
 import { spawn } from "node:child_process";
-import { mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, rmSync } from "node:fs";
 import { join } from "node:path";
 
 /** The system Chromium, as the demo and measure's other pages run it. */
@@ -19,9 +19,15 @@ const chromium = "/usr/bin/chromium";
  * directory, never TMPDIR, and is Chromium's TMPDIR too, where it makes its singleton socket's
  * directory and its other temporary files, so closing removes them with it: Chromium aborts when
  * that socket's path is longer than a socket address holds, as it is under a run's TMPDIR in
- * measure's scratch.
+ * measure's scratch. A missing Chromium fails before the spawn, naming the fix, as the Playwright
+ * driver's does, rather than as the spawn's bare ENOENT.
  */
 export async function launch({ lang, tz, width, height }) {
+  if (!existsSync(chromium)) {
+    throw new Error(
+      `the system Chromium isn't installed; install the host's chromium package (no ${chromium})`,
+    );
+  }
   const profile = mkdtempSync(join("/tmp", "browser-pipe."));
   const child = spawn(
     chromium,

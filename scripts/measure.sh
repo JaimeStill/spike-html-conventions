@@ -164,11 +164,11 @@
 #                   the system Chromium), and playwright-core (the repository's devDependency) on the
 #                   system Chromium, its Chromium Headless Shell, and its Firefox, both drivers
 #                   emulating the light color scheme. Per driver and engine, a row per version's
-#                   probe, passing when every case holds; one passing when all four versions'
+#                   probe, passing when all 27 cases hold; one passing when all four versions'
 #                   reports match, within that engine; and one for the restyle check, passing when
 #                   it holds in all four. Then the unbundled form, tsc's emit with native CSS module
 #                   scripts over plain http, the probe in all four versions through Playwright on
-#                   the system Chromium and Firefox, passing when every case holds. No WebKit:
+#                   the system Chromium and Firefox, passing when all 27 hold. No WebKit:
 #                   Playwright's WebKit build doesn't launch off its Ubuntu. Each browser run has a
 #                   TMPDIR of its own in scratch, removed after. Reads the network only to download
 #                   Playwright's browsers into scratch (PLAYWRIGHT_BROWSERS_PATH), never the
@@ -2021,10 +2021,10 @@ for engine in chromium-headless-shell firefox; do
 done
 # browser_rows KEY SERVER LABEL DRIVER [ENGINE]: runs the cases on DRIVER (and the Playwright
 # ENGINE) against SERVER, vite or unbundled, keeping the results as KEY, and adds its rows, named
-# by LABEL. Over Vite: one per version's probe, passing when every case holds; one for the
+# by LABEL. Over Vite: one per version's probe, passing when all 27 cases hold; one for the
 # reports, passing when every version's is the first's line for line; and one for the restyle
 # check, passing when it holds in all four versions. Unbundled: one row, passing when every
-# version's probe holds. The run has a TMPDIR of its own, removed after, so nothing a browser
+# version's probe holds all 27. The count is scripts/browser-cases.js's probeCases. The run has a TMPDIR of its own, removed after, so nothing a browser
 # leaves there (Playwright's profile and artifacts directories) outlives it.
 browser_rows() {
   local key=$1 server=$2 label=$3 driver=$4 engine=${5:-}

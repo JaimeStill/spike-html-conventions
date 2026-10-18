@@ -10,8 +10,8 @@
 // to that layer. Either rule follows the baseline's own in its layer, with the same zero
 // specificity, so it wins.
 //
-// scripts/browser.test.js runs one page per version; each passes when both buttons painted from the source
-// before the edit and both take the edit after it.
+// scripts/browser.test.js runs one page per version; each passes when both buttons painted from the
+// source before the edit, an opaque color, so the tokens loaded, and both take the edit after it.
 
 import type { EntryItem } from "../layers/components/entry-lit-shadow.js";
 import { elements } from "../layers/foundation/baseline.js";
@@ -54,6 +54,14 @@ const lightSource: Source = {
     document.head.append(style);
   },
 };
+
+/**
+ * Whether a computed background is an opaque color. A computed color with an alpha of 1 serializes
+ * as rgb(), any other as rgba(), and a var() the page has no token for computes to transparent,
+ * rgba(0, 0, 0, 0): so a page whose tokens didn't load, its baseline unlinked, fails here rather
+ * than matching a transparent expected value with transparent buttons.
+ */
+const opaque = (background: string): boolean => background.startsWith("rgb(");
 
 /** A background as the page computes it, so a source's value compares with a button's. */
 function computed(background: string): string {
@@ -106,7 +114,7 @@ async function restyle(
   const after = background();
 
   const ok =
-    before.every((value) => value === expected && value !== edited) &&
+    before.every((value) => value === expected && opaque(value) && value !== edited) &&
     after.every((value) => value === edited);
   const line = `${source.name}: pagination ${before[0]} -> ${after[0]}, entry ${before[1]} -> ${after[1]}`;
   return { ok, line };

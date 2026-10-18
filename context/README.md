@@ -433,10 +433,10 @@ moved onto the foundation's port, measure gave its adopted sheets their own chun
 `scripts/css-sheets.js` minified the sheets it builds in production, and each production row
 required that no file outside Lit's chunk hold a comment; all 121 of its rows passed. Results 6's
 later CSS-scope figures keep the run of 2026-10-17T20:35:52Z they cite. Results 5 cites the run
-of **2026-10-18T19:20:43Z (UTC)** as *(m 2026-10-18T19:20:43Z)*, for the browser cases through
+of **2026-10-18T19:38:34Z (UTC)** as *(m 2026-10-18T19:38:34Z)*, for the browser cases through
 each driver and engine and Playwright's overhead, with the system Chromium at 154.0.8037.97 and
-playwright-core 1.64.1 from the devDependencies, after the check gained its browser tier; all 156
-of its rows passed.
+playwright-core 1.64.1 from the devDependencies, after the check gained its browser tier and each
+probe row required exactly 27 cases; all 156 of its rows passed.
 File counts from the offline installs are from `mise run check` the same day. Survey figures cite
 the Ecosystem survey's sources, and other facts from outside the spike carry their own source and
 date.
@@ -1225,7 +1225,7 @@ sheets hold layout alone and mirror the light ones.
 playwright-core 1.64.1 as a devDependency, on the system Chromium and on Playwright's Firefox 157.
 Rejected: the default, the raw Chromium debugging pipe on the system Chromium alone, and
 Playwright on Chromium alone. Every measured figure below is from the fresh run of
-2026-10-18T19:20:43Z, cited *(m 2026-10-18T19:20:43Z)*, unless it names another; all 156 of its
+2026-10-18T19:38:34Z, cited *(m 2026-10-18T19:38:34Z)*, unless it names another; all 156 of its
 rows passed.
 
 **The unit tier** is `test/`, the router suite and the layer test, under node --test and bun
@@ -1252,7 +1252,7 @@ scheme. The test lives in `scripts/`, outside `test/`, so `bun test` never runs 
 takes about 6 s of a check of about 17 s, and a deliberately broken case fails it (the check,
 2026-10-18).
 
-**The comparison** *(m 2026-10-18T19:20:43Z)*. The same cases over Vite through each driver
+**The comparison** *(m 2026-10-18T19:38:34Z)*. The same cases over Vite through each driver
 and engine, and the probe alone on the unbundled form, tsc's emit of the components with each
 `.css` beside its module, served by `node:http` with Lit through an import map:
 
@@ -1275,11 +1275,11 @@ light.
 | row | raw pipe | Playwright |
 | --- | --- | --- |
 | footprint, the driver | no package | playwright-core 1.64.1, 13.5 MB in 116 files, no dependencies, alone in its pnpm store directory |
-| downloads, bytes and time | none: the system Chromium | Firefox 157.0: 111 MiB in 5.8 s, 324.5 MB unpacked. Measure only: Chromium Headless Shell 156.0.8078.4, 120 MiB and FFmpeg 2.2 MiB in 6.0 s, 285.1 MB and 5.3 MB unpacked |
+| downloads, bytes and time | none: the system Chromium | Firefox 157.0: 111 MiB in 5.8 s, 324.5 MB unpacked. Measure only: Chromium Headless Shell 156.0.8078.4, 120 MiB and FFmpeg 2.2 MiB in 6.1 s, 285.1 MB and 5.3 MB unpacked |
 | pins and devDependencies added | none | one devDependency, playwright-core 1.64.1, pinned exactly in `package.json` and the lockfile, with none of its own; its browsers pinned by that release's `browsers.json` (Headless Shell r1248, Firefox r1555, FFmpeg r1013) |
-| harness lines | 131, `scripts/browser-pipe.js` | 63, `scripts/browser-playwright.js` |
-| cold, every case on the system Chromium | 1,385 ms ± 36 | 2,063 ms ± 26, 1.49x |
-| warm, the same | 1,400 ms ± 21 | 2,071 ms ± 37, 1.48x |
+| harness lines | 136, `scripts/browser-pipe.js` | 63, `scripts/browser-playwright.js` |
+| cold, every case on the system Chromium | 1,378 ms ± 12 | 2,035 ms ± 16, 1.48x |
+| warm, the same | 1,363 ms ± 12 | 2,034 ms ± 35, 1.49x |
 | repeat, 20 runs | 0 failed | 0 failed |
 
 - Download bytes are the sizes Playwright's log reports at 100% for each download; the time is
@@ -1287,14 +1287,15 @@ light.
   the install added. Each install downloads into measure's scratch, never the check's directory.
 - Harness lines are the lines that hold code, not blank and not wholly a comment. Both drivers
   keep one interface, `launch(settings)`, and share `scripts/browser-cases.js` and
-  `scripts/browser.test.js` (236 and 60 such lines), the pages, the servers, and the test.
+  `scripts/browser.test.js` (239 and 68 such lines), the pages, the servers, and the test.
 - Cold empties the run's scratch, Vite's dependency cache with it, before each of 5 runs; warm
   keeps it from a warmup run, over 10 runs. Each driver launches its browser on a fresh profile
   either way. The repeat runs each driver 20 times in fresh scratch, as a check's run would be.
 - The review stop read 57 Playwright lines and 13.7 MB from the run of 2026-10-18T18:43:26Z,
   when measure installed playwright-core into its own scratch with npm. Since then the driver
-  checks each engine's executable before it launches (63 lines), and measure reads the
-  repository's own install from pnpm's store (13.5 MB). Neither moves the argument.
+  checks each engine's executable before it launches (63 lines), measure reads the
+  repository's own install from pnpm's store (13.5 MB), and the raw pipe checks for the system
+  Chromium the same way (136 lines, from 131). None moves the argument.
 
 **The order.** As in Results 1 and 6: first, industry standard and maintainability; second,
 footprint; third, speed, only on an order-of-magnitude gap.
@@ -1303,17 +1304,17 @@ footprint; third, speed, only on an order-of-magnitude gap.
 50% use and 94% retention in SoJS 2025 ([s19][sj25-test]), `@playwright/test` at 76.2M npm
 downloads a week ([s55][npm-pw]), the test runner of FAST and Fluent and beside Jest in Ionic,
 and the driver both alternatives below run on. The raw pipe is this repository's own DevTools
-protocol client: 131 lines that nobody else maintains, against Playwright's 63, less than half
-*(m 2026-10-18T19:20:43Z)*.
+protocol client: 136 lines that nobody else maintains, against Playwright's 63, less than half
+*(m 2026-10-18T19:38:34Z)*.
 And Playwright buys the coverage the raw pipe can't: a second engine, Firefox, through the same
 63 lines. Its maintenance cost is one devDependency for `mise run currency` to track, and a
 Firefox download with each pin it moves to.
 
-**Second: footprint** *(m 2026-10-18T19:20:43Z)*. The raw pipe adds nothing. Playwright adds 13.5 MB
+**Second: footprint** *(m 2026-10-18T19:38:34Z)*. The raw pipe adds nothing. Playwright adds 13.5 MB
 in `node_modules` and Firefox's 324.5 MB, a 111 MiB download, outside the tree. That is the price of
 the second engine, and it doesn't overturn the first.
 
-**Third: speed** *(the same run)*. Playwright is 1.49 times the raw pipe cold and 1.48 times warm,
+**Third: speed** *(the same run)*. Playwright is 1.48 times the raw pipe cold and 1.49 times warm,
 about two seconds against under one and a half for every case on the system Chromium: no
 order-of-magnitude gap. Both drivers ran 20 times without a failure.
 

@@ -23,7 +23,15 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after, before, describe, test } from "node:test";
 
-import { run, serve, serveUnbundled, settings, versions } from "./browser-cases.js";
+import {
+  probeCases,
+  probeHolds,
+  run,
+  serve,
+  serveUnbundled,
+  settings,
+  versions,
+} from "./browser-cases.js";
 
 const driver = process.env.BROWSER_DRIVER ?? "pipe";
 const { launch } = await import(`./browser-${driver}.js`);
@@ -66,10 +74,11 @@ describe(`browser cases, ${driver} driver${engine}, ${kind} server`, () => {
   });
 
   for (const version of versions) {
-    test(`probe, ${version}: every case holds`, async () => {
+    test(`probe, ${version}: all ${probeCases} cases hold`, async () => {
       const outcome = await run(browser, server.origin, "probe", version);
       results.probe[version] = outcome;
-      assert.match(outcome.verdict, /^ok: /, outcome.report);
+      // Exactly the count: a probe that holds every case it has, but lost one, fails.
+      assert.equal(outcome.verdict, probeHolds, outcome.report);
     });
   }
 
