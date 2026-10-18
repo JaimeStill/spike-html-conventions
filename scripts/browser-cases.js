@@ -1,6 +1,7 @@
-// The browser cases and the server their pages come from, shared by every driver
+// The browser cases and the servers their pages come from, shared by every driver
 // (scripts/browser.test.js runs them): demo/probe.ts's cases in each version of the components
-// layer, and demo/restyle.ts's check in each, one page per run, on pages Vite's dev server serves.
+// layer, and demo/restyle.ts's check in each, one page per run, on pages Vite's dev server serves;
+// and the probe alone on pages a plain http server serves from tsc's emit, unbundled.
 //
 // The server is the mise-pinned vite, started as scripts/preview.sh starts it: scratch is its root
 // and holds its config and cache (cacheDir, node_modules/.vite by default), the config loaded
@@ -10,6 +11,14 @@
 // to the repository, so no tsc emit, import map, or file:// flag is needed. The pages are written
 // before the server starts, so Vite's dependency scan finds Lit through them and pre-bundles it
 // before the first request, and no page reloads mid-run.
+//
+// The unbundled server (serveUnbundled) is the form a page loads with no tool between: tsc's emit
+// of the components layer and the demo's modules (tsconfig.demo.json, as mise run build:tsc emits
+// it) into scratch, with each .css in layers/ copied beside its module, served by node:http with
+// each .css as text/css, so each component's import of it is a native CSS module script, and
+// Lit mapped by the page's import map onto the installed packages, which the server serves too.
+// Only the probe runs there: the restyle check's module imports the foundation's sheets itself,
+// so in a browser without CSS module scripts it never loads at all.
 //
 // A driver keeps one interface: launch(settings) resolves to a browser with its version, an
 // open(url) that resolves to a page once its load event fires, and a close(); a page has
@@ -22,11 +31,24 @@
 //       version's probe, passing when every case holds; one for the reports, passing when every
 //       version's is the first's line for line; and one for the restyle check, passing when it
 //       holds in every version
+//   browser-cases.js unbundled <results.json> holds|fails
+//       one row, the same way, from the unbundled server's results: with holds, passing when
+//       every version's probe holds every case; with fails, passing when the browser launched and
+//       every version's components failed to load, the probe writing a failed verdict and no
+//       case, its error text the row's fact
 
-import { spawn } from "node:child_process";
-import { readFileSync, writeFileSync } from "node:fs";
+import { spawn, spawnSync } from "node:child_process";
+import {
+  copyFileSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  realpathSync,
+  writeFileSync,
+} from "node:fs";
+import { createServer as createHttpServer } from "node:http";
 import { createServer } from "node:net";
-import { join } from "node:path";
+import { dirname, extname, join, normalize } from "node:path";
 
 /** The root of the repository, whose demo/ and layers/ every page loads. */
 const root = join(import.meta.dirname, "..");
@@ -45,14 +67,15 @@ export const settings = { lang: "en-US", tz: "UTC", width: 1280, height: 720 };
 const timeout = 60_000;
 
 /**
- * A page that runs a demo module's run(version), the version from its query. The classic script
- * makes window.verdict, a promise settled once the run returns or once the module fails to load
- * (its error event), so a driver awaits the verdict itself, never the page's load: the run's
- * top-level await doesn't hold the load event.
+ * A page that runs a demo module's run(version), the version from its query, the module and the
+ * foundation's baseline under the base path given, with the head's extra markup (the unbundled
+ * pages' import map). The classic script makes window.verdict, a promise settled once the run
+ * returns or once the module fails to load (its error event), so a driver awaits the verdict
+ * itself, never the page's load: the run's top-level await doesn't hold the load event.
  */
-const page = (module) => `<!doctype html>
+const page = (module, { base, ext, head = "" }) => `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><title>${module}</title>
-<link rel="stylesheet" href="/@fs${root}/layers/foundation/baseline.css">
+<link rel="stylesheet" href="${base}/layers/foundation/baseline.css">${head}
 </head><body>
 <main></main>
 <pre id="verdict">FAIL: the ${module} didn't run</pre>
@@ -62,7 +85,7 @@ const page = (module) => `<!doctype html>
   window.verdict = new Promise((resolve) => (settle = resolve));
 </script>
 <script type="module" onerror="settle()">
-  import { run } from "/@fs${root}/demo/${module}.ts";
+  import { run } from "${base}/demo/${module}.${ext}";
   try {
     await run(new URLSearchParams(location.search).get("version"));
   } finally {
@@ -95,7 +118,10 @@ const freePort = () =>
  */
 export async function serve(scratch) {
   for (const module of ["probe", "restyle"]) {
-    writeFileSync(join(scratch, `${module}.html`), page(module));
+    writeFileSync(
+      join(scratch, `${module}.html`),
+      page(module, { base: `/@fs${root}`, ext: "ts" }),
+    );
   }
   const port = await freePort();
   const config = join(scratch, "vite.config.mjs");
@@ -153,6 +179,72 @@ export default {
   throw new Error(`Vite's dev server didn't answer at ${origin}: ${log.trim()}`);
 }
 
+/** Each type the unbundled server serves, by extension; any other file isn't served. */
+const types = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css" };
+
+/**
+ * Emits the components layer and the demo's modules with tsc into scratch, copies each .css in
+ * layers/ beside them, writes the probe's page with an import map for Lit, and serves scratch
+ * over plain http on the loopback address, with Lit's installed packages under /deps/. Resolves
+ * to its origin and a stop() that ends it.
+ */
+export async function serveUnbundled(scratch) {
+  const out = join(scratch, "tsc");
+  const emit = spawnSync("tsc", ["-p", join(root, "tsconfig.demo.json"), "--outDir", out], {
+    encoding: "utf8",
+  });
+  if (emit.status !== 0) {
+    throw new Error(
+      `tsc couldn't emit: ${(emit.error?.message ?? emit.stdout + emit.stderr).trim()}`,
+    );
+  }
+  for (const entry of readdirSync(join(root, "layers"), { recursive: true })) {
+    if (!entry.endsWith(".css")) continue;
+    mkdirSync(join(out, "layers", dirname(entry)), { recursive: true });
+    copyFileSync(join(root, "layers", entry), join(out, "layers", entry));
+  }
+  // Lit's packages sit beside lit itself, in lit's .pnpm directory, as scripts/demo.sh maps them.
+  const deps = dirname(realpathSync(join(root, "node_modules/lit")));
+  const imports = {
+    lit: "/deps/lit/index.js",
+    "lit/": "/deps/lit/",
+    "lit-html": "/deps/lit-html/lit-html.js",
+    "lit-html/": "/deps/lit-html/",
+    "lit-element/": "/deps/lit-element/",
+    "@lit/reactive-element": "/deps/@lit/reactive-element/reactive-element.js",
+    "@lit/reactive-element/": "/deps/@lit/reactive-element/",
+  };
+  const head = `\n<script type="importmap">${JSON.stringify({ imports })}</script>`;
+  writeFileSync(join(scratch, "probe.html"), page("probe", { base: "/tsc", ext: "js", head }));
+
+  const server = createHttpServer((request, response) => {
+    const path = normalize(decodeURIComponent(new URL(request.url, "http://host").pathname));
+    const file = path.startsWith("/deps/")
+      ? join(deps, path.slice("/deps/".length))
+      : join(scratch, path);
+    const type = types[extname(file)];
+    let body;
+    try {
+      if (type !== undefined) body = readFileSync(file);
+    } catch {
+      // A missing file is a 404, as is a type the server doesn't serve.
+    }
+    if (body === undefined) {
+      response.writeHead(404).end();
+      return;
+    }
+    response.writeHead(200, { "content-type": type }).end(body);
+  });
+  await new Promise((resolve, reject) => {
+    server.once("error", reject);
+    server.listen(0, "127.0.0.1", resolve);
+  });
+  return {
+    origin: `http://127.0.0.1:${server.address().port}`,
+    stop: () => new Promise((resolve) => server.close(resolve)),
+  };
+}
+
 /**
  * Runs one demo module's page in the version, in the browser: resolves to the page's verdict and
  * report, the report empty for the restyle check, which writes a verdict alone.
@@ -205,12 +297,44 @@ function rows({ browser, error, probe, restyle }) {
   ];
 }
 
-if (import.meta.main) {
-  const [command, path] = process.argv.slice(2);
-  if (command !== "rows" || path === undefined) {
-    throw new Error("usage: browser-cases.js rows <results.json>");
+/** measure's row from the unbundled server's results, expecting the probe to hold or to fail. */
+function unbundled({ browser, error, probe }, expect) {
+  const verdict = (version) => probe[version]?.verdict ?? `no verdict${error ? `: ${error}` : ""}`;
+  const who = browser ?? "no browser";
+  if (expect === "holds") {
+    const held = versions.every((version) => verdict(version).startsWith("ok: "));
+    const fact = held
+      ? `${verdict(versions[0])} in each of ${versions.length} versions`
+      : versions.map((version) => `${version}: ${verdict(version)}`).join("; ");
+    return [["the probe in every version, every case holds", held ? 1 : 0, `${who}: ${fact}`]];
   }
-  for (const row of rows(JSON.parse(readFileSync(path, "utf8")))) {
+  // A load failure: the browser ran the probe's page, and the probe wrote a failed verdict before
+  // any case, as it does when a version's modules fail to import.
+  const failed = versions.every(
+    (version) => probe[version]?.verdict.startsWith("FAIL: ") && probe[version].report === "",
+  );
+  const texts = [...new Set(versions.map(verdict))].join("; ");
+  return [
+    [
+      "the components fail to load in every version (no CSS module scripts)",
+      browser !== null && failed ? 1 : 0,
+      `${who}: ${texts}`,
+    ],
+  ];
+}
+
+if (import.meta.main) {
+  const [command, path, expect] = process.argv.slice(2);
+  const usage =
+    "usage: browser-cases.js rows <results.json> | unbundled <results.json> holds|fails";
+  if (path === undefined) throw new Error(usage);
+  const results = JSON.parse(readFileSync(path, "utf8"));
+  let printed;
+  if (command === "rows") printed = rows(results);
+  else if (command === "unbundled" && (expect === "holds" || expect === "fails")) {
+    printed = unbundled(results, expect);
+  } else throw new Error(usage);
+  for (const row of printed) {
     console.log(row.map((cell) => String(cell).replace(/[\t\n]/g, " ")).join("\t"));
   }
 }

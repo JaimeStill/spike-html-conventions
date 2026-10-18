@@ -160,10 +160,19 @@
 #   browser         the components' browser cases, demo/probe.ts's 27 in each of the four versions
 #                   and demo/restyle.ts's check in each, on pages Vite's dev server serves from
 #                   scratch with scripts/css-sheets.js, loading the working tree through /@fs/,
-#                   through the raw Chromium debugging pipe (no package, the system Chromium): a
-#                   row per version's probe, passing when every case holds; one passing when all
-#                   four versions' reports match; and one for the restyle check, passing when it
-#                   holds in all four. Reads no network. See "Browser" below.
+#                   through each driver and engine: the raw Chromium debugging pipe (no package,
+#                   the system Chromium), and playwright-core (playwright_packages, below) on the
+#                   system Chromium, its Chromium Headless Shell, its Firefox, and its WebKit. Per
+#                   driver and engine, a row per version's probe, passing when every case holds;
+#                   one passing when all four versions' reports match, within that engine; and
+#                   one for the restyle check, passing when it holds in all four. Then the
+#                   unbundled form, tsc's emit with native CSS module scripts over plain http, the
+#                   probe in all four versions through Playwright on the system Chromium, Firefox,
+#                   and WebKit: the Chromium and Firefox rows pass when every case holds, the WebKit
+#                   row when the components fail to load in every version (WebKit's missing CSS
+#                   module scripts, Safari's gap). Reads the network only to install playwright-core
+#                   and download its browsers into scratch (PLAYWRIGHT_BROWSERS_PATH), never
+#                   Playwright's default ~/.cache/ms-playwright. See "Browser" below.
 #   lint and format per setup: footprint, each tool's installed size, B's devDependencies and D's
 #                   scratch packages included, passing when every tool and package is at its pin;
 #                   time, the timings' means, passing when the lint, the format check, and both pass
@@ -236,6 +245,9 @@ mapfile -t dev_packages < <(node -e '
 # The fourth setup's formatting packages: ESLint Stylistic for the code and eslint-plugin-jsonc
 # for the JSON, installed into scratch. scripts/currency.sh reads this line.
 stylistic_packages=(@stylistic/eslint-plugin@5.10.0 eslint-plugin-jsonc@3.4.2)
+# The Playwright driver's package, the library alone, installed into scratch for the browser
+# section; never a dependency of the repository. scripts/currency.sh reads this line.
+playwright_packages=(playwright-core@1.64.1)
 lit=$(node -p 'require(process.argv[1]).dependencies.lit' "$root/package.json")
 # npm, mise's pin for this project, by its path, so neither node's bundled npm nor a global npm
 # earlier on PATH runs instead.
@@ -309,6 +321,9 @@ for spec in "${dev_packages[@]}"; do
 done
 for spec in "${stylistic_packages[@]}"; do
   version "${spec%@*}" "${spec##*@} (installed into scratch for ESLint Stylistic, D; stylistic_packages in measure.sh)"
+done
+for spec in "${playwright_packages[@]}"; do
+  version "${spec%@*}" "${spec##*@} (installed into scratch for the browser section's Playwright driver; playwright_packages in measure.sh)"
 done
 version shellcheck "$(shellcheck --version | sed -n 's/^version: //p')"
 version chromium "$(chromium --version)"
@@ -1933,32 +1948,69 @@ done < <(cd "$root" && node scripts/components.js brotli "${component_sources[@]
 echo
 
 # ---- Browser: the components' browser cases, demo/probe.ts's 27 in each version and
-# demo/restyle.ts's check in each, on pages Vite's dev server serves from scratch, through one
-# driver: scripts/browser.test.js under node --test, with the cases and the server in
+# demo/restyle.ts's check in each, on pages Vite's dev server serves from scratch, through each
+# driver: scripts/browser.test.js under node --test, with the cases and the servers in
 # scripts/browser-cases.js and the driver in scripts/browser-<name>.js. The raw pipe drives the
-# system Chromium over its DevTools protocol on a pipe, with no package. The test writes every
-# page's verdict and report to a results file in scratch, which the rows read; the section reads no
-# network: Chromium resolves no name but the loopback address.
+# system Chromium over its DevTools protocol on a pipe, with no package; Playwright drives each
+# engine through playwright-core, installed into scratch with its browsers. Then the unbundled
+# form: tsc's emit served over plain http, the probe alone. The test writes every page's verdict
+# and report to a results file in scratch, which the rows read. The section reads the network only
+# for playwright-core and its browsers; Chromium resolves no name but the loopback address.
 echo "measure: browser rows" >&2
 browser="$scratch/browser"
 mkdir -p "$browser"
-# browser_rows DRIVER LABEL: runs the cases on DRIVER and adds its rows, named by LABEL: one per
-# version's probe, passing when every case holds; one for the reports, passing when every
-# version's is the first's line for line; and one for the restyle check, passing when it holds in
-# all four versions.
+# playwright-core into scratch, as D's packages are, and its browsers beside it: Chromium
+# Headless Shell, Firefox, and WebKit, each downloaded by its own install so each one's time and
+# size are its own. A browser this host can't run (WebKit, short of system libraries) still
+# downloads; Playwright warns, and its launch fails in the rows, with Playwright's error.
+playwright="$browser/playwright"
+export PLAYWRIGHT_BROWSERS_PATH="$playwright/browsers"
+status=0
+"$npm" install --prefix "$playwright" --cache "$playwright/npm-cache" "${npm_flags[@]}" \
+  --save-exact "${playwright_packages[@]}" >"$playwright.log" 2>&1 || status=$?
+((status == 0)) || fail "npm couldn't install ${playwright_packages[*]} into scratch: $(tail -n1 "$playwright.log")"
+playwright_core="$playwright/node_modules/playwright-core"
+for engine in chromium-headless-shell firefox webkit; do
+  start=$(date +%s%N)
+  status=0
+  node "$playwright_core/cli.js" install "$engine" >"$playwright-$engine.log" 2>&1 || status=$?
+  echo "measure: playwright install $engine: exit $status, $((($(date +%s%N) - start) / 1000000)) ms" >&2
+done
+du -sb "$PLAYWRIGHT_BROWSERS_PATH"/* | sed 's|^|measure: playwright browsers |' >&2
+# browser_rows KEY SERVER LABEL DRIVER [ENGINE [EXPECT]]: runs the cases on DRIVER (and the
+# Playwright ENGINE) against SERVER, vite or unbundled, keeping the results as KEY, and adds its
+# rows, named by LABEL. Over Vite: one per version's probe, passing when every case holds; one
+# for the reports, passing when every version's is the first's line for line; and one for the
+# restyle check, passing when it holds in all four versions. Unbundled: one row, EXPECT holds or
+# fails, as scripts/browser-cases.js says.
 browser_rows() {
-  local driver=$1 label=$2 results="$browser/$1.json" status=0
-  BROWSER_DRIVER=$driver BROWSER_SCRATCH="$browser/$driver" BROWSER_RESULTS="$results" \
-    node --test "$root/scripts/browser.test.js" >"$browser/$driver.log" 2>&1 || status=$?
+  local key=$1 server=$2 label=$3 driver=$4 engine=${5:-} expect=${6:-holds}
+  local results="$browser/$key.json" status=0 over="over Vite"
+  [[ "$server" == unbundled ]] && over="unbundled over plain http"
+  BROWSER_DRIVER=$driver BROWSER_ENGINE=$engine BROWSER_SERVER=$server PLAYWRIGHT_CORE="$playwright_core" \
+    BROWSER_SCRATCH="$browser/$key" BROWSER_RESULTS="$results" \
+    node --test "$root/scripts/browser.test.js" >"$browser/$key.log" 2>&1 || status=$?
   if [[ ! -f "$results" ]]; then
-    row "Browser, $label over Vite: the cases run" 0 "exit $status, no results: $(tail -n3 "$browser/$driver.log")"
+    row "Browser, $label $over: the cases run" 0 "exit $status, no results: $(tail -n3 "$browser/$key.log")"
     return
   fi
+  local command=(rows "$results")
+  [[ "$server" == unbundled ]] && command=(unbundled "$results" "$expect")
   while IFS=$'\t' read -r name ok fact; do
-    row "Browser, $label over Vite: $name" "$ok" "$fact"
-  done < <(node "$root/scripts/browser-cases.js" rows "$results")
+    row "Browser, $label $over: $name" "$ok" "$fact"
+  done < <(node "$root/scripts/browser-cases.js" "${command[@]}")
 }
-browser_rows pipe "raw pipe (system Chromium, no package)"
+browser_rows pipe vite "raw pipe (system Chromium, no package)" pipe
+browser_rows playwright-system vite "Playwright (system Chromium)" playwright chromium-system
+browser_rows playwright-shell vite "Playwright (Chromium Headless Shell)" playwright chromium-headless-shell
+browser_rows playwright-firefox vite "Playwright (Firefox)" playwright firefox
+browser_rows playwright-webkit vite "Playwright (WebKit)" playwright webkit
+# The unbundled form through Playwright on every engine, Chromium the system's: one driver across
+# the three rows, so the engine is all that differs, and the Chromium the demo already loads tsc's
+# emit in.
+browser_rows unbundled-chromium unbundled "Playwright (system Chromium)" playwright chromium-system
+browser_rows unbundled-firefox unbundled "Playwright (Firefox)" playwright firefox
+browser_rows unbundled-webkit unbundled "Playwright (WebKit)" playwright webkit fails
 
 echo "measure: lint and format rows" >&2
 # pin TOOL: TOOL's version in mise.toml.
