@@ -1,6 +1,6 @@
 # goal · experiment.html.spike-html-conventions
 
-- **State:** building
+- **State:** brief ready
 - **Task:** testing
 - **Branch:** testing
 
