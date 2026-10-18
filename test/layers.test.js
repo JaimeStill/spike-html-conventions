@@ -122,3 +122,50 @@ describe("a .css import is a static CSS module script", () => {
     );
   });
 });
+
+// A declaration file has no runtime, so an import that resolves to one passes only as a type
+// import: eslint.config.js's last dependencies policy. Each refused file imports a declaration in
+// one value form, an inline `type` specifier among them, since verbatimModuleSyntax keeps that
+// import; the allowed files import the same declarations for their types alone, from an app and
+// from within the declaration's own layer.
+const declarationFiles = {
+  "layers/sdk/api.d.ts": "export declare const x: number;\nexport interface X {}",
+  "layers/foundation/format.d.ts": "export declare function formatBytes(bytes: number): string;",
+};
+const valueDeclarations = {
+  "layers/apps/application/documents/value.ts": `import { x } from "../../../sdk/api.js";`,
+  "layers/apps/application/documents/side-effect.ts": `import "../../../sdk/api.js";`,
+  "layers/apps/application/documents/inline-type.ts": `import { type X } from "../../../sdk/api.js";`,
+  "layers/apps/application/documents/export.ts": `export { x } from "../../../sdk/api.js";`,
+  "layers/apps/application/documents/export-all.ts": `export * from "../../../sdk/api.js";`,
+  "layers/apps/application/documents/dynamic.ts": `await import("../../../sdk/api.js");`,
+  "layers/apps/application/documents/domains/format.ts": `import { formatBytes } from "../../../../foundation/format.js";`,
+  "layers/foundation/internal.ts": `import { formatBytes } from "./format.js";`,
+};
+const typeDeclarations = {
+  "layers/apps/application/documents/type.ts": `import type { X, x } from "../../../sdk/api.js";`,
+  "layers/apps/application/documents/export-type.ts": `export type { X } from "../../../sdk/api.js";`,
+  "layers/apps/application/documents/elements/typeof.ts": `import type { formatBytes } from "../../../../foundation/format.js";\nexport type Format = typeof formatBytes;`,
+  "layers/foundation/internal-type.ts": `import type { formatBytes } from "./format.js";`,
+};
+
+/** Writes `files` under `dir` as they stand, with the declarations they import; returns the
+ * paths. */
+function writeDeclarations(dir, files) {
+  const written = { ...files, ...declarationFiles };
+  for (const [path, source] of Object.entries(written)) {
+    mkdirSync(dirname(join(dir, path)), { recursive: true });
+    writeFileSync(join(dir, path), `${source}\n`);
+  }
+  return Object.keys(written);
+}
+
+describe("a declaration file is imported for its types alone", () => {
+  test("each value import of a .d.ts file draws the dependencies rule, and no type import does", () => {
+    const files = { ...valueDeclarations, ...typeDeclarations };
+    assert.deepEqual(
+      [...flagged(files, [dependencies, unresolved], writeDeclarations)].sort(),
+      Object.keys(valueDeclarations).sort(),
+    );
+  });
+});

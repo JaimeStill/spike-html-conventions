@@ -1,8 +1,12 @@
 // A static-branch app: a page of content on the foundation, components, and lit, without the SDK.
+// Its entry renders the page from its own elements.
 
 import { html, render } from "lit";
 
-import "../../../components/status-badge.js";
 import { required } from "../../../foundation/dom.js";
+import "./elements/site-header.js";
 
-render(html`<sl-status-badge label="Published"></sl-status-badge>`, required(document, "main"));
+render(
+  html`<site-header heading="Standards Lab" status="Published"></site-header>`,
+  required(document, "main"),
+);

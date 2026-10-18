@@ -145,6 +145,20 @@ const policies = layers.map(({ name, may }) => ({
   },
 }));
 
+// A declaration file (layers/sdk/*.d.ts, layers/foundation/format.d.ts) has no runtime, so an
+// import that resolves to one passes only as a type import, `import type` or `export type`, which
+// tsc erases: the last policy refuses any other kind, and as the last whose selector matches it
+// overrides the allows before it. The dependency's kind is the declaration's, so
+// `import { type X }` is a value import here, as it is to verbatimModuleSyntax, which keeps it as
+// `import {}` and so loads the file. checkInternals has the rule judge an import within one layer
+// too (the foundation's own import of format.d.ts); every row's policy allows its own layer.
+const declarations = {
+  disallow: { to: { internalPath: "**/*.d.ts" }, dependency: { kind: "value" } },
+  message:
+    "A .d.ts file is a declaration with no runtime: import it with `import type` (or export " +
+    "from it with `export type`), never as a value, a side effect, or an import().",
+};
+
 export default defineConfig([
   // Build output; ESLint ignores node_modules/ at any depth itself, the fixtures' installs too.
   globalIgnores(["dist/"]),
@@ -165,7 +179,13 @@ export default defineConfig([
       "import-x/no-unresolved": "error",
       "boundaries/dependencies": [
         "error",
-        { default: "disallow", checkAllOrigins: true, checkUnknownLocals: true, policies },
+        {
+          default: "disallow",
+          checkAllOrigins: true,
+          checkUnknownLocals: true,
+          checkInternals: true,
+          policies: [...policies, declarations],
+        },
       ],
     },
   },
