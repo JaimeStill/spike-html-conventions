@@ -157,6 +157,13 @@
 #                   The section prints its figures under its own heading, the element sources'
 #                   lines and brotli bytes beside them as context, and reads no network.
 #                   See "Components" below.
+#   browser         the components' browser cases, demo/probe.ts's 27 in each of the four versions
+#                   and demo/restyle.ts's check in each, on pages Vite's dev server serves from
+#                   scratch with scripts/css-sheets.js, loading the working tree through /@fs/,
+#                   through the raw Chromium debugging pipe (no package, the system Chromium): a
+#                   row per version's probe, passing when every case holds; one passing when all
+#                   four versions' reports match; and one for the restyle check, passing when it
+#                   holds in all four. Reads no network. See "Browser" below.
 #   lint and format per setup: footprint, each tool's installed size, B's devDependencies and D's
 #                   scratch packages included, passing when every tool and package is at its pin;
 #                   time, the timings' means, passing when the lint, the format check, and both pass
@@ -1924,6 +1931,34 @@ while IFS=$'\t' read -r path bytes; do
   printf '| %s | %s | %s B |\n' "$path" "$(wc -l <"$root/$path")" "$bytes"
 done < <(cd "$root" && node scripts/components.js brotli "${component_sources[@]}")
 echo
+
+# ---- Browser: the components' browser cases, demo/probe.ts's 27 in each version and
+# demo/restyle.ts's check in each, on pages Vite's dev server serves from scratch, through one
+# driver: scripts/browser.test.js under node --test, with the cases and the server in
+# scripts/browser-cases.js and the driver in scripts/browser-<name>.js. The raw pipe drives the
+# system Chromium over its DevTools protocol on a pipe, with no package. The test writes every
+# page's verdict and report to a results file in scratch, which the rows read; the section reads no
+# network: Chromium resolves no name but the loopback address.
+echo "measure: browser rows" >&2
+browser="$scratch/browser"
+mkdir -p "$browser"
+# browser_rows DRIVER LABEL: runs the cases on DRIVER and adds its rows, named by LABEL: one per
+# version's probe, passing when every case holds; one for the reports, passing when every
+# version's is the first's line for line; and one for the restyle check, passing when it holds in
+# all four versions.
+browser_rows() {
+  local driver=$1 label=$2 results="$browser/$1.json" status=0
+  BROWSER_DRIVER=$driver BROWSER_SCRATCH="$browser/$driver" BROWSER_RESULTS="$results" \
+    node --test "$root/scripts/browser.test.js" >"$browser/$driver.log" 2>&1 || status=$?
+  if [[ ! -f "$results" ]]; then
+    row "Browser, $label over Vite: the cases run" 0 "exit $status, no results: $(tail -n3 "$browser/$driver.log")"
+    return
+  fi
+  while IFS=$'\t' read -r name ok fact; do
+    row "Browser, $label over Vite: $name" "$ok" "$fact"
+  done < <(node "$root/scripts/browser-cases.js" rows "$results")
+}
+browser_rows pipe "raw pipe (system Chromium, no package)"
 
 echo "measure: lint and format rows" >&2
 # pin TOOL: TOOL's version in mise.toml.
