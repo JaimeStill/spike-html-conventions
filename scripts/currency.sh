@@ -5,21 +5,23 @@
 #
 # Five kinds of pin, each line naming the file that holds it, as `FILE: NAME PIN -> LATEST`:
 #
-#   mise tools        mise.toml's [tools], against `mise outdated --bump --local`.
+#   mise tools        mise.toml's [tools], against `mise outdated --bump --local`: the http:
+#                     chrome-headless-shell pin against Chrome for Testing's Stable channel, read
+#                     from the version_list_url mise.toml gives it.
 #   registry deps     a package.json dependency pinned to a version (lit in the root package),
 #                     against the registry's latest dist-tag through `pnpm view`.
 #   github: tag deps  a dependency written github:<owner>/<repo>#vX.Y.Z (the consumer fixtures'
 #                     spike-html-design and spike-html-conventions), against the highest vX.Y.Z
 #                     tag in `git ls-remote --tags`. Neither `pnpm outdated` nor `bun outdated`
 #                     reports these, so the comparison is here.
-#   devDependencies   the root package's lint tooling and playwright-core, the browser tier's
-#                     driver, as `pnpm outdated --dev` reports them against
+#   devDependencies   the root package's lint tooling, as `pnpm outdated --dev` reports it against
 #                     the registry's latest. pnpm outdated honors minimumReleaseAge, pnpm's
 #                     default of a day, so a release younger than that isn't yet its latest: a
 #                     devDependency held behind one is reported once the release is a day old.
 #   scratch packages  scripts/measure.sh's stylistic_packages, ESLint Stylistic's setup's packages,
-#                     which install into measure's scratch, against the registry's latest through
-#                     `pnpm view`.
+#                     and its playwright_packages, the Playwright driver's playwright-core, each of
+#                     which installs into measure's scratch, against the registry's latest
+#                     through `pnpm view`.
 #
 # A devDependency or scratch package another of them names as a peer (typescript, under
 # typescript-eslint) is compared against the highest version in that peer range instead, the
@@ -103,7 +105,7 @@ done
 
 # The devDependencies and the scratch packages, each NAME@PIN with the file that holds it: the
 # devDependencies from package.json, the scratch packages from measure.sh's stylistic_packages
-# line. Each package's peer ranges, at its pin, are looked up once.
+# and playwright_packages lines. Each package's peer ranges, at its pin, are looked up once.
 specs=()
 declare -A holder=()
 devs=$(node -e '
@@ -113,9 +115,13 @@ devs=$(node -e '
 while read -r spec; do
   if [[ -n "$spec" ]]; then specs+=("$spec") holder[$spec]=package.json; fi
 done <<<"$devs"
-line=$(sed -n 's/^stylistic_packages=(\(.*\))$/\1/p' scripts/measure.sh)
-if [[ -z "$line" ]]; then report "scripts/measure.sh: stylistic_packages -> not found"; fi
-read -ra listed <<<"$line"
+listed=()
+for array in stylistic_packages playwright_packages; do
+  line=$(sed -n "s/^$array=(\(.*\))\$/\1/p" scripts/measure.sh)
+  if [[ -z "$line" ]]; then report "scripts/measure.sh: $array -> not found"; fi
+  read -ra scratch_specs <<<"$line"
+  listed+=("${scratch_specs[@]}")
+done
 for spec in "${listed[@]}"; do specs+=("$spec") holder[$spec]=scripts/measure.sh; done
 declare -A peers=()
 for spec in "${specs[@]}"; do

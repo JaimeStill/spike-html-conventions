@@ -17,15 +17,22 @@ shellcheck = "0.11.0"
 "npm:oxfmt" = "0.73.0"
 "aqua:sharkdp/hyperfine" = "2.0.0"
 
-[env]
-# Playwright's browsers for the check's browser tier, the repository's own, outside the tree:
-# mise run install downloads Firefox there, and the check reads it offline. Never Playwright's
-# shared default, ~/.cache/ms-playwright, which holds other projects' browsers; measure names a
-# directory in its own scratch instead.
-PLAYWRIGHT_BROWSERS_PATH = "{{env.HOME}}/.cache/spike-html-conventions/playwright"
+# The browser tier's browser, in the check and in measure's raw-pipe and like-for-like Playwright
+# rows: Chrome for Testing's chrome-headless-shell, one generic linux64 zip, the same build here
+# and in CI. Chrome for Testing publishes no checksums, so the sha256 and size are ours, taken
+# from the download by hand at each bump; mise refuses a download that doesn't match. Its latest
+# is the Stable channel of Chrome for Testing's last-known-good versions, which mise outdated, and
+# so mise run currency, compares the pin against.
+[tools."http:chrome-headless-shell"]
+version = "155.0.8059.84"
+version_list_url = "https://googlechromelabs.github.io/chrome-for-testing/last-known-good-versions.json"
+version_json_path = ".channels.Stable.version"
+
+[tools."http:chrome-headless-shell".platforms]
+linux-x64 = { url = "https://storage.googleapis.com/chrome-for-testing-public/{{ version }}/linux64/chrome-headless-shell-linux64.zip", checksum = "sha256:a5d71b91aa996fef00517cd212b2dfb816b43055edefbe727e6fd562d4ae1f9c", size = "125033980" }
 
 [tasks.check]
-description = "Lint (ESLint, with the layer direction), format-check (Prettier), type-check, and test the sources (the unit tier under node --test and bun test; the browser tier, the components' probe and restyle cases in each version over Vite's dev server, through Playwright on the system Chromium and on Firefox, under node --test), and install the three consumer fixtures offline; reads no network, writes nothing"
+description = "Lint (ESLint, with the layer direction), format-check (Prettier), type-check, and test the sources (the unit tier under node --test and bun test; the browser tier, the components' probe and restyle cases in each version over Vite's dev server, through the raw Chromium debugging pipe on the pinned chrome-headless-shell, under node --test), and install the three consumer fixtures offline; reads no network, writes nothing"
 run = '''
 set -eu
 cd "$MISE_PROJECT_ROOT"
@@ -36,11 +43,30 @@ if [ ! -d node_modules/lit ]; then
   echo "check: lit isn't installed; run mise run install first" >&2
   exit 1
 fi
-if [ ! -x node_modules/.bin/eslint ] || [ ! -x node_modules/.bin/prettier ] \
-  || [ ! -d node_modules/playwright-core ]; then
-  echo "check: the devDependencies (the lint tooling and playwright-core) aren't installed; run mise run install first" >&2
+if [ ! -x node_modules/.bin/eslint ] || [ ! -x node_modules/.bin/prettier ]; then
+  echo "check: the lint tooling (devDependencies) isn't installed; run mise run install first" >&2
   exit 1
 fi
+# The browser tier's browser, the chrome-headless-shell pin in [tools] above, by its path. mise
+# which fails when the pin isn't installed, so that is named here, with the fix, rather than left
+# to mise's message.
+if ! headless_shell=$(mise which chrome-headless-shell 2>/dev/null); then
+  echo "check: chrome-headless-shell (mise.toml's pin) isn't installed; run mise run install first" >&2
+  exit 1
+fi
+# The shell must report the version pinned, read from mise itself. mise's download cache is keyed
+# by checksum, so a version bumped without its new sha256 installs the cached old build under the
+# new version's name; this fails it.
+shell_pin=$(mise ls --local --json http:chrome-headless-shell \
+  | node -e 'console.log(JSON.parse(require("node:fs").readFileSync(0, "utf8"))[0]?.requested_version ?? "")')
+shell_version=$("$headless_shell" --version)
+case "$shell_version" in
+  *" $shell_pin") ;;
+  *)
+    echo "check: $headless_shell reports $shell_version, but mise.toml pins chrome-headless-shell $shell_pin; give the pin its own sha256 and size" >&2
+    exit 1
+    ;;
+esac
 # The project's own copies, by pnpm exec: eslint.config.js holds the lint rules and the layer
 # table, .prettierrc.json the format, and .prettierignore limits Prettier to the code, the JSON,
 # and the CSS.
@@ -54,13 +80,11 @@ tsc --noEmit -p .
 node --test test/
 bun test ./test/
 # The browser tier, under node --test alone: scripts/browser.test.js, outside test/ so bun test
-# never runs it, through Playwright on each engine. Each run serves the pages from Vite's dev
-# server (the mise-pinned vite, with scripts/css-sheets.js) in a scratch directory of its own in
-# TMPDIR, removed after; Firefox comes from PLAYWRIGHT_BROWSERS_PATH ([env] above), which mise run
-# install fills, and the driver fails naming that when an engine's browser is missing.
-for engine in chromium-system firefox; do
-  BROWSER_DRIVER=playwright BROWSER_ENGINE=$engine node --test scripts/browser.test.js
-done
+# never runs it, through the raw pipe (scripts/browser-pipe.js, no package) on the pinned
+# chrome-headless-shell, Chromium alone. The run serves the pages from Vite's dev server (the
+# mise-pinned vite, with scripts/css-sheets.js) in a scratch directory of its own in TMPDIR,
+# removed after; the driver fails naming the fix when the executable it is given is missing.
+BROWSER_DRIVER=pipe BROWSER_EXECUTABLE="$headless_shell" node --test scripts/browser.test.js
 # Each consumer fixture installs this package and spike-html-design by git tag, offline, from
 # local repositories, with lit from the managers' caches (mise run install warms them): pnpm,
 # npm, and bun.
@@ -68,11 +92,10 @@ scripts/consumers.sh
 '''
 
 [tasks.install]
-description = "Install lit and the devDependencies (playwright-core and the lint tooling: ESLint, Prettier, and their plugins) from the lockfile with pnpm, download Playwright's Firefox into PLAYWRIGHT_BROWSERS_PATH for the check's browser tier (skipped when it's already there), and warm pnpm's, npm's, and bun's caches with lit for the check's offline fixture installs; reads the network"
-# Firefox alone: the browser tier's Chromium is the system's, through executablePath.
+description = "Install every mise.toml pin (mise install: the check's browser, chrome-headless-shell, with the rest; each skipped when it's already installed), lit and the lint tooling (the devDependencies: ESLint, Prettier, and their plugins) from the lockfile with pnpm, and warm pnpm's, npm's, and bun's caches with lit for the check's offline fixture installs; reads the network"
 run = [
+  "mise install",
   "pnpm install --frozen-lockfile",
-  "pnpm exec playwright-core install firefox",
   "scripts/consumers.sh warm",
 ]
 dir = "{{config_root}}"
@@ -108,7 +131,7 @@ run = "scripts/preview.sh"
 dir = "{{config_root}}"
 
 [tasks.measure]
-description = "Record each mise tool's installed size and each TypeScript form's lines and brotli bytes, time each toolchain with hyperfine (Node: pnpm installs and npm installs in its hoisted and linked layouts, tsc, esbuild, and Vite; Bun: bun install and bun build), and record every row, the layout rows (phantom dependencies, lockfile determinism, and disk sharing under npm, pnpm, and bun) and the GitHub and jsDelivr ones for v0.1.0 once it is released, record what each version of the components layer serves (the pagination alone and the composition, under Vite's dev server and from vite build, Lit's share apart), run the components' browser cases (the probe's in each version and the restyle check) on pages Vite's dev server serves, through the raw Chromium debugging pipe and through playwright-core (the devDependency, its browsers downloaded into scratch) on the system Chromium, Chromium Headless Shell, and Firefox, and the probe on tsc's unbundled emit over plain http in Chromium and Firefox, with Playwright's overhead over the raw pipe (footprint, download bytes and time, pins added, harness lines, cold and warm timings, and a 20-run repeat per driver), and compare four lint and format setups over the code and JSON, their content scope against the check's code, JSON, and CSS (Biome; the check's own, ESLint with typescript-eslint and eslint-plugin-boundaries and Prettier, from the devDependencies; oxlint and oxfmt; ESLint with ESLint Stylistic and eslint-plugin-jsonc: footprint, timings, leaving the formatting unchanged and restoring it from a disturbed copy, content scope, the layer rules, and surface), as a dated markdown report on stdout; reads the network, writes nothing to the working tree"
+description = "Record each mise tool's installed size and each TypeScript form's lines and brotli bytes, time each toolchain with hyperfine (Node: pnpm installs and npm installs in its hoisted and linked layouts, tsc, esbuild, and Vite; Bun: bun install and bun build), and record every row, the layout rows (phantom dependencies, lockfile determinism, and disk sharing under npm, pnpm, and bun) and the GitHub and jsDelivr ones for v0.1.0 once it is released, record what each version of the components layer serves (the pagination alone and the composition, under Vite's dev server and from vite build, Lit's share apart), run the components' browser cases (the probe's in each version and the restyle check) on pages Vite's dev server serves, through the raw Chromium debugging pipe on the pinned chrome-headless-shell and through playwright-core (installed into scratch, with its browsers) on that pin, its own Chromium Headless Shell, and its Firefox, and the probe on tsc's unbundled emit over plain http in Chromium and Firefox, with Playwright's overhead over the raw pipe (footprint, download bytes and time, pins added, harness lines, cold and warm timings, and a 20-run repeat per driver), and compare four lint and format setups over the code and JSON, their content scope against the check's code, JSON, and CSS (Biome; the check's own, ESLint with typescript-eslint and eslint-plugin-boundaries and Prettier, from the devDependencies; oxlint and oxfmt; ESLint with ESLint Stylistic and eslint-plugin-jsonc: footprint, timings, leaving the formatting unchanged and restoring it from a disturbed copy, content scope, the layer rules, and surface), as a dated markdown report on stdout; reads the network, writes nothing to the working tree"
 run = "scripts/measure.sh"
 dir = "{{config_root}}"
 

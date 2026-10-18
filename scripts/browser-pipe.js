@@ -1,38 +1,53 @@
-// The raw pipe driver: the system Chromium, headless, driven over its DevTools protocol on a pipe
-// (--remote-debugging-pipe), with no package between. Chromium reads commands on its fd 3 and
+// The raw pipe driver: Chromium, headless, driven over its DevTools protocol on a pipe
+// (--remote-debugging-pipe), with no package between. It is the check's browser tier's driver, on
+// Chrome for Testing's chrome-headless-shell, which mise.toml pins (mise.toml's check task), and
+// measure compares it with Playwright on the same pin. Chromium reads commands on its fd 3 and
 // writes replies and events on its fd 4, each message one JSON object ended by a NUL. Every page
 // is a target of its own, attached with flatten, so its commands carry its session id on the one
 // pipe. scripts/browser-cases.js names the interface every driver keeps: launch, open a page by
 // URL, evaluate an expression in it, close.
+//
+//   BROWSER_EXECUTABLE  the Chromium to launch, by path (required): the check and measure pass the
+//                       pin's, mise which chrome-headless-shell
 
 import { spawn } from "node:child_process";
 import { existsSync, mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
-
-/** The system Chromium, as the demo and measure's other pages run it. */
-const chromium = "/usr/bin/chromium";
 
 /**
  * Launches Chromium on a profile of its own with the language and time zone given, and no name
  * resolved but the loopback address, so its background requests never leave the machine.
- * Resolves to the browser once the protocol answers. The profile is in the system's temporary
- * directory, never TMPDIR, and is Chromium's TMPDIR too, where it makes its singleton socket's
- * directory and its other temporary files, so closing removes them with it: Chromium aborts when
- * that socket's path is longer than a socket address holds, as it is under a run's TMPDIR in
- * measure's scratch. A missing Chromium fails before the spawn, naming the fix, as the Playwright
- * driver's does, rather than as the spawn's bare ENOENT.
+ * Resolves to the browser once the protocol answers. The profile is a new directory in TMPDIR,
+ * and is Chromium's TMPDIR too, where it makes its temporary files, so closing removes them with
+ * it. The headless shell makes no singleton socket, so a run's long TMPDIR in measure's scratch
+ * holds it, where a full Chromium aborts on a socket path longer than a socket address holds. A
+ * missing executable fails before the spawn, naming the fix, rather than as the spawn's bare
+ * ENOENT.
+ *
+ * --no-sandbox: Ubuntu 23.10 and later, CI's runners among them, let AppArmor refuse the
+ * unprivileged user namespaces a downloaded Chrome's sandbox needs, so the check runs without it
+ * everywhere, the same here and in CI. It loads only the repository's own pages, from the
+ * loopback address, and resolves no other host.
  */
 export async function launch({ lang, tz, width, height }) {
-  if (!existsSync(chromium)) {
+  const chromium = process.env.BROWSER_EXECUTABLE;
+  if (!chromium) {
     throw new Error(
-      `the system Chromium isn't installed; install the host's chromium package (no ${chromium})`,
+      "the raw pipe needs BROWSER_EXECUTABLE, the Chromium to launch: the pinned chrome-headless-shell, mise which chrome-headless-shell",
     );
   }
-  const profile = mkdtempSync(join("/tmp", "browser-pipe."));
+  if (!existsSync(chromium)) {
+    throw new Error(
+      `chrome-headless-shell (mise.toml's pin) isn't installed; run mise run install (no ${chromium})`,
+    );
+  }
+  const profile = mkdtempSync(join(tmpdir(), "browser-pipe."));
   const child = spawn(
     chromium,
     [
       "--headless",
+      "--no-sandbox",
       "--remote-debugging-pipe",
       `--user-data-dir=${profile}`,
       `--lang=${lang}`,
