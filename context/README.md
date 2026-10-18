@@ -764,6 +764,7 @@ layers/
   foundation/dom.ts                 the platform alone: define, emit, required
   components/status-badge.ts        a minimal Lit element on the foundation
   sdk/session.ts                    a Lit reactive controller, standing in for the auth hook
+                                    (replaced by the SDK's declarations, Results 8)
   apps/static/site/main.ts          a static-branch app
   apps/application/documents/       an application-branch app: main.ts, model.ts, views/list.ts
   apps/application/prompts/main.ts  a second application-branch app, the sibling the rules refuse
@@ -973,7 +974,7 @@ elements sheets they adopt (below).
 | shadow root and adopted styles | Lit provides; vanilla builds by hand | Lit: `static styles = [...baseline, styles]`, the foundation's reset and elements sheets then the element's layout sheet, adopted into the root it attaches. Vanilla: `attachShadow` and `root.adoptedStyleSheets = [...baseline, styles]`, two lines. In light DOM neither has it: both versions adopt their sheet into the document by hand (`adopt()` in each `-light.ts`), since Lit adopts `static styles` into a shadow root alone |
 | pre-upgrade properties | Lit provides; vanilla builds by hand | Vanilla: in the constructor, each property found as an own field is taken off the instance and set again through its setter (`Object.hasOwn`, `Reflect`), as Lit does |
 | lifecycle hooks | Lit provides; vanilla builds by hand | Lit light: `firstUpdated` starts the child placement, and `connectedCallback` and `disconnectedCallback`, calling `super`, adopt the sheet and start and stop the observer (`pagination-lit-light.ts`). Vanilla light: the platform's `connectedCallback` and `disconnectedCallback` (`pagination-vanilla-light.ts`); with no update cycle there is nothing for `willUpdate` or `updated` to hook |
-| reactive controllers | not exercised | no component uses one; the SDK's `session.ts` (Results 3) is the repository's one controller |
+| reactive controllers | not exercised | no component uses one; the SDK's `session.ts` (Results 3), a stand-in since replaced by its declarations (Results 8), was the repository's one controller |
 | keyed lists | not exercised | the entries are the host's children, and the size options are mapped without `repeat` |
 | slots | not exercised | the platform's `<slot>`, under a shadow root in both: both shadow versions use `<slot>` and `<slot name="label">`, in Lit's template and in vanilla's `<template>` alike. Light DOM has no slots, Lit or vanilla: both light versions place the host's children by hand with a `MutationObserver` (`#place` in each `pagination-*-light.ts`) |
 | form association | not exercised; neither provides it | `ElementInternals` is a platform API: an element sets `static formAssociated = true` and calls `attachInternals()` ([MDN][mdn-internals]). Lit 3.3.3 adds nothing for it: none of `lit`, `lit-element`, `lit-html`, or `@lit/reactive-element` names `formAssociated` or `attachInternals`, only the server DOM shim `@lit-labs/ssr-dom-shim` (installed tree, read 2026-10-17). Either version writes it by hand |
@@ -1650,6 +1651,325 @@ Prettier's, reopens it too.
   3.3.3, and the element's JSDoc and plain JS forms in Lit and vanilla, all from jsDelivr at their
   tags; each element is defined and renders page 3 of 7.
 
+### 8. Branches and the SDK spec: one Vite build for both, the SDK declared on the platform
+
+**What this result is.** The `branches` task's specs: the static and application layouts, the
+application SDK, the foundation's formatters, and a Go serving half proposed for go-web-sdk. It
+cites no measure run. Its checked form is the repository's own files, which `mise run check`
+holds: the layer table in `eslint.config.js`, the declarations in `layers/sdk/*.d.ts` and
+`layers/foundation/format.d.ts`, and the occupants in `layers/apps/`, typed against them. Facts
+from outside the spike name their source: go-web-sdk at v0.15.2 (commit d566dee), go-web-service
+at 15e0bc3, herald at 6fc22b3, and standards-lab's `context/` notes, each read 2026-10-18.
+
+**The static branch.** An app is an entry and its own reusable elements, with no tier split:
+
+```
+layers/apps/static/site/
+  main.ts                      the entry: renders the page from its elements
+  elements/site-header.ts      the app's own element: Lit with a shadow root
+  elements/site-header.css     its layout sheet, a CSS module script
+```
+
+- Its elements are Lit with a shadow root, under Results 4's component rules: props and
+  attributes in, events out, each element's CSS a `.css` file imported as a CSS module script.
+- The app imports the foundation, the components, and Lit, and never the SDK: the layer table's
+  `static` and `static-elements` rows name no `sdk` (the direction table, below).
+- It builds through Vite with `scripts/css-sheets.js`, to hashed filenames and a build manifest
+  (the build, below). A page that loads the components unbundled imports CSS module scripts,
+  which no Safari release loads (Results 4), so a static page builds as an application does.
+- What a Pages workflow uploads is the build output, not `layers/`.
+
+**The application branch.** The entry and the route table sit at the app's root, beside four
+tiers, each a directory:
+
+```
+layers/apps/application/documents/
+  main.ts                      the entry: start(runtime) makes the client, service, and router
+  routes.ts                    the route table: each URLPattern pathname to its view's loader
+  views/list.ts                route-level: mounted at "/" and "/folders/:folder"
+  modules/document-list.ts     a feature: reads a page through the service, pages by the query
+  elements/document-table.ts   presentational: rows and formatters in, document-open out
+  domains/document.ts          the app's types: Document
+  domains/documents.ts         its domain service: DocumentsService over the SDK's Client
+  domains/context.ts           the context the root provides its modules
+```
+
+- **Views** are route-level: the router mounts one by tag and sets each path param on it as an
+  attribute (`folder` on `documents-list-view`), and a view loads its route's data through the
+  modules it composes.
+- **Modules** are features: they call the domain services and the router's query
+  (`document-list.ts` reads the page from `router.current.query` and sets it with
+  `router.query`, so the view stays mounted while it pages).
+- **App-internal elements** are presentational, under the component rules, and are promoted to
+  `layers/components/` once a second app needs one. `document-table.ts` declares its own
+  `DocumentRow`, which the domains' `Document` satisfies, and takes the formatters as a property.
+- **Domains** hold the app's types and its domain services, and no UI.
+
+The tiers come from herald's client ([herald `app/client`][herald-client], 6fc22b3):
+`ui/elements`, `ui/modules`, and `ui/views`, with a service per domain
+(`domains/{classifications,documents,prompts,storage}/service.ts`). Four of herald's element
+files import from `@domains` (Results 3, handed on): `classify-progress.ts`, `document-card.ts`,
+`prompt-card.ts`, and `blob-viewer.ts`. That coupling is why an app-internal element here imports
+neither the domains nor the SDK: an element that names a domain type can't be promoted without
+it.
+
+**The direction, with the tiers.** The layer table in `eslint.config.js` gives each tier a row,
+before its app's root row, since eslint-plugin-boundaries takes the first row whose directory
+holds a file. Every row may import its own layer; a row with a `*` is one app's, reachable only
+from the same app, so no app imports another:
+
+| from | may import | never |
+| --- | --- | --- |
+| application app root (entry, route table) | the foundation, components, the SDK, Lit, every tier of its app | another app |
+| views | the foundation, components, the SDK, Lit, modules, elements, domains | the root, another app |
+| modules | the foundation, components, the SDK, Lit, elements, domains | views, the root, another app |
+| app-internal elements | the foundation, components, Lit | the SDK, views, modules, domains, the root |
+| domains | the foundation, the SDK | components, Lit, every UI tier, the root |
+| static app root (entry) | the foundation, components, Lit, its elements | the SDK, another app |
+| static app elements | the foundation, components, Lit | the SDK, the entry, another app |
+
+The check enforces it by resolved file, as Results 3's table: `test/layers.test.js` runs the
+pinned ESLint over `test/layers-tree.js`'s trees, now 256 violation files, every forbidden tier
+edge in the four import forms with cross-branch edges between a static and an application app of
+the same name, and 48 allowed files, and passes only on an exact match. A second rule rides the
+same table: a `.d.ts` file has no runtime, so an import that resolves to one passes only as
+`import type` or `export type`. `import { type X }` is refused too, since `verbatimModuleSyntax`
+keeps it as `import {}`, which loads the file. Its case in `test/layers.test.js` refuses all 8
+value imports and none of the 4 type imports.
+
+**The build, both branches.** Vite 8.3.4, pinned in `mise.toml` (`npm:vite`), with
+`scripts/css-sheets.js` for the CSS module scripts (Results 4), and three options:
+
+- `base`, the path the app is served under ([Vite `base`][vite-base]): the same path the Go
+  shell writes as `<base href>` and the router takes as `RouterOptions.base`.
+- Vite's default hashed filenames, so every emitted file can be cached for good.
+- `build.manifest: true`, which writes `.vite/manifest.json` in the output, mapping each entry's
+  source path to its hashed file ([backend integration][vite-backend]); the Go shell reads it.
+  A scratch build of the static site under the pin wrote `assets/main-BRYe5p6W.js` and a manifest
+  whose `layers/apps/static/site/main.ts` entry names it, `isEntry: true` (reproduced
+  2026-10-18). Herald's shell named fixed files (`dist/app.js`), the rejected alternative.
+
+**The SDK spec.** Four parts, each a declaration file whose signatures tsc checks
+(`skipLibCheck` is off) and `test/declarations.test.js` holds free of runtime code, each on a
+platform API. The occupants import them for their types alone; whatever loads an app passes the
+values (`start(runtime)` in `main.ts`), since nothing implements them yet.
+
+- **The router** (`router.d.ts`), on URLPattern and the Navigation API, with no hand-written
+  matcher:
+
+  ```ts
+  export type Loader = () => Promise<string>;
+  export type Routes = Readonly<Record<string, string | Loader>>;
+  export interface Match {
+    pattern: string;
+    tag: string;
+    params: Readonly<Record<string, string>>;
+    query: URLSearchParams;
+  }
+  export interface RouterOptions {
+    outlet: Element;
+    base?: string;
+    notFound?: string | Loader;
+  }
+  export interface Router {
+    readonly current: Match | undefined;
+    start(): void;
+    stop(): void;
+    navigate(path: string, options?: NavigateOptions): Promise<void>;
+    query(changes: Readonly<Record<string, string | undefined>>, options?: NavigateOptions): void;
+  }
+  export declare function createRouter(routes: Routes, options: RouterOptions): Router;
+  ```
+
+  Once started, it intercepts every same-document navigation, a plain link's click included,
+  through the Navigation API's `navigate` event, matches the destination with URLPattern, the
+  first pattern in the table's order winning, and replaces the outlet's content with the route's
+  element, each path param set on it as an attribute of the same name. A loader imports the
+  element's module and resolves to its tag, so a view's code loads on its route's first visit.
+  `query` sets or deletes parameters and keeps the rest, replacing the history entry by default,
+  with the element left mounted; every pattern and `navigate` path is relative to `base` ("/" by
+  default). Neither herald quirk the frozen port keeps exists in it: the port's `resolveRoute`
+  splits on `?` and keeps two parts, dropping a second `?` and what follows, and passes a
+  `#fragment` into the route path. URLPattern matches a parsed URL by component:
+  `new URLPattern({ pathname: "/folders/:folder" })` against `/folders/a?b=1?c=2#top` gives
+  `folder` "a", the search `b=1?c=2` (so `b` is `1?c=2`), and the hash `top`, apart (Node 26.12.0,
+  reproduced 2026-10-18). The matcher port in `src/` and its suite, `test/router.test.js`, stay
+  frozen as Results 2's evidence.
+
+- **The API client** (`api.d.ts`), on fetch and AbortSignal. Every call resolves to a `Result`
+  and never rejects:
+
+  ```ts
+  export interface Problem {
+    type: string;
+    status: number;
+    title: string;
+    detail?: string;
+    instance?: string;
+    request_id?: string;
+  }
+  export type Result<T> = { ok: true; data: T } | { ok: false; problem: Problem };
+  export interface Page<T> {
+    items: T[];
+    page?: number;
+    size: number;
+    total?: number;
+    more: boolean;
+    next?: string;
+  }
+  export interface Client {
+    get<T>(path: string, options?: RequestOptions): Promise<Result<T>>;
+    post<T>(path: string, body?: unknown, options?: RequestOptions): Promise<Result<T>>;
+    // put and patch as post; delete as get
+  }
+  export declare function createClient(options?: ClientOptions): Client;
+  ```
+
+  The failure is go-web-sdk's RFC 9457 problem: `type`, `status`, `title`, `detail`, and
+  `instance` are its `Problem`'s members, `detail` and `instance` omitted when empty, and
+  `WriteFor` adds `request_id` when the request carries a correlation id (go-web-sdk v0.15.2,
+  `problem.go`, `doc.go`). A problem the client makes itself has status 0 and a
+  `ClientProblemType`: `urn:standards-lab:problem:network` when fetch rejects,
+  `:abort` when the caller's signal aborts, `:timeout` when `AbortSignal.timeout` fires. A
+  response that isn't a problem document becomes an `about:blank` problem with its status.
+  `Page<T>` is go-web-sdk's envelope (`response.go`: `Page[T]`, with `page` omitted under a
+  cursor, `total` when the read didn't count, and `next` the cursor that continues); the
+  documents module reads it into Results 4's pagination. `ClientOptions.base` is `/api` by
+  default, where go-web-service mounts its API (`internal/app/domain.go`, `web.NewGroup("/api")`).
+
+- **The auth hook** (`auth.d.ts`), a token provider with a no-op default:
+
+  ```ts
+  export interface TokenProvider {
+    token(): Promise<string | undefined>;
+    refresh(): Promise<string | undefined>;
+  }
+  export declare const anonymous: TokenProvider;
+  ```
+
+  The client sends `Authorization: Bearer <token>` when the provider has a token, and on a 401
+  asks it to `refresh` and retries that call once with the new token, or returns the 401's
+  problem when there is none. The OIDC library behind a real provider is left to v1.auth, whose
+  client sweep puts the reference client behind authentication (standards-lab
+  `context/roadmap.toml`, `goals.v1.auth`): Keycloak is the declared provider, and every service
+  is a resource server that verifies the bearer token from `Authorization: Bearer` and nowhere
+  else (`context/auth-strategy.md`, section 1). The provider interface is all the client needs of
+  it. It replaces the stand-in session controller, `sdk/session.ts`, that Results 3 placed.
+
+- **The domain-service pattern** (`service.d.ts`): a service is a stateless object of endpoints,
+  one per route, made from the client it calls through:
+
+  ```ts
+  export type Endpoint<A extends unknown[] = never[], T = unknown> = (
+    ...args: A
+  ) => Promise<Result<T>>;
+  export type Service = Readonly<Record<string, Endpoint<never[], unknown>>>;
+  export type ServiceFactory<S extends Service> = (client: Client) => S;
+  ```
+
+  The documents app's `DocumentsService extends Service`, with `list(query, options)` to
+  `Result<Page<Document>>` and `get(id, options)` to `Result<Document>`, and
+  `documentsService: ServiceFactory<DocumentsService>` holds nothing between calls.
+
+**Formatting is a foundation spec, not an SDK one.** A component may not import the SDK, and
+components format too (Results 4's entry formats size and time with `Intl`), so the shared
+formatters are the foundation's, in `layers/foundation/format.d.ts`, on Intl alone, with no
+library and no Temporal, which isn't Baseline (the floor, below). Each takes Intl's locale
+argument, the user agent's when undefined, and the options of the Intl formatter beneath it:
+
+- `formatBytes(bytes, locale?, options?: BytesOptions)`: SI units, base 1000, with
+  Intl.NumberFormat's byte units (kB, MB, GB);
+- `formatDate` and `formatDateTime(date: Date | number, locale?, options?)`: Intl.DateTimeFormat,
+  `dateStyle` "medium", and `timeStyle` "short" for the second;
+- `formatRelative(date, locale?, options?: RelativeOptions)`: Intl.RelativeTimeFormat, in the
+  largest whole unit, relative to `options.now`, the current time by default;
+- `formatDuration(milliseconds, locale?, options?: DurationOptions)`: Intl.DurationFormat, style
+  "short" by default, in days, hours, minutes, and seconds.
+
+**The Go serving half, proposed for go-web-sdk.** Prose with Go signatures; no Go code is
+written, and it stays proposed until spike-html-apps proves it. go-web-sdk has no shell,
+fallback, or embedded-build handler today: its only seam is `NewHandlerModule(prefix string,
+handler http.Handler, mw ...Middleware) *Module` (`module.go`), which mounts a raw handler,
+"such as an embedded client application", under a prefix it strips. The proposal is one handler
+for an app's embedded build output, the `dist/` Vite writes:
+
+- `func NewClient(dist fs.FS, opts ClientOptions) (http.Handler, error)`, with `ClientOptions`
+  holding the base path, the page title, the manifest key of the app's entry, and a config value.
+  It reads `.vite/manifest.json` from `dist` once and fails if the entry isn't there.
+- The shell: a request for a client route answers an HTML page that writes `<base href>` (the
+  base path), the title, the config value as JSON in a `<script type="application/json">`, and
+  the entry the manifest names, as a module script with its CSS. Every path that isn't an asset
+  is a client route and falls back to the shell, so a deep link or a reload reaches the router.
+- The assets: a request under the build's asset directory answers the embedded file, with
+  `Cache-Control: public, max-age=31536000, immutable`, since its hashed name changes with its
+  content; a missing asset answers a 404 problem (`WriteProblem(w, r, http.StatusNotFound, title,
+  detail)`, `problem.go`), never the shell, so a stale page's import fails as a 404.
+- Mounted as `router.Mount(web.NewHandlerModule("/app", client, mw...))`, beside the API's
+  module. go-web-sdk refuses a prefix that ends in `/` (`validatePrefix`, `group.go`), so an app
+  at the server's root would mount through `Router.SetNotFound(h http.Handler)` instead, which
+  spike-html-apps settles.
+
+Herald is the prior art ([herald `app/app.go`][herald-app], [`pkg/web`][herald-web], 6fc22b3):
+`web.NewTemplateSet` parses a shell template that writes `<base href="{{ .BasePath }}/">`, the
+title, and the config as `<script id="herald-config" type="application/json">`;
+`web.DistServer` serves the embedded `dist/` through `http.FileServer`, with no cache header; and
+`Router.SetFallback` sends every unmatched path to the shell, while a missing file under
+`dist/` answers `http.FileServer`'s plain-text 404. The proposal keeps the shell and the
+fallback, reads the manifest in place of herald's fixed `dist/app.js`, and answers a missing
+asset with a problem. go-web-service stages Go conventions bound for a
+library in its `sdk/` package (`sdk/doc.go`: "conventions proven here in running code before they
+move outward"), which is where spike-html-apps would prove this before go-web-sdk takes it.
+
+**The browser floor.** Safari 26.2, Firefox 147, and Chromium (Chrome and Edge 102 by the data,
+155 in the check), set by the Navigation API, the latest of the APIs the specs rest on. From
+web-features 3.43.0 ([web-features][reg-web-features], fetched 2026-10-18):
+
+| API | used by | Baseline | since | first versions |
+| --- | --- | --- | --- | --- |
+| Navigation API (`navigation`) | the router | newly available | 2026-01-13 | Chrome 102, Firefox 147, Safari 26.2 |
+| URLPattern (`urlpattern`) | the router | newly available | 2025-09-15 | Chrome 95, Firefox 142, Safari 26 |
+| View Transitions (`view-transitions`) | open to the router, not declared | newly available | 2025-10-14 | Chrome 111, Firefox 144, Safari 18 |
+| Intl.DurationFormat (`intl-duration-format`) | `formatDuration` | newly available | 2025-03-04 | Chrome 129, Firefox 136, Safari 16.4 |
+| AbortSignal.timeout (`abortsignal-timeout`) | the client's timeout | newly available | 2024-04-18 | Chrome 124, Firefox 100, Safari 16 |
+| Intl.RelativeTimeFormat (`intl-relative-time-format`) | `formatRelative` | widely available | 2023-03-16 | Chrome 71, Firefox 76, Safari 14 |
+| fetch (`fetch`) | the client | widely available | 2019-09-27 | Chrome 42, Firefox 39, Safari 10.1 |
+| Server-sent events (`server-sent-events`) | live transport, unspecified | widely available | 2022-07-15 | Chrome 6, Firefox 6, Safari 5 |
+| WebSocket (`websockets`) | live transport, unspecified | widely available | 2018-01-29 | Chrome 5, Firefox 11, Safari 5 |
+| Temporal (`temporal`) | nothing: not used | not Baseline | | Chrome 144, Firefox 139, no Safari |
+| CSS module scripts (`css-modules`) | built away by Vite (Results 4) | not Baseline | | Chrome 123, Firefox 147, no Safari |
+
+URLPattern is a global in Node 26.12.0 and Bun 1.4.3, and the pinned chrome-headless-shell
+155.0.8059.84 has URLPattern, the Navigation API (`navigation`), and Intl.DurationFormat
+(reproduced 2026-10-18), so spike-html-apps can test the router's code in the unit tier and
+drive it in the browser tier without a new pin.
+
+**The gap: live transport.** Server-sent events and the WebSocket bridge are Baseline, but the
+spec declares neither: no event stream on the client, no reconnection, no message types. It is a
+named gap, left to spike-html-apps and v1.client. standards-lab's messaging strategy gives the
+WebSocket bridge to v1.client (`context/messaging.md`:187, "Client transport, not events between
+services"), and v1.client's goal names a live view of go-web-service's reactors over it
+(`context/roadmap.toml`, `goals.v1.client`).
+
+**What it doesn't prove.** The SDK and the formatters are declared, not implemented: their
+signatures type-check and the occupants type-check against them, but no router, client, auth
+provider, or formatter runs anywhere yet, and nothing calls the documents app's `start`. The Go
+half is prose, run nowhere. No figure here is measured: the browser floor is web-features' data,
+not a run, and the one build reproduced is the static site's. spike-html-apps builds the SDK, the
+formatters, and the Go half, and proves them.
+
+**Handed on.**
+
+- To spike-html-apps: implement the router, the client, the default token provider, and the
+  formatters to these declarations, and prove the Go serving half in go-web-service's `sdk/`
+  before go-web-sdk takes it; settle an app at the server's root, and that Vite's `base`, the
+  shell's `<base href>`, and `RouterOptions.base` agree; and name live transport. `api.d.ts`
+  types `title` as always present, as go-web-sdk's `Write` defaults it to the status phrase, but
+  for a status outside net/http's table that phrase is empty and `title` is omitted
+  (`problem.go`), so the client fills it.
+- To v1.client: the WebSocket bridge, as messaging.md assigns it.
+- To v1.auth: the OIDC library behind a `TokenProvider`.
+- To spike-html-hosting: a Pages workflow runs the Vite build and uploads its output.
+
 [node-sched]: https://github.com/nodejs/Release/blob/main/schedule.json
 [node-blog]: https://nodejs.org/en/blog/announcements/evolving-the-nodejs-release-schedule
 [pnpm-oc]: https://opencollective.com/pnpm
@@ -1741,6 +2061,11 @@ Prettier's, reopens it too.
 [runner-11489]: https://github.com/actions/runner-images/pull/11489
 [fx-cdp]: https://fxdx.dev/cdp-retirement-in-firefox/
 [bz-1882096]: https://bugzilla.mozilla.org/show_bug.cgi?id=1882096
+[herald-client]: https://github.com/JaimeStill/herald/tree/6fc22b3cb492/app/client
+[herald-app]: https://github.com/JaimeStill/herald/blob/6fc22b3cb492/app/app.go
+[herald-web]: https://github.com/JaimeStill/herald/tree/6fc22b3cb492/pkg/web
+[vite-base]: https://vite.dev/config/shared-options#base
+[vite-backend]: https://vite.dev/guide/backend-integration
 
 ## Capabilities
 
