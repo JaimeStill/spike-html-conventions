@@ -1,14 +1,14 @@
 # goal · experiment.html.spike-html-conventions
 
-- **State:** brief ready
-- **Task:** components
-- **Branch:** components
+- **State:** idle
+- **Task:** none
+- **Branch:** none
 
 ## Tasks
 
 1. [x] toolchain
 2. [x] structure
-3. [ ] components
+3. [x] components
 4. [ ] testing
 5. [ ] branches
 
@@ -317,8 +317,6 @@ Out of scope  The tools layer, the non-default profiles, any change to spike-htm
 Door          two-way: no tag, nothing published.
 
 ## Progress
-
-slices 11/11 committed · review stop done · escalation answered · redirect at BRIEF: amendment 2 approved · standards done · spec done · editor done
 
 ## Decisions
 
