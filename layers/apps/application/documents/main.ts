@@ -5,8 +5,8 @@
 // app with an implementation passes; a value import of either would fail in the browser, and the
 // check refuses one (eslint.config.js).
 
-import type { formatBytes, formatDate } from "../../../foundation/format.js";
 import { required } from "../../../foundation/dom.js";
+import type { formatBytes, formatDate } from "../../../foundation/format.js";
 import type { createClient } from "../../../sdk/api.js";
 import type { TokenProvider } from "../../../sdk/auth.js";
 import type { createRouter, Router } from "../../../sdk/router.js";

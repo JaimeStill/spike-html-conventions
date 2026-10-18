@@ -8,8 +8,9 @@
 
 import type { TokenProvider } from "./auth.js";
 
-/** An RFC 9457 problem document, as go-web-sdk's Problem writes it: `title` defaults to the status
- * phrase there, so it is always present; `detail` and `instance` are omitted when empty, and
+/** An RFC 9457 problem document, as go-web-sdk's Problem writes it, with `title` always present:
+ * go-web-sdk's Write defaults it to the status phrase, but omits it for a status outside net/http's
+ * table, where the client fills it. `detail` and `instance` are omitted when empty, and
  * `request_id` is present when the server's request carried a correlation id. */
 export interface Problem {
   /** A URI naming the problem's kind: "about:blank" for a status with no further meaning, or one
