@@ -202,6 +202,7 @@ in a container or install libraries on the host.
 - slice 6 committed (e3d9958): demo trimmed to the 20 frozen pagination pages (esbuild, bun, tsc, src). 
 - slice 7 committed (93da1e6): build:tsc's demo emit dropped; Results 5, STANDARDS.md Tests and dependency rules, the html-artifacts.md pending edit; measure 2026-10-18T19:20:43Z 156/156. 
 - standards review committed (9b90c44); its follow-ups committed (997a494): exactly 27 cases, opaque restyle baseline, the pipe's missing-Chromium error; evidence re-cited to measure 2026-10-18T19:38:34Z 156/156. Next: spec review.
+- redirect 2 committed (8f485da, 4bb25b9): the check drives the pinned CfT chrome-headless-shell 155.0.8059.84 (mise http:) over the raw pipe, with a version guard; playwright-core back in measure's scratch; STANDARDS.md, Results 5, the pending edit; check ~12 s (browser tier 0.89 s); measure 2026-10-18T20:47:44Z 156/156. Next: set `task.run_auto_install = false` (below), verify the three unread source URLs in Results 5 (Playwright system requirements, the Puppeteer AppArmor anchor, runner-images #11489), then standards review, spec review, editor, brief.
 
 ## Decisions
 
@@ -420,6 +421,9 @@ in a container or install libraries on the host.
 - testing: round 4: Playwright stays in measure as the comparison column, playwright-core back in measure's scratch; it leaves package.json, and the devDependency rule reverts to lint tooling only.
 - testing: round 4: the stopped redirect-1 slice is discarded, and the repository's 588 MB Playwright cache outside the tree removed.
 - testing: measure's raw-pipe rows and Playwright's like-for-like row run on the pinned headless shell, so the comparison measures the check's own browser; the demo's frozen --dump-dom pages stay on the system Chromium (outside the task).
+- testing: the check guards the pin's version (`--version` must end in the pinned version), because mise's download cache, keyed by checksum, installed the cached 155 build under a lowered 154 pin without error.
+- testing: the pin is linux-x64 only, as the brief names; another platform gets no URL until it needs one.
+- testing: mise.toml sets `task.run_auto_install = false`, so `mise run check` never installs a missing tool from the network and fails by name instead; `mise run install` is the step that downloads.
 
 ## Pending edits
 
