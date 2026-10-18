@@ -1,8 +1,8 @@
 # goal · experiment.html.spike-html-conventions
 
 - **State:** handoff
-- **Task:** branches
-- **Branch:** branches
+- **Task:** none
+- **Branch:** none
 
 ## Tasks
 
@@ -169,7 +169,7 @@ slices 6/6 committed · standards ✓ · spec ✓ · editor ✓ · brief accepte
 
 ## Handoff
 
-merge, then sync: pull request #5 (branches) is published and accepted; the merge was blocked by the session's permission mode. Merge #5, then run the sync (session brief's Sync section; stage experiment.html.spike-html-packages).
+merge `sync-experiment.html.spike-html-conventions`, then delete the record: standards-lab pull request #90 is published and holds the whole sync (spike-html-packages staged); the merge was blocked by the session's permission mode.
 
 ## Decisions
 
