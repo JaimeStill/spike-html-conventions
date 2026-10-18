@@ -2115,4 +2115,47 @@ The spike reads these repositories and never writes to them. Each is a key in th
 
 ## The answer
 
-Pending: the `branches` task writes it.
+The question: which toolchain and conventions should every layer of the native web stack
+(foundation, components, and apps) be built on, over the spike-html-design v0.7.0 baseline?
+
+**Node 26 with pnpm, `.ts` shipped through a release build, the layers of `layers/` with their
+direction enforced by resolved file, Lit with a shadow root for components, a DOM-free unit tier
+and a browser tier on the raw pipe, ESLint + Prettier, and one Vite build for both branches over
+an SDK declared on the platform.**
+
+1. **Toolchain** (Results 1): Node over Bun clearly, pnpm over npm narrowly, never Bun beside
+   it; tsc emit for libraries, Vite for apps, no esbuild. Proven by the run of
+   *(m 2026-10-16T14:03:02Z)* and the survey's sourced facts.
+2. **TypeScript form** (Results 2): `.ts` with a release build, over JSDoc and plain JS, by the
+   architect's decision on the Forms rows *(m 2026-10-16)*; what a release must ship is handed
+   to spike-html-packages.
+3. **Layout and direction** (Results 3, 8): the layers as directories of `layers/`, the import
+   direction by eslint-plugin-boundaries on the resolved file. Proven by the check,
+   `test/layers.test.js` on exact matches, and the rejected mechanisms by
+   *(m 2026-10-16T21:11:09Z)*.
+4. **Components** (Results 4): Lit with a shadow root, adopting the foundation's baseline sheets
+   before a layout-only `.css` of its own, by the architect's reading of all 8 versions. The
+   probe and restyle cases hold in each version in the check (`scripts/browser.test.js`); served
+   bytes *(m 2026-10-17T23:45:28Z)*; seen side by side in `mise run preview`.
+5. **Testing tiers** (Results 5): unit under node --test and bun test with no DOM shim; browser
+   over the raw DevTools pipe on the pinned chrome-headless-shell, Chromium alone. Proven by the
+   check, against Playwright in *(m 2026-10-18T20:47:44Z)*; Firefox and WebKit are gaps.
+6. **Lint and format** (Results 6): ESLint + Prettier, over Biome, oxlint + oxfmt, and ESLint
+   Stylistic. Run by the check; compared in *(m 2026-10-16T21:11:09Z)*.
+7. **Consumption** (Results 7): spike-html-design v0.7.0 and this package's v0.1.0 install by
+   tag under npm, pnpm, and bun, and load from jsDelivr. Proven by the check's offline fixtures
+   and *(m 2026-10-16)* and *(m 2026-10-16T17:15:39Z)*; v0.1.0 ships source only.
+8. **Branches and the SDK** (Results 8): a static and an application layout with four tiers, one
+   Vite build with a manifest, and the router, client, auth hook, and service pattern on platform
+   APIs. Specified, not built: the SDK and formatters are type-only declarations checked by tsc
+   and `test/declarations.test.js`, and the tier direction by `test/layers.test.js`; the router,
+   client, and Go half run nowhere yet. spike-html-apps builds them.
+
+**Provisional.** pnpm, until spike-html-packages decides how the layers release; a registry
+release reopens npm against pnpm. ESLint + Prettier, until spike-html-packages makes the layers
+packages, when declared dependencies take over the direction between them, or ESLint's or
+Prettier's foundation or funding changes. The direction mechanism with it, since Results 3's
+layout holds provisionally with Results 6's pick.
+
+This answer is evidence for standards-lab's experiment.html intake; the spike decides nothing
+itself.
